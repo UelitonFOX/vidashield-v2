@@ -108,7 +108,8 @@ streamlit run app/main.py
 
 ## 🧠 Desenvolvido por
 
-Ueliton Fox 🦊 – Projeto Integrador Talento Tech 15  
-Com apoio do assistente estratégico IA 🤖
+Ueliton Fox 🦊
+Beatriz Delgado
+Camili Machado – Projeto Integrador Talento Tech 15  
 
 ---
