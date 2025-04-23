@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="500" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cadeira -->
+  <path d="M150 300 L350 300 L380 450 L120 450 Z" fill="#8B4513"/>
+  <path d="M200 200 L300 200 L350 300 L150 300 Z" fill="#A0522D"/>
+  
+  <!-- Pessoa -->
+  <circle cx="250" cy="150" r="40" fill="#FFA07A"/> <!-- Cabeça -->
+  <path d="M220 190 L280 190 L290 300 L210 300 Z" fill="#20B2AA"/> <!-- Corpo -->
+  <path d="M220 250 L180 320" stroke="#20B2AA" stroke-width="20"/> <!-- Braço esquerdo -->
+  <path d="M280 250 L320 320" stroke="#20B2AA" stroke-width="20"/> <!-- Braço direito -->
+  
+  <!-- Laptop -->
+  <rect x="220" y="280" width="120" height="80" rx="5" fill="#808080"/>
+  <rect x="220" y="270" width="120" height="10" fill="#A9A9A9"/>
+  
+  <!-- Cacto -->
+  <rect x="400" y="200" width="20" height="100" fill="#228B22"/>
+  <path d="M400 220 L380 220 L380 240 L400 240" fill="#228B22"/>
+  <path d="M420 250 L440 250 L440 270 L420 270" fill="#228B22"/>
+  <rect x="390" y="290" width="40" height="20" fill="#8B4513"/> <!-- Vaso -->
+</svg> 
