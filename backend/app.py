@@ -1,8 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from routes import auth_bp
-from routes import dashboard_bp
+from routes import auth_bp, dashboard_bp, users_bp, logs_bp, alerts_bp, settings_bp
 from models import db, User
 import config
 import os
@@ -22,6 +21,10 @@ db.init_app(app)
 # Registro dos blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
+app.register_blueprint(users_bp, url_prefix='/api/users')
+app.register_blueprint(logs_bp, url_prefix='/api/logs')
+app.register_blueprint(alerts_bp, url_prefix='/api/alerts')
+app.register_blueprint(settings_bp, url_prefix='/api/settings')
 
 # Adiciona uma rota para teste de conectividade
 @app.route('/ping')

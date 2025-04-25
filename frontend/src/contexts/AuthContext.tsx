@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import api from '../services/api';
 
-interface User {
+export interface User {
   id: number;
-  email: string;
   name: string;
+  email: string;
+  role?: 'admin' | 'manager' | 'user';
 }
 
 interface AuthContextType {

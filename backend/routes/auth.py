@@ -79,7 +79,7 @@ def login():
     
     if user and check_password_hash(user.password_hash, password):
         access_token = create_access_token(
-            identity=user.id,
+            identity=str(user.id),
             expires_delta=timedelta(hours=1)
         )
         print(f"Login bem-sucedido para: {email}")
@@ -108,7 +108,7 @@ def register():
     db.session.commit()
     
     access_token = create_access_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=timedelta(hours=1)
     )
     
@@ -119,17 +119,7 @@ def register():
 
 @auth_bp.route('/google')
 def google_login():
-    # Verifica se estamos em modo de teste/desenvolvimento
-    if current_app.config.get('TESTING') or not current_app.config.get('GOOGLE_CLIENT_ID'):
-        print("Usando fluxo de login simulado para Google")
-        # Gera um token diretamente para simular o fluxo de login
-        token = _generate_test_token("google")
-        # Use o FRONTEND_URL configurado ou o padrão
-        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
-        redirect_url = f"{frontend_url}/oauth-callback?token={token}"
-        print(f"Redirecionando para: {redirect_url}")
-        return redirect(redirect_url)
-        
+    # Usar sempre o fluxo de autenticação real do Google
     redirect_uri = url_for('auth.google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -154,7 +144,7 @@ def google_callback():
         db.session.commit()
     
     access_token = create_access_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=timedelta(hours=1)
     )
     
@@ -162,17 +152,7 @@ def google_callback():
 
 @auth_bp.route('/github')
 def github_login():
-    # Verifica se estamos em modo de teste/desenvolvimento
-    if current_app.config.get('TESTING') or not current_app.config.get('GITHUB_CLIENT_ID'):
-        print("Usando fluxo de login simulado para GitHub")
-        # Gera um token diretamente para simular o fluxo de login
-        token = _generate_test_token("github")
-        # Use o FRONTEND_URL configurado ou o padrão
-        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
-        redirect_url = f"{frontend_url}/oauth-callback?token={token}"
-        print(f"Redirecionando para: {redirect_url}")
-        return redirect(redirect_url)
-        
+    # Usar sempre o fluxo de autenticação real do GitHub
     redirect_uri = url_for('auth.github_callback', _external=True)
     return oauth.github.authorize_redirect(redirect_uri)
 
@@ -210,7 +190,7 @@ def github_callback():
             db.session.commit()
     
     access_token = create_access_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=timedelta(hours=1)
     )
     
@@ -331,7 +311,7 @@ def _generate_test_token(provider):
     
     # Gera um token JWT para o usuário
     token = create_access_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=timedelta(hours=1)
     )
     

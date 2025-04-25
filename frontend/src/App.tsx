@@ -10,6 +10,14 @@ import { OAuthCallback } from './pages/OAuthCallback';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PrivateRoute } from './components/PrivateRoute';
 
+// Importação das novas páginas
+import Users from './pages/Users';
+import Logs from './pages/Logs';
+import Alerts from './pages/Alerts';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
+
 // Componente para decidir se redireciona para dashboard ou home na rota raiz
 const RootRedirect: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -48,6 +56,43 @@ const App: React.FC = () => {
             <Route path="/dashboard" element={
               <PrivateRoute>
                 <Dashboard />
+              </PrivateRoute>
+            } />
+            
+            {/* Novas rotas protegidas */}
+            <Route path="/users" element={
+              <PrivateRoute>
+                <Users />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/logs" element={
+              <PrivateRoute>
+                <Logs />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/alerts" element={
+              <PrivateRoute>
+                <Alerts />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <Profile />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/settings" element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/help" element={
+              <PrivateRoute>
+                <Help />
               </PrivateRoute>
             } />
           </Routes>

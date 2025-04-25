@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import './Dashboard.css';
@@ -190,34 +190,34 @@ const Dashboard: React.FC = () => {
         {/* Sidebar */}
         <aside className="sidebar">
           <nav className="sidebar-nav">
-            <a href="#" className="menu-item active">
+            <Link to="/dashboard" className="menu-item active">
               <FiHome size={20} />
               <span>Dashboard</span>
-            </a>
-            <a href="#" className="menu-item">
+            </Link>
+            <Link to="/users" className="menu-item">
               <FiUsers size={20} />
               <span>Usuários</span>
-            </a>
-            <a href="#" className="menu-item">
+            </Link>
+            <Link to="/logs" className="menu-item">
               <FiList size={20} />
               <span>Logs</span>
-            </a>
-            <a href="#" className="menu-item">
+            </Link>
+            <Link to="/alerts" className="menu-item">
               <FiAlertTriangle size={20} />
               <span>Alertas</span>
-            </a>
-            <a href="#" className="menu-item">
+            </Link>
+            <Link to="/profile" className="menu-item">
               <FiUser size={20} />
               <span>Perfil</span>
-            </a>
-            <a href="#" className="menu-item">
+            </Link>
+            <Link to="/settings" className="menu-item">
               <FiSettings size={20} />
               <span>Configurações</span>
-            </a>
-            <a href="#" className="menu-item">
+            </Link>
+            <Link to="/help" className="menu-item">
               <FiHelpCircle size={20} />
               <span>Ajuda</span>
-            </a>
+            </Link>
           </nav>
         </aside>
 
