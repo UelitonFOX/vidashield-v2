@@ -9,6 +9,9 @@ import { Register } from './pages/Register';
 import { OAuthCallback } from './pages/OAuthCallback';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PrivateRoute } from './components/PrivateRoute';
+import PermissionGuard from './components/PermissionGuard';
+import AcessoNegado from './pages/AcessoNegado';
+import { SystemPermissions } from './services/api/permissionService';
 
 // Importação das novas páginas
 import Users from './pages/Users';
@@ -52,6 +55,13 @@ const App: React.FC = () => {
             {/* Rota raiz que decide para onde redirecionar */}
             <Route path="/" element={<RootRedirect />} />
             
+            {/* Página de acesso negado */}
+            <Route path="/acesso-negado" element={
+              <PrivateRoute>
+                <AcessoNegado />
+              </PrivateRoute>
+            } />
+            
             {/* Rotas protegidas */}
             <Route path="/dashboard" element={
               <PrivateRoute>
@@ -59,22 +69,28 @@ const App: React.FC = () => {
               </PrivateRoute>
             } />
             
-            {/* Novas rotas protegidas */}
+            {/* Rotas que requerem permissões específicas */}
             <Route path="/users" element={
               <PrivateRoute>
-                <Users />
+                <PermissionGuard requiredPermission={SystemPermissions.VIEW_USERS}>
+                  <Users />
+                </PermissionGuard>
               </PrivateRoute>
             } />
             
             <Route path="/logs" element={
               <PrivateRoute>
-                <Logs />
+                <PermissionGuard requiredPermission={SystemPermissions.VIEW_LOGS}>
+                  <Logs />
+                </PermissionGuard>
               </PrivateRoute>
             } />
             
             <Route path="/alerts" element={
               <PrivateRoute>
-                <Alerts />
+                <PermissionGuard requiredPermission={SystemPermissions.VIEW_ALERTS}>
+                  <Alerts />
+                </PermissionGuard>
               </PrivateRoute>
             } />
             
@@ -86,7 +102,9 @@ const App: React.FC = () => {
             
             <Route path="/settings" element={
               <PrivateRoute>
-                <Settings />
+                <PermissionGuard requiredPermission={SystemPermissions.VIEW_SETTINGS}>
+                  <Settings />
+                </PermissionGuard>
               </PrivateRoute>
             } />
             

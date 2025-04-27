@@ -1,15 +1,12 @@
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ConditionalSidebar from './ConditionalSidebar';
 import { 
-  FiUsers, 
-  FiAlertTriangle, 
   FiSettings, 
   FiHelpCircle, 
   FiLogOut, 
   FiBell, 
-  FiHome,
-  FiList,
   FiUser
 } from 'react-icons/fi';
 
@@ -90,39 +87,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
       </header>
 
       <div className="dashboard-content">
-        {/* Sidebar */}
-        <aside className="sidebar">
-          <nav className="sidebar-nav">
-            <Link to="/dashboard" className={`menu-item ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-              <FiHome size={20} />
-              <span>Dashboard</span>
-            </Link>
-            <Link to="/users" className={`menu-item ${location.pathname === '/users' ? 'active' : ''}`}>
-              <FiUsers size={20} />
-              <span>Usuários</span>
-            </Link>
-            <Link to="/logs" className={`menu-item ${location.pathname === '/logs' ? 'active' : ''}`}>
-              <FiList size={20} />
-              <span>Logs</span>
-            </Link>
-            <Link to="/alerts" className={`menu-item ${location.pathname === '/alerts' ? 'active' : ''}`}>
-              <FiAlertTriangle size={20} />
-              <span>Alertas</span>
-            </Link>
-            <Link to="/profile" className={`menu-item ${location.pathname === '/profile' ? 'active' : ''}`}>
-              <FiUser size={20} />
-              <span>Perfil</span>
-            </Link>
-            <Link to="/settings" className={`menu-item ${location.pathname === '/settings' ? 'active' : ''}`}>
-              <FiSettings size={20} />
-              <span>Configurações</span>
-            </Link>
-            <Link to="/help" className={`menu-item ${location.pathname === '/help' ? 'active' : ''}`}>
-              <FiHelpCircle size={20} />
-              <span>Ajuda</span>
-            </Link>
-          </nav>
-        </aside>
+        {/* Sidebar condicional baseada nas permissões */}
+        <ConditionalSidebar />
 
         {/* Main Content */}
         <main className="main-content">

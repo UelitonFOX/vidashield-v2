@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Resposta da API não contém dados do usuário");
       }
       
-      console.log("Dados de usuário obtidos com sucesso:", response.data.email);
+      console.log("Dados de usuário obtidos com sucesso:", response.data.email, "Papel:", response.data.role);
       setUser(response.data);
       setToken(newToken);
       localStorage.setItem('token', newToken);
