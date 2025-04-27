@@ -30,6 +30,22 @@ def ensure_test_user_exists():
         print(f"Usuário de teste criado: {test_email} / password")
     return test_user
 
+# Garantir que exista um admin padrão
+def ensure_default_admin_exists():
+    admin_email = "admin@vidashield.com"
+    admin_user = User.query.filter_by(email=admin_email).first()
+    if not admin_user:
+        admin_user = User(
+            email=admin_email,
+            password_hash=generate_password_hash("vidashield@admin"),
+            name="Administrador do Sistema",
+            role="admin"
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        print(f"Administrador padrão criado: {admin_email} / vidashield@admin")
+    return admin_user
+
 # Configuração do OAuth
 def setup_oauth(app):
     oauth.init_app(app)
@@ -66,27 +82,33 @@ def setup_oauth(app):
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    # Garante que o usuário de teste existe
-    ensure_test_user_exists()
-    
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
     
-    print(f"Tentativa de login para: {email}")
+    # Garante que o usuário de teste e admin existam
+    ensure_test_user_exists()
+    ensure_default_admin_exists()
     
     user = User.query.filter_by(email=email).first()
     
-    if user and check_password_hash(user.password_hash, password):
-        access_token = create_access_token(
-            identity=str(user.id),
-            expires_delta=timedelta(hours=1)
-        )
-        print(f"Login bem-sucedido para: {email}")
-        return jsonify(access_token=access_token), 200
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({"msg": "Credenciais inválidas"}), 401
         
-    print(f"Login falhou para: {email}")
-    return jsonify({"msg": "Credenciais inválidas"}), 401
+    access_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(hours=1)
+    )
+    
+    return jsonify({
+        "access_token": access_token,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
+    })
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -208,7 +230,23 @@ def get_user():
     return jsonify({
         "id": user.id,
         "email": user.email,
-        "name": user.name
+        "name": user.name,
+        "role": user.role
+    })
+
+@auth_bp.route('/check-role')
+@jwt_required()
+def check_role():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({"msg": "Usuário não encontrado"}), 404
+        
+    return jsonify({
+        "isAdmin": user.role == 'admin',
+        "isManager": user.role == 'manager',
+        "role": user.role
     })
 
 @auth_bp.route('/recover', methods=['POST'])
@@ -289,6 +327,40 @@ def reset_password():
     db.session.commit()
     
     return jsonify({"msg": "Senha alterada com sucesso"}), 200
+
+@auth_bp.route('/create-admin', methods=['POST'])
+def create_admin():
+    # Verificar se já existe um admin
+    if User.query.filter_by(role="admin").first():
+        return jsonify({"msg": "Já existe pelo menos um administrador no sistema"}), 400
+    
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    name = data.get('name')
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({"msg": "Email já cadastrado"}), 400
+        
+    user = User(
+        email=email,
+        password_hash=generate_password_hash(password),
+        name=name,
+        role="admin"
+    )
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    return jsonify({
+        "msg": "Administrador criado com sucesso",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
+    }), 201
 
 # Função auxiliar para gerar tokens de teste
 def _generate_test_token(provider):
