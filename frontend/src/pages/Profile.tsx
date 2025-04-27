@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { FiUser, FiSave, FiKey, FiMail, FiUserCheck, FiEye, FiEyeOff, FiShield } from 'react-icons/fi';
+import { FiUser, FiSave, FiKey, FiMail, FiUserCheck, FiEye, FiEyeOff, FiShield, FiCheckCircle, FiAlertCircle, FiLock } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import './Dashboard.css';
+import './Profile.css';
 
 interface PasswordFormData {
   currentPassword: string;
@@ -124,7 +125,7 @@ const Profile: React.FC = () => {
         </div>
         
         <div className="profile-content">
-          <div className="profile-info-card">
+          <div className="profile-info-card chart-container">
             <div className="profile-avatar">
               <div className="avatar-container">
                 <img src="/avatar.svg" alt="Avatar" className="avatar" />
@@ -134,29 +135,31 @@ const Profile: React.FC = () => {
             <div className="profile-details">
               <h3>{user?.name || 'Usuário'}</h3>
               
-              <div className="profile-detail-item">
-                <FiMail className="detail-icon" />
-                <span>{user?.email || 'email@exemplo.com'}</span>
-              </div>
-              
-              <div className="profile-detail-item">
-                <FiUserCheck className="detail-icon" />
-                <span>Função: {getRoleName(user?.role)}</span>
-              </div>
-              
-              <div className="profile-detail-item">
-                <FiShield className="detail-icon" />
-                <span>Status: <span className="status-active">Ativo</span></span>
+              <div className="profile-details-grid">
+                <div className="profile-detail-item stat-card">
+                  <FiMail size={24} color="#339999" />
+                  <span>{user?.email || 'email@exemplo.com'}</span>
+                </div>
+                
+                <div className="profile-detail-item stat-card">
+                  <FiUserCheck size={24} color="#339999" />
+                  <span>Função: <span className="role-badge">{getRoleName(user?.role)}</span></span>
+                </div>
+                
+                <div className="profile-detail-item stat-card">
+                  <FiShield size={24} color="#339999" />
+                  <span>Status: <span className="status-badge">Ativo</span></span>
+                </div>
               </div>
             </div>
           </div>
           
           <div className="profile-actions">
             <button 
-              className={`action-card ${showPasswordSection ? 'active' : ''}`}
+              className={`action-card stat-card ${showPasswordSection ? 'active' : 'inactive'}`}
               onClick={() => setShowPasswordSection(!showPasswordSection)}
             >
-              <FiKey size={24} />
+              <FiKey size={24} color="#339999" />
               <div>
                 <h4>Alterar Senha</h4>
                 <p>Atualize sua senha de acesso</p>
@@ -164,8 +167,8 @@ const Profile: React.FC = () => {
             </button>
             
             {showThemeToggle && (
-              <button className="action-card">
-                <FiEye size={24} />
+              <button className="action-card stat-card inactive">
+                <FiEye size={24} color="#339999" />
                 <div>
                   <h4>Preferências de tema</h4>
                   <p>Altere o tema da interface</p>
@@ -175,30 +178,41 @@ const Profile: React.FC = () => {
           </div>
           
           {showPasswordSection && (
-            <div className="profile-password-section">
-              <h3>Alterar Senha</h3>
+            <div className="password-section chart-container">
+              <h3>
+                <FiKey size={20} color="#339999" />
+                Alterar Senha
+              </h3>
               
               {message && (
-                <div className={`message ${message.type}`}>
+                <div className={`form-message ${message.type}`}>
+                  {message.type === 'success' ? (
+                    <FiCheckCircle size={18} />
+                  ) : (
+                    <FiAlertCircle size={18} />
+                  )}
                   {message.text}
                 </div>
               )}
               
-              <form onSubmit={handleSubmitPassword}>
+              <form onSubmit={handleSubmitPassword} className="password-form">
                 <div className="form-group">
-                  <label htmlFor="currentPassword">Senha Atual</label>
+                  <label htmlFor="currentPassword">
+                    <FiLock size={16} color="#339999" /> Senha atual
+                  </label>
                   <div className="password-input-container">
                     <input 
-                      type={showCurrentPassword ? "text" : "password"} 
+                      type={showCurrentPassword ? "text" : "password"}
                       id="currentPassword"
                       name="currentPassword"
                       value={passwordData.currentPassword}
                       onChange={handlePasswordChange}
+                      className="password-input"
                     />
                     <button 
-                      type="button"
-                      className="toggle-password"
+                      type="button" 
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="toggle-password-button"
                     >
                       {showCurrentPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                     </button>
@@ -206,51 +220,64 @@ const Profile: React.FC = () => {
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="newPassword">Nova Senha</label>
+                  <label htmlFor="newPassword">
+                    <FiLock size={16} color="#339999" /> Nova senha
+                  </label>
                   <div className="password-input-container">
                     <input 
-                      type={showNewPassword ? "text" : "password"} 
+                      type={showNewPassword ? "text" : "password"}
                       id="newPassword"
                       name="newPassword"
                       value={passwordData.newPassword}
                       onChange={handlePasswordChange}
+                      className="password-input"
                     />
                     <button 
-                      type="button"
-                      className="toggle-password"
+                      type="button" 
                       onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="toggle-password-button"
                     >
                       {showNewPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                     </button>
                   </div>
-                  <small className="form-hint">Mínimo de 8 caracteres</small>
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="confirmPassword">Confirmar Nova Senha</label>
-                  <input 
-                    type="password" 
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                  />
+                  <label htmlFor="confirmPassword">
+                    <FiLock size={16} color="#339999" /> Confirmar nova senha
+                  </label>
+                  <div className="password-input-container">
+                    <input 
+                      type={showNewPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      className="password-input"
+                    />
+                  </div>
                 </div>
                 
                 <div className="form-actions">
                   <button 
                     type="button" 
-                    className="btn-cancel"
                     onClick={() => setShowPasswordSection(false)}
+                    className="cancel-button"
                   >
                     Cancelar
                   </button>
                   <button 
                     type="submit" 
-                    className="btn-primary"
+                    className="submit-button"
                     disabled={loading}
                   >
-                    {loading ? 'Alterando...' : 'Alterar Senha'}
+                    {loading ? (
+                      <>Processando...</>
+                    ) : (
+                      <>
+                        <FiSave size={18} /> Salvar alterações
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

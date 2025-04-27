@@ -11,7 +11,7 @@ import {
   FiArrowRight
 } from 'react-icons/fi';
 import api from '../services/api';
-import './Dashboard.css';
+import './Alerts.css';
 
 interface AlertDetail {
   user_id: number;
@@ -261,10 +261,11 @@ const Alerts: React.FC = () => {
                   aria-label="Filtrar por status"
                   value={showResolved === null ? '' : showResolved ? 'resolved' : 'active'}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '') setShowResolved(null);
-                    else if (value === 'resolved') setShowResolved(true);
-                    else setShowResolved(false);
+                    if (e.target.value === '') {
+                      setShowResolved(null);
+                    } else {
+                      setShowResolved(e.target.value === 'resolved');
+                    }
                   }}
                   className="filter-select"
                 >
@@ -276,20 +277,22 @@ const Alerts: React.FC = () => {
               
               {/* Botão para limpar filtros */}
               {(selectedSeverity || showResolved !== null || searchTerm) && (
-                <button 
-                  type="button" 
-                  onClick={clearFilters}
-                  className="clear-filters-btn"
-                >
-                  <FiX size={18} />
-                  <span>Limpar Filtros</span>
-                </button>
+                <div className="filter-actions">
+                  <button 
+                    type="button" 
+                    onClick={clearFilters}
+                    className="btn-secondary"
+                  >
+                    <FiX size={18} />
+                    <span>Limpar Filtros</span>
+                  </button>
+                </div>
               )}
             </div>
           </form>
         </div>
         
-        {/* Lista de Alertas */}
+        {/* Lista de alertas */}
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
@@ -307,76 +310,111 @@ const Alerts: React.FC = () => {
           </div>
         ) : (
           <div className="alerts-list-container">
-            <p className="results-count">Exibindo {alerts.length} de {totalAlerts} alertas</p>
+            <p className="results-count">
+              Exibindo {alerts.length} de {totalAlerts} alertas
+            </p>
             
-            <div className="alerts-list">
-              {alerts.length > 0 ? (
-                alerts.map((alert) => (
-                  <div key={alert.id} className={`alert-item ${alert.severity} ${alert.resolved ? 'resolved' : ''}`}>
-                    <div className="alert-item-header">
-                      {getSeverityIcon(alert.severity)}
-                      <div className="alert-title">{alert.type}</div>
-                      <div className="alert-time">{alert.formatted_date}</div>
-                    </div>
-                    
-                    <div className="alert-item-content">
-                      <p>Usuário: {alert.details.user_email}</p>
-                      {alert.details.ip_address && <p>IP: {alert.details.ip_address}</p>}
-                    </div>
-                    
-                    <div className="alert-item-actions">
-                      <button 
-                        className="action-button details"
-                        onClick={() => openAlertDetails(alert)}
-                      >
-                        Detalhes <FiArrowRight size={14} />
-                      </button>
-                      
-                      {!alert.resolved && (
-                        <button 
-                          className="action-button resolve"
-                          onClick={() => handleResolveAlert(alert.id)}
-                        >
-                          <FiCheckCircle size={16} /> Resolver
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="no-results">
-                  Nenhum alerta encontrado com os filtros selecionados.
-                </div>
-              )}
+            <div className="table-responsive">
+              <table className="alerts-table">
+                <thead>
+                  <tr>
+                    <th>Severidade</th>
+                    <th>Tipo</th>
+                    <th>Data/Hora</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alerts.length > 0 ? (
+                    alerts.map(alert => (
+                      <tr key={alert.id} onClick={() => openAlertDetails(alert)}>
+                        <td>
+                          <div className="severity-display">
+                            {getSeverityIcon(alert.severity)}
+                            <span className={`severity-text ${alert.severity}`}>
+                              {alert.severity === 'critical' ? 'Crítico' : 
+                               alert.severity === 'warning' ? 'Aviso' : 'Informativo'}
+                            </span>
+                          </div>
+                        </td>
+                        <td>{alert.type}</td>
+                        <td>{alert.formatted_date}</td>
+                        <td>
+                          <span className={`status-indicator ${alert.resolved ? 'resolved' : 'active'}`}>
+                            {alert.resolved ? 'Resolvido' : 'Ativo'}
+                          </span>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <div className="alert-actions">
+                            <button 
+                              className="alert-detail-button"
+                              onClick={() => openAlertDetails(alert)}
+                              title="Ver detalhes"
+                            >
+                              <FiArrowRight size={16} />
+                            </button>
+                            
+                            {!alert.resolved && (
+                              <button 
+                                className="resolve-button"
+                                onClick={() => handleResolveAlert(alert.id)}
+                                title="Marcar como resolvido"
+                              >
+                                Resolver
+                              </button>
+                            )}
+                            
+                            {alert.resolved && (
+                              <button 
+                                className="resolve-button resolved"
+                                disabled
+                                title="Alerta já resolvido"
+                              >
+                                <FiCheckCircle size={16} />
+                                Resolvido
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="empty-alerts-message">
+                        Nenhum alerta encontrado com os filtros selecionados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
             
             {/* Paginação */}
             {totalPages > 1 && (
               <div className="pagination">
                 <button 
+                  className="page-button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="pagination-button"
                 >
                   Anterior
                 </button>
                 
-                <div className="page-numbers">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`page-number ${currentPage === page ? 'active' : ''}`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
+                {[...Array(totalPages)].map((_, index) => (
+                  <button
+                    key={index + 1}
+                    className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
+                    onClick={() => handlePageChange(index + 1)}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
                 
                 <button 
+                  className="page-button"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="pagination-button"
                 >
                   Próxima
                 </button>
@@ -385,82 +423,80 @@ const Alerts: React.FC = () => {
           </div>
         )}
         
-        {/* Modal de detalhes do alerta */}
+        {/* Modal de detalhes */}
         {showDetailsModal && selectedAlert && (
           <div className="modal-overlay">
-            <div className="modal-content alert-details-modal">
-              <h3>
-                {getSeverityIcon(selectedAlert.severity)}
-                Detalhes do Alerta
-              </h3>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Detalhes do Alerta</h3>
+                <button className="close-button" onClick={closeDetailsModal}>×</button>
+              </div>
               
-              <div className="alert-details">
+              <div className="modal-body">
                 <div className="alert-detail-item">
-                  <span className="detail-label">Tipo:</span>
-                  <span className="detail-value">{selectedAlert.type}</span>
+                  <span className="alert-detail-label">Severidade</span>
+                  <div className="severity-display">
+                    {getSeverityIcon(selectedAlert.severity)}
+                    <span className={`severity-text ${selectedAlert.severity}`}>
+                      {selectedAlert.severity === 'critical' ? 'Crítico' : 
+                      selectedAlert.severity === 'warning' ? 'Aviso' : 'Informativo'}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="alert-detail-item">
-                  <span className="detail-label">Data/Hora:</span>
-                  <span className="detail-value">{selectedAlert.formatted_date}</span>
+                  <span className="alert-detail-label">Tipo</span>
+                  <span className="alert-detail-value">{selectedAlert.type}</span>
                 </div>
                 
                 <div className="alert-detail-item">
-                  <span className="detail-label">Severidade:</span>
-                  <span className={`detail-value severity-badge ${selectedAlert.severity}`}>
-                    {selectedAlert.severity === 'critical' ? 'Crítico' : 
-                     selectedAlert.severity === 'warning' ? 'Aviso' : 'Informativo'}
-                  </span>
-                </div>
-                
-                <div className="alert-detail-item">
-                  <span className="detail-label">Status:</span>
-                  <span className={`detail-value status-badge ${selectedAlert.resolved ? 'resolved' : 'active'}`}>
-                    {selectedAlert.resolved ? 'Resolvido' : 'Ativo'}
-                  </span>
-                </div>
-                
-                <div className="alert-detail-item">
-                  <span className="detail-label">Usuário:</span>
-                  <span className="detail-value">{selectedAlert.details.user_email}</span>
+                  <span className="alert-detail-label">Usuário</span>
+                  <span className="alert-detail-value">{selectedAlert.details.user_email}</span>
                 </div>
                 
                 {selectedAlert.details.ip_address && (
                   <div className="alert-detail-item">
-                    <span className="detail-label">IP:</span>
-                    <span className="detail-value">{selectedAlert.details.ip_address}</span>
+                    <span className="alert-detail-label">Endereço IP</span>
+                    <span className="alert-detail-value">{selectedAlert.details.ip_address}</span>
                   </div>
                 )}
                 
                 {selectedAlert.details.attempts && (
                   <div className="alert-detail-item">
-                    <span className="detail-label">Tentativas:</span>
-                    <span className="detail-value">{selectedAlert.details.attempts}</span>
+                    <span className="alert-detail-label">Tentativas</span>
+                    <span className="alert-detail-value">{selectedAlert.details.attempts}</span>
                   </div>
                 )}
                 
                 {selectedAlert.details.usual_ip && (
                   <div className="alert-detail-item">
-                    <span className="detail-label">IP usual:</span>
-                    <span className="detail-value">{selectedAlert.details.usual_ip}</span>
+                    <span className="alert-detail-label">IP Usual</span>
+                    <span className="alert-detail-value">{selectedAlert.details.usual_ip}</span>
                   </div>
                 )}
                 
-                {selectedAlert.resolved && selectedAlert.resolved_time && (
+                <div className="alert-detail-item">
+                  <span className="alert-detail-label">Data/Hora</span>
+                  <span className="alert-detail-value">{selectedAlert.formatted_date}</span>
+                </div>
+                
+                <div className="alert-detail-item">
+                  <span className="alert-detail-label">Status</span>
+                  <span className={`status-indicator ${selectedAlert.resolved ? 'resolved' : 'active'}`}>
+                    {selectedAlert.resolved ? 'Resolvido' : 'Ativo'}
+                  </span>
+                </div>
+                
+                {selectedAlert.resolved && (
                   <div className="alert-detail-item">
-                    <span className="detail-label">Resolvido em:</span>
-                    <span className="detail-value">
-                      {new Date(selectedAlert.resolved_time).toLocaleString()}
-                    </span>
+                    <span className="alert-detail-label">Resolvido em</span>
+                    <span className="alert-detail-value">{selectedAlert.resolved_time}</span>
                   </div>
                 )}
               </div>
               
-              <div className="modal-actions">
-                <button 
-                  className="btn-cancel"
-                  onClick={closeDetailsModal}
-                >
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={closeDetailsModal}>
                   Fechar
                 </button>
                 
@@ -472,7 +508,8 @@ const Alerts: React.FC = () => {
                       closeDetailsModal();
                     }}
                   >
-                    <FiCheckCircle size={18} /> Marcar como Resolvido
+                    <FiCheckCircle size={18} />
+                    Marcar como Resolvido
                   </button>
                 )}
               </div>

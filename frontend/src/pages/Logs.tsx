@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { FiList, FiDownload, FiFilter, FiSearch, FiX, FiCalendar } from 'react-icons/fi';
+import { FiList, FiDownload, FiFilter, FiSearch, FiX, FiCalendar, FiAlertCircle } from 'react-icons/fi';
 import api from '../services/api';
 import './Dashboard.css';
+import './Logs.css';
 
 interface Log {
   id: number;
@@ -117,13 +118,23 @@ const Logs: React.FC = () => {
     }
   };
   
+  const getActionIcon = (action: string) => {
+    if (action.includes('falha') || action.includes('bloqueio')) {
+      return <div className="alert-icon critical"><FiAlertCircle size={16} /></div>;
+    } else if (action.includes('sucedido') || action.includes('Criação')) {
+      return <div className="alert-icon success"><FiAlertCircle size={16} /></div>;
+    } else {
+      return <div className="alert-icon warning"><FiAlertCircle size={16} /></div>;
+    }
+  };
+  
   return (
     <DashboardLayout title="Logs do Sistema">
       <div className="logs-page">
         {/* Cabeçalho com ações */}
         <div className="page-header">
           <h2 className="section-title">Registro de Atividades</h2>
-          <button className="btn-primary" onClick={handleExport}>
+          <button className="action-button" onClick={handleExport}>
             <FiDownload size={18} />
             <span>Exportar Logs</span>
           </button>
@@ -133,22 +144,26 @@ const Logs: React.FC = () => {
         <div className="filters-section">
           <form onSubmit={handleSearch} className="search-form">
             <div className="search-input-container">
-              <input 
-                type="text" 
-                placeholder="Buscar por usuário, ação ou IP..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              <button type="submit" className="search-button" title="Buscar logs">
-                <FiSearch size={18} />
-              </button>
+              <div className="stat-card">
+                <input 
+                  type="text" 
+                  placeholder="Buscar por usuário, ação ou IP..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+                <button type="submit" className="search-button" title="Buscar logs">
+                  <FiSearch size={18} color="#339999" />
+                </button>
+              </div>
             </div>
             
             <div className="filters-container">
               {/* Filtro por tipo de log */}
-              <div className="filter-group">
-                <label htmlFor="log-type-filter"><FiFilter /> Tipo:</label>
+              <div className="filter-group stat-card">
+                <label htmlFor="log-type-filter">
+                  <FiFilter color="#339999" /> Tipo:
+                </label>
                 <select 
                   id="log-type-filter"
                   aria-label="Filtrar por tipo de log"
@@ -164,8 +179,10 @@ const Logs: React.FC = () => {
               </div>
               
               {/* Filtro de data inicial */}
-              <div className="filter-group">
-                <label htmlFor="from-date"><FiCalendar /> De:</label>
+              <div className="filter-group stat-card">
+                <label htmlFor="from-date">
+                  <FiCalendar color="#339999" /> De:
+                </label>
                 <input 
                   id="from-date"
                   type="date" 
@@ -176,8 +193,10 @@ const Logs: React.FC = () => {
               </div>
               
               {/* Filtro de data final */}
-              <div className="filter-group">
-                <label htmlFor="to-date"><FiCalendar /> Até:</label>
+              <div className="filter-group stat-card">
+                <label htmlFor="to-date">
+                  <FiCalendar color="#339999" /> Até:
+                </label>
                 <input 
                   id="to-date"
                   type="date" 
@@ -192,7 +211,7 @@ const Logs: React.FC = () => {
                 <button 
                   type="button" 
                   onClick={clearFilters}
-                  className="clear-filters-btn"
+                  className="action-button"
                 >
                   <FiX size={18} />
                   <span>Limpar Filtros</span>
@@ -219,69 +238,66 @@ const Logs: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="logs-table-container">
-            <p className="results-count">Exibindo {logs.length} de {totalLogs} registros</p>
+          <div className="logs-table-container chart-container">
+            <p className="results-count">
+              Exibindo {logs.length} de {totalLogs} registros
+            </p>
             
-            <table className="logs-table">
-              <thead>
-                <tr>
-                  <th>Ação</th>
-                  <th>Usuário</th>
-                  <th>IP</th>
-                  <th>Data/Hora</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.length > 0 ? (
-                  logs.map((log) => (
+            <div className="table-responsive">
+              <table className="logs-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Ação</th>
+                    <th>Usuário</th>
+                    <th>IP</th>
+                    <th>Data/Hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map(log => (
                     <tr key={log.id}>
+                      <td>{log.id}</td>
                       <td>
-                        <span className={`action-badge ${getActionClassname(log.action)}`}>
-                          {log.action}
-                        </span>
+                        <div className="log-action">
+                          {getActionIcon(log.action)}
+                          <span className={getActionClassname(log.action)}>{log.action}</span>
+                        </div>
                       </td>
                       <td>{log.user_name}</td>
                       <td>{log.ip_address}</td>
                       <td>{log.formatted_date}</td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="no-results">
-                      Nenhum log encontrado com os filtros selecionados.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             
             {/* Paginação */}
             {totalPages > 1 && (
               <div className="pagination">
                 <button 
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
                   className="pagination-button"
+                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
                 >
                   Anterior
                 </button>
                 
-                <div className="page-numbers">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`page-number ${currentPage === page ? 'active' : ''}`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
+                {[...Array(totalPages)].map((_, index) => (
+                  <button
+                    key={index + 1}
+                    className={`pagination-button ${currentPage === index + 1 ? 'active' : ''}`}
+                    onClick={() => handlePageChange(index + 1)}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
                 
                 <button 
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
                   className="pagination-button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
                 >
                   Próxima
                 </button>

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../services/api';
-import { FiEdit, FiKey, FiUserCheck, FiUserMinus, FiUserPlus, FiSearch, FiFilter, FiX } from 'react-icons/fi';
+import { FiEdit, FiKey, FiUserCheck, FiUserMinus, FiUserPlus, FiSearch, FiFilter, FiX, FiAlertCircle } from 'react-icons/fi';
+import './Dashboard.css';
+import './Users.css';
+import { isAdmin, isManagerOrAdmin } from '../services/api/permissionService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface User {
   id: number;
@@ -13,6 +17,7 @@ interface User {
 }
 
 const Users: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +35,12 @@ const Users: React.FC = () => {
   // Modal
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  // Verificar se o usuário atual é admin
+  const userIsAdmin = isAdmin(currentUser);
+  
+  // Verificar se pode gerenciar (admin ou gerente)
+  const canManageUsers = isManagerOrAdmin(currentUser);
   
   useEffect(() => {
     const fetchUsers = async () => {
@@ -130,37 +141,43 @@ const Users: React.FC = () => {
         {/* Cabeçalho com ações */}
         <div className="page-header">
           <h2 className="section-title">Usuários do Sistema</h2>
-          <button 
-            className="btn-primary"
-            onClick={() => {
-              setSelectedUser(null);
-              setShowModal(true);
-            }}
-          >
-            <FiUserPlus size={18} />
-            <span>Novo Usuário</span>
-          </button>
+          {canManageUsers && (
+            <button 
+              className="action-button"
+              onClick={() => {
+                setSelectedUser(null);
+                setShowModal(true);
+              }}
+            >
+              <FiUserPlus size={18} />
+              <span>Novo Usuário</span>
+            </button>
+          )}
         </div>
         
         {/* Seção de Filtros */}
         <div className="filters-section">
           <form onSubmit={handleSearch} className="search-form">
             <div className="search-input-container">
-              <input 
-                type="text" 
-                placeholder="Buscar por nome ou email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              <button type="submit" className="search-button" title="Buscar usuários">
-                <FiSearch size={18} />
-              </button>
+              <div className="stat-card">
+                <input 
+                  type="text" 
+                  placeholder="Buscar por nome ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+                <button type="submit" className="search-button" title="Buscar usuários">
+                  <FiSearch size={18} color="#339999" />
+                </button>
+              </div>
             </div>
             
             <div className="filters-container">
-              <div className="filter-group">
-                <label htmlFor="status-filter"><FiFilter /> Status:</label>
+              <div className="filter-group stat-card">
+                <label htmlFor="status-filter">
+                  <FiFilter color="#339999" /> Status:
+                </label>
                 <select 
                   id="status-filter"
                   aria-label="Filtrar por status"
@@ -174,8 +191,10 @@ const Users: React.FC = () => {
                 </select>
               </div>
               
-              <div className="filter-group">
-                <label htmlFor="role-filter"><FiFilter /> Função:</label>
+              <div className="filter-group stat-card">
+                <label htmlFor="role-filter">
+                  <FiFilter color="#339999" /> Função:
+                </label>
                 <select 
                   id="role-filter"
                   aria-label="Filtrar por função"
@@ -194,7 +213,7 @@ const Users: React.FC = () => {
                 <button 
                   type="button" 
                   onClick={clearFilters}
-                  className="clear-filters-btn"
+                  className="action-button"
                 >
                   <FiX size={18} />
                   <span>Limpar Filtros</span>
@@ -224,79 +243,98 @@ const Users: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="users-table-container">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Email</th>
-                  <th>Função</th>
-                  <th>Status</th>
-                  <th>Último Acesso</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length > 0 ? (
-                  users.map(user => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>
-                        <span className={`role-badge role-${user.role}`}>
-                          {user.role === 'admin' ? 'Administrador' : 
-                           user.role === 'manager' ? 'Gerente' : 'Usuário'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${user.status}`}>
-                          {user.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                      <td>{user.lastLogin}</td>
-                      <td className="actions-cell">
-                        <button 
-                          className="action-button edit" 
-                          onClick={() => handleEditUser(user)}
-                          title="Editar Usuário"
-                        >
-                          <FiEdit size={18} />
-                        </button>
-                        <button 
-                          className="action-button reset-pwd" 
-                          onClick={() => handleResetPassword(user.id)}
-                          title="Resetar Senha"
-                        >
-                          <FiKey size={18} />
-                        </button>
-                        {user.role !== 'admin' && (
-                          <button 
-                            className="action-button promote" 
-                            onClick={() => handlePromoteUser(user.id)}
-                            title="Promover Usuário"
-                          >
-                            <FiUserCheck size={18} />
-                          </button>
-                        )}
-                        <button 
-                          className={`action-button ${user.status === 'active' ? 'deactivate' : 'activate'}`}
-                          onClick={() => handleToggleStatus(user.id, user.status)}
-                          title={user.status === 'active' ? 'Desativar Usuário' : 'Ativar Usuário'}
-                        >
-                          <FiUserMinus size={18} />
-                        </button>
+          <div className="users-table-container chart-container">
+            <div className="table-responsive">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Função</th>
+                    <th>Status</th>
+                    <th>Último Acesso</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length > 0 ? (
+                    users.map(user => (
+                      <tr key={user.id}>
+                        <td>{user.name}</td>
+                        <td>{user.email}</td>
+                        <td>
+                          <span className={`role-badge role-${user.role}`}>
+                            {user.role === 'admin' ? 'Administrador' : 
+                             user.role === 'manager' ? 'Gerente' : 'Usuário'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${user.status}`}>
+                            {user.status === 'active' ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td>{user.lastLogin}</td>
+                        <td className="actions-cell">
+                          <div className="table-actions">
+                            {canManageUsers && (
+                              <button 
+                                className="action-icon-button"
+                                onClick={() => handleEditUser(user)}
+                                title="Editar usuário"
+                              >
+                                <FiEdit size={18} />
+                              </button>
+                            )}
+                            
+                            {canManageUsers && (
+                              <button 
+                                className="action-icon-button"
+                                onClick={() => handleResetPassword(user.id)}
+                                title="Resetar senha"
+                              >
+                                <FiKey size={18} />
+                              </button>
+                            )}
+                            
+                            {userIsAdmin && user.role !== 'admin' && (
+                              <button 
+                                className="action-icon-button promote"
+                                onClick={() => handlePromoteUser(user.id)}
+                                title="Promover a administrador"
+                              >
+                                <FiUserCheck size={18} />
+                              </button>
+                            )}
+                            
+                            {canManageUsers && (
+                              <button 
+                                className="action-icon-button"
+                                onClick={() => handleToggleStatus(user.id, user.status)}
+                                title={user.status === 'active' ? 'Desativar usuário' : 'Ativar usuário'}
+                              >
+                                {user.status === 'active' ? 
+                                  <FiUserMinus size={18} /> : 
+                                  <FiUserCheck size={18} />
+                                }
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="no-data">
+                        <div className="no-data-message">
+                          <FiAlertCircle size={24} />
+                          <p>Nenhum usuário encontrado</p>
+                        </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="no-results">
-                      Nenhum usuário encontrado com os filtros selecionados.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
             
             {/* Paginação */}
             {totalPages > 1 && (
@@ -333,34 +371,46 @@ const Users: React.FC = () => {
           </div>
         )}
         
-        {/* Modal para novo usuário ou edição - implementação básica */}
+        {/* Modal para novo usuário ou edição */}
         {showModal && (
           <div className="modal-overlay">
             <div className="modal-content">
-              <h3>{selectedUser ? 'Editar Usuário' : 'Novo Usuário'}</h3>
+              <h3>
+                {selectedUser ? 'Editar Usuário' : 'Novo Usuário'}
+              </h3>
               <form>
-                {/* Formulário será implementado completamente em futura iteração */}
                 <div className="form-group">
                   <label>Nome</label>
-                  <input type="text" placeholder="Nome completo" defaultValue={selectedUser?.name || ''} />
+                  <input 
+                    type="text" 
+                    placeholder="Nome completo" 
+                    defaultValue={selectedUser?.name || ''} 
+                  />
                 </div>
                 <div className="form-group">
                   <label>Email</label>
-                  <input type="email" placeholder="Email" defaultValue={selectedUser?.email || ''} />
+                  <input 
+                    type="email" 
+                    placeholder="Email" 
+                    defaultValue={selectedUser?.email || ''} 
+                  />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="user-role">Função</label>
-                  <select 
-                    id="user-role" 
-                    aria-label="Selecionar função do usuário"
-                    defaultValue={selectedUser?.role || 'user'}
-                  >
-                    <option value="user">Usuário</option>
-                    <option value="manager">Gerente</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-                <div className="form-actions">
+                {userIsAdmin && (
+                  <div className="form-group">
+                    <label>Função</label>
+                    <select 
+                      id="user-role" 
+                      aria-label="Selecionar função do usuário"
+                      defaultValue={selectedUser?.role || 'user'}
+                    >
+                      <option value="user">Usuário</option>
+                      <option value="manager">Gerente</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </div>
+                )}
+                
+                <div className="modal-actions">
                   <button 
                     type="button" 
                     className="btn-cancel"

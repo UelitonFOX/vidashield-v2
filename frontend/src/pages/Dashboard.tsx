@@ -22,7 +22,9 @@ import {
   FiActivity,
   FiFileText,
   FiUserX,
-  FiLock
+  FiLock,
+  FiTrendingUp,
+  FiPieChart
 } from 'react-icons/fi';
 
 interface DashboardData {
@@ -223,54 +225,136 @@ const Dashboard: React.FC = () => {
 
         {/* Main Content */}
         <main className="main-content">
-          {/* Stats Grid */}
-          <section className="stats-grid">
-            <div className="stat-card">
-              <FiUsers className="stat-icon" />
-              <div className="stat-content">
-                <div className="stat-title">Usuários Ativos</div>
-                <div className="stat-value">120</div>
-                <div className="description">Total de contas ativas no sistema</div>
+          {/* Stats Overview */}
+          <section className="stats-overview">
+            <h2 className="section-title">Visão Geral do Sistema</h2>
+            
+            {/* Stats Grid */}
+            <div className="stats-grid">
+              <div className="stat-card gradient-users">
+                <div className="stat-header">
+                  <FiUsers className="stat-icon" />
+                  <div className="stat-trend up">
+                    <FiTrendingUp size={16} />
+                    <span>5%</span>
+                  </div>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-title">Usuários Ativos</div>
+                  <div className="stat-value">120</div>
+                  <div className="stat-description">Total de contas ativas no sistema</div>
+                </div>
+                <div className="stat-footer">
+                  <div className="stat-indicator">
+                    <div className="stat-indicator-bar stat-indicator-width-80"></div>
+                  </div>
+                  <div className="stat-percentage">80%</div>
+                </div>
               </div>
-            </div>
-            <div className="stat-card">
-              <FiUserX className="stat-icon" />
-              <div className="stat-content">
-                <div className="stat-title">Usuários Inativos</div>
-                <div className="stat-value">4</div>
-                <div className="description">Contas que não acessam o sistema há 30 dias</div>
+
+              <div className="stat-card gradient-inactive">
+                <div className="stat-header">
+                  <FiUserX className="stat-icon" />
+                  <div className="stat-trend down">
+                    <FiTrendingUp size={16} />
+                    <span>2%</span>
+                  </div>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-title">Usuários Inativos</div>
+                  <div className="stat-value">4</div>
+                  <div className="stat-description">Contas que não acessam o sistema há 30 dias</div>
+                </div>
+                <div className="stat-footer">
+                  <div className="stat-indicator">
+                    <div className="stat-indicator-bar stat-indicator-width-10"></div>
+                  </div>
+                  <div className="stat-percentage">10%</div>
+                </div>
               </div>
-            </div>
-            <div className="stat-card">
-              <FiCheckCircle className="stat-icon" />
-              <div className="stat-content">
-                <div className="stat-title">Logins Hoje</div>
-                <div className="stat-value">5</div>
-                <div className="description">Quantidade de logins realizados nas últimas 24h</div>
+
+              <div className="stat-card gradient-logins">
+                <div className="stat-header">
+                  <FiCheckCircle className="stat-icon" />
+                  <div className="stat-trend up">
+                    <FiTrendingUp size={16} />
+                    <span>12%</span>
+                  </div>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-title">Logins Hoje</div>
+                  <div className="stat-value">5</div>
+                  <div className="stat-description">Quantidade de logins realizados nas últimas 24h</div>
+                </div>
+                <div className="stat-footer">
+                  <div className="stat-indicator">
+                    <div className="stat-indicator-bar stat-indicator-width-45"></div>
+                  </div>
+                  <div className="stat-percentage">45%</div>
+                </div>
               </div>
-            </div>
-            <div className="stat-card">
-              <FiAlertTriangle className="stat-icon" />
-              <div className="stat-content">
-                <div className="stat-title">Alertas Críticos</div>
-                <div className="stat-value">3</div>
-                <div className="description">Falhas de login, acessos de IP desconhecido ou comportamentos suspeitos</div>
+
+              <div className="stat-card gradient-alerts">
+                <div className="stat-header">
+                  <FiAlertTriangle className="stat-icon" />
+                  <div className="stat-trend up">
+                    <FiTrendingUp size={16} />
+                    <span>8%</span>
+                  </div>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-title">Alertas Críticos</div>
+                  <div className="stat-value">3</div>
+                  <div className="stat-description">Falhas de login, acessos de IP desconhecido</div>
+                </div>
+                <div className="stat-footer">
+                  <div className="stat-indicator">
+                    <div className="stat-indicator-bar stat-indicator-width-25"></div>
+                  </div>
+                  <div className="stat-percentage">25%</div>
+                </div>
               </div>
-            </div>
-            <div className="stat-card">
-              <FiLock className="stat-icon" />
-              <div className="stat-content">
-                <div className="stat-title">Tentativas de invasão bloqueadas</div>
-                <div className="stat-value">9</div>
-                <div className="description">Acessos rejeitados por IPs ou usuários previamente bloqueados</div>
+
+              <div className="stat-card gradient-security">
+                <div className="stat-header">
+                  <FiLock className="stat-icon" />
+                  <div className="stat-trend down">
+                    <FiTrendingUp size={16} />
+                    <span>15%</span>
+                  </div>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-title">Tentativas Bloqueadas</div>
+                  <div className="stat-value">9</div>
+                  <div className="stat-description">Acessos rejeitados de IPs ou usuários bloqueados</div>
+                </div>
+                <div className="stat-footer">
+                  <div className="stat-indicator">
+                    <div className="stat-indicator-bar stat-indicator-width-70"></div>
+                  </div>
+                  <div className="stat-percentage">70%</div>
+                </div>
               </div>
-            </div>
-            <div className="stat-card">
-              <FiFileText className="stat-icon" />
-              <div className="stat-content">
-                <div className="stat-title">Relatórios Exportados</div>
-                <div className="stat-value">7</div>
-                <div className="description">Total de relatórios gerados e baixados no sistema</div>
+
+              <div className="stat-card gradient-reports">
+                <div className="stat-header">
+                  <FiFileText className="stat-icon" />
+                  <div className="stat-trend up">
+                    <FiTrendingUp size={16} />
+                    <span>20%</span>
+                  </div>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-title">Relatórios Exportados</div>
+                  <div className="stat-value">7</div>
+                  <div className="stat-description">Total de relatórios gerados e baixados</div>
+                </div>
+                <div className="stat-footer">
+                  <div className="stat-indicator">
+                    <div className="stat-indicator-bar stat-indicator-width-65"></div>
+                  </div>
+                  <div className="stat-percentage">65%</div>
+                </div>
               </div>
             </div>
           </section>
