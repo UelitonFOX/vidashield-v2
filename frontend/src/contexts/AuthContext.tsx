@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import api from '../services/api';
+import api, { fetchCSRFToken } from '../services/api';
 
 export interface User {
   id: number;
@@ -18,31 +18,45 @@ interface AuthContextType {
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const savedToken = localStorage.getItem('token');
-      console.log("Inicializando autenticação, token salvo:", savedToken ? "presente" : "ausente");
-      
-      if (savedToken) {
-        try {
-          await validateAndSetToken(savedToken);
-          console.log("Autenticação inicializada com sucesso");
-        } catch (error) {
-          console.error('Token inválido durante inicialização:', error);
-          localStorage.removeItem('token');
+    const initAuth = async () => {
+      setLoading(true);
+      try {
+        // Obter token CSRF ao iniciar a aplicação
+        await fetchCSRFToken();
+
+        const storedToken = localStorage.getItem('token');
+        if (storedToken) {
+          try {
+            await validateAndSetToken(storedToken);
+          } catch (error) {
+            console.error('Erro ao validar token armazenado:', error);
+            localStorage.removeItem('token');
+          }
         }
+      } catch (error) {
+        console.error('Erro ao inicializar autenticação:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    initializeAuth();
+    initAuth();
   }, []);
 
   const validateAndSetToken = async (newToken: string) => {
@@ -65,7 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         console.log("Testando conexão direta com axios...");
         const testResponse = await axios.get('http://localhost:5000/api/auth/me', {
-          headers: { Authorization: `Bearer ${newToken}` }
+          headers: { Authorization: `Bearer ${newToken}` },
+          withCredentials: true // Importante para enviar cookies CSRF
         });
         console.log("Teste axios direto bem-sucedido:", testResponse.data);
       } catch (axiosError: any) {
@@ -129,12 +144,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }; 

@@ -60,41 +60,72 @@ export const Login: React.FC = () => {
 
   // Verificar se o servidor está online
   useEffect(() => {
-    const checkServerStatus = async () => {
+    const checkBackendStatus = async () => {
       try {
-        // Tentamos uma chamada simples para verificar se o servidor está online
-        await axios.get('http://localhost:5000/ping', { timeout: 5000 });
-        console.log('Servidor backend está online');
-        setServerStatus('online');
-      } catch (error) {
-        console.error('Servidor backend parece estar offline:', error);
+        // Importa a função de verificação do serviço de API
+        const { checkServerStatus } = await import('../services/api');
+        const isOnline = await checkServerStatus();
+        
+        console.log('Status do servidor backend:', isOnline ? 'online' : 'offline');
+        setServerStatus(isOnline ? 'online' : 'offline');
+      } catch (error: any) {
+        console.error('Erro ao verificar status do servidor:', error);
         setServerStatus('offline');
       }
     };
 
-    checkServerStatus();
-  }, []);
+    // Tentamos verificar o status várias vezes em caso de falha
+    checkBackendStatus();
+    
+    // Nova tentativa após 3 segundos se falhar na primeira vez
+    const retryTimeout = setTimeout(() => {
+      if (serverStatus === 'offline' || serverStatus === 'checking') {
+        console.log('Tentando verificar status do servidor novamente...');
+        checkBackendStatus();
+      }
+    }, 3000);
+    
+    return () => clearTimeout(retryTimeout);
+  }, [serverStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (serverStatus === 'offline') {
-      setError('O servidor parece estar offline. Certifique-se de que o backend está rodando.');
+    if (isLoading) {
+      console.log("Submissão bloqueada: operação em andamento");
       return;
     }
     
-    // Reativando a verificação de captcha
-    if (!captchaToken) {
-      setError('Por favor, confirme que você não é um robô');
+    // Validações
+    if (!email.trim()) {
+      setError("Por favor, informe seu email");
+      return;
+    }
+    
+    if (!password.trim()) {
+      setError("Por favor, informe sua senha");
+      return;
+    }
+    
+    // Validar captcha (exceto em modo de desenvolvimento)
+    if (process.env.NODE_ENV !== 'development' && !captchaToken) {
+      setError("Por favor, complete a verificação de segurança");
       return;
     }
     
     setIsLoading(true);
-    setError('');
-    
-    console.log("Enviando requisição de login para:", email);
+    setError("");
     
     try {
+      // Garante que temos um token CSRF antes de enviar o login
+      try {
+        // Importando de forma dinâmica para evitar ciclos de dependência
+        const { fetchCSRFToken } = await import('../services/api');
+        await fetchCSRFToken();
+      } catch (csrfError) {
+        console.error("Falha ao obter token CSRF:", csrfError);
+      }
+      
       // Tente uma chamada direta com axios primeiro para diagnóstico
       try {
         console.log("Teste direto com axios antes do login");
@@ -103,7 +134,8 @@ export const Login: React.FC = () => {
           password,
           captchaToken
         }, {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: true
         });
         console.log("Teste axios bem-sucedido:", testResponse.status, testResponse.data);
       } catch (axiosError: any) {
@@ -129,29 +161,24 @@ export const Login: React.FC = () => {
         console.error("Resposta sem token:", response.data);
         throw new Error('Token não recebido');
       }
-    } catch (err: any) {
-      console.error('Erro detalhado no login:', err.response?.data || err.message);
+    } catch (error: any) {
+      console.error("Erro ao fazer login:", error);
+      let message = "Erro ao realizar login. Tente novamente.";
       
-      // Mensagem de erro mais informativa
-      if (err.response?.status === 401) {
-        setError('E-mail ou senha incorretos. Para testar, use test@example.com / password');
-      } else if (err.response?.status === 404) {
-        setError('Serviço de autenticação indisponível. Verifique se o backend está em execução.');
-      } else if (err.response?.data?.msg) {
-        setError(err.response.data.msg);
-      } else if (!err.response) {
-        setError('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
-      } else {
-        setError('Erro ao fazer login. Tente novamente mais tarde.');
+      if (error.response?.data?.msg) {
+        message = error.response.data.msg;
+      } else if (error.message === 'Token não recebido') {
+        message = "Autenticação falhou: resposta inválida do servidor";
+      } else if (error.message.includes('Network Error')) {
+        message = "Erro de conexão. Verifique se o servidor está rodando.";
       }
       
-      // Reset captcha após um erro
-      if (captchaRef.current && typeof captchaRef.current.resetCaptcha === 'function') {
-        captchaRef.current.resetCaptcha();
-      }
-      setCaptchaToken(null);
+      setError(message);
     } finally {
       setIsLoading(false);
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
     }
   };
 
