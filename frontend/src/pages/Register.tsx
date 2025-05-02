@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+// HCaptcha é importado dinamicamente mais tarde
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -10,8 +11,30 @@ export const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<any>(null);
+  const [HCaptchaReady, setHCaptchaReady] = useState<boolean>(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  
+  // Obter a SiteKey do hCaptcha a partir das variáveis de ambiente
+  const hcaptchaSiteKey = process.env.REACT_APP_HCAPTCHA_SITEKEY || 
+                          '866663ec-b850-4a54-8884-8376d11051c4';
+  
+  // Componente HCaptcha importado dinamicamente para evitar problemas de tipagem
+  useEffect(() => {
+    const loadHCaptcha = async () => {
+      try {
+        await import('@hcaptcha/react-hcaptcha');
+        setHCaptchaReady(true);
+      } catch (error) {
+        console.error('Erro ao carregar o componente HCaptcha:', error);
+        setError('Não foi possível carregar o componente de verificação. Tente novamente mais tarde.');
+      }
+    };
+    
+    loadHCaptcha();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,12 +45,18 @@ export const Register: React.FC = () => {
       return;
     }
 
+    if (!captchaToken) {
+      setError('Por favor, confirme que você não é um robô');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await axios.post('http://localhost:5000/api/auth/register', {
         name,
         email,
-        password
+        password,
+        captchaToken
       });
 
       if (response.data.access_token) {
@@ -39,9 +68,57 @@ export const Register: React.FC = () => {
     } catch (err: any) {
       console.error('Erro ao registrar:', err);
       setError(err.response?.data?.msg || 'Erro ao criar conta');
+      // Reset captcha após um erro
+      if (captchaRef.current && typeof captchaRef.current.resetCaptcha === 'function') {
+        captchaRef.current.resetCaptcha();
+      }
+      setCaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const onCaptchaVerify = (token: string) => {
+    setCaptchaToken(token);
+  };
+
+  const onCaptchaExpire = () => {
+    setCaptchaToken(null);
+  };
+
+  const onCaptchaError = (err: any) => {
+    console.error("Erro no hCaptcha:", err);
+    setError('Erro ao verificar captcha. Por favor, tente novamente.');
+    setCaptchaToken(null);
+  };
+  
+  // Renderização do componente HCaptcha com importação dinâmica
+  const renderHCaptcha = () => {
+    if (!HCaptchaReady) {
+      return (
+        <div className="flex justify-center">
+          <div className="p-4 text-gray-400 text-sm">Carregando verificação...</div>
+        </div>
+      );
+    }
+    
+    // Usamos require para evitar problemas de tipagem com o TypeScript
+    const HCaptcha = require('@hcaptcha/react-hcaptcha').default;
+    
+    return (
+      <div className="flex justify-center">
+        <HCaptcha
+          sitekey={hcaptchaSiteKey}
+          onVerify={onCaptchaVerify}
+          onExpire={onCaptchaExpire}
+          onError={onCaptchaError}
+          ref={captchaRef}
+          theme="dark"
+          size="normal"
+          languageOverride="pt-BR"
+        />
+      </div>
+    );
   };
 
   return (
@@ -125,13 +202,15 @@ export const Register: React.FC = () => {
             />
           </div>
 
+          {renderHCaptcha()}
+
           {error && (
             <div className="text-red-500 text-sm text-center" role="alert">{error}</div>
           )}
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !captchaToken}
             className="w-full bg-teal-500 text-white py-2.5 px-4 rounded-lg hover:bg-teal-400 transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-75 disabled:cursor-not-allowed"
           >
             {isLoading ? (

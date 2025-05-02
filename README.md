@@ -32,6 +32,7 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
   * ✓ Cadastro de novos usuários
   * ✓ Recuperação de senha via e-mail
   * ✓ Autenticação persistente com armazenamento seguro de tokens
+  * ✓ Proteção contra bots com hCaptcha nos formulários
 
 * **Dashboard Moderno**:
   * ✓ Interface responsiva adaptada para diferentes dispositivos
@@ -93,13 +94,15 @@ As seguintes funcionalidades estão em desenvolvimento ativo:
 * `Recharts` - Biblioteca de gráficos para React
 * `React Icons` - Pacote de ícones SVG
 * `React Router` - Roteamento para navegação na aplicação
+* `@hcaptcha/react-hcaptcha` - Integração com hCaptcha para proteção contra bots
 
 ### Backend
 * `Python 3.11+` - Linguagem de programação do backend
 * `Flask` - Framework web minimalista e eficiente
-* `SQLite` - Banco de dados relacional leve
+* `PostgreSQL/Supabase` - Banco de dados relacional 
 * `JWT` - Tokens seguros para autenticação
 * `bcrypt` - Criptografia robusta para senhas
+* `hcaptcha` - Biblioteca para verificação de tokens do hCaptcha
 
 ---
 
@@ -166,6 +169,22 @@ O VidaShield foi projetado com foco em segurança:
 * Detecção de padrões suspeitos de acesso
 * Logs detalhados para auditoria
 * Sanitização de dados em todas as entradas
+* Proteção contra bots com hCaptcha nos formulários de autenticação
+
+### Integração com hCaptcha
+
+Para aumentar a segurança durante a autenticação, integramos o hCaptcha nas telas de login e registro:
+
+* **Proteção contra bots** em formulários de login e registro
+* **Verificação invisível** para melhor experiência do usuário
+* **Verificação no backend** dos tokens de captcha antes de processar a autenticação
+* **Configuração simples** via variáveis de ambiente:
+  ```
+  HCAPTCHA_SITE_KEY=[SUA-CHAVE-SITE]
+  HCAPTCHA_SECRET=[SEU-SEGREDO]
+  ```
+
+> ⚠️ **Importante**: As chaves de teste do hCaptcha devem ser substituídas por chaves reais em ambiente de produção. Para desenvolvimento, as chaves de teste permitem validação mesmo sem confirmar o captcha.
 
 ---
 
@@ -262,5 +281,76 @@ Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes
 ### Gráfico de Acessos Interativo
 ![Gráfico de Acessos](docs/screenshots/access-chart.png)
 *Gráfico interativo mostrando acessos diários com linha de acumulação e filtros de período.*
+
+---
+
+## 🚀 Utilizando Supabase como Banco de Dados (PostgreSQL)
+
+1. Crie um projeto no Supabase e obtenha as variáveis:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+   - `DATABASE_URL` (string de conexão PostgreSQL)
+
+2. No arquivo `backend/.env`, configure:
+
+```
+DATABASE_URL=postgresql://postgres:[SUA-SENHA]@[SEU-HOST].supabase.co:5432/postgres
+SUPABASE_URL=https://[SEU-PROJETO].supabase.co
+SUPABASE_KEY=[SUA-API-KEY]
+HCAPTCHA_SITE_KEY=[SUA-CHAVE-SITE]
+HCAPTCHA_SECRET=[SEU-SEGREDO]
+```
+
+3. Instale as dependências do backend, incluindo o PostgreSQL:
+
+```
+pip install -r requirements.txt
+pip install psycopg2-binary hcaptcha
+```
+
+4. Se for necessário criar as tabelas no Supabase, execute o SQL disponível em `supabase_schema.sql`:
+
+```bash
+# Acesse o SQL Editor no painel do Supabase e importe/execute o arquivo SQL
+# Ou use a CLI do Supabase para executar o script
+```
+
+5. Teste a conexão e rode o backend:
+
+```bash
+# Teste a conexão
+python backend/test_db_connection.py
+
+# Execute o backend
+python backend/app.py
+```
+
+## 🔒 Segurança do Supabase
+
+Para garantir a segurança das tabelas e dados no Supabase, siga estas recomendações:
+
+1. **Desabilitar Permissões Públicas**:
+   - Acesse o painel do Supabase > API > Tables & Views
+   - Para cada tabela (`user` e `alert`), acesse a aba "Auth"
+   - Desmarque todas as permissões para o role "anon" (SELECT, INSERT, UPDATE, DELETE)
+   - Mantenha apenas permissões para `authenticated` e `service_role`
+
+2. **Aplicar Configurações via SQL**:
+   - Use o script `supabase_security.sql` para aplicar as configurações de segurança:
+   ```bash
+   # No SQL Editor do Supabase, execute:
+   cat supabase_security.sql | psql [SUA-DATABASE-URL]
+   ```
+
+3. **Row Level Security (Opcional)**:
+   - Para segurança avançada, considere ativar o RLS nas tabelas
+   - Isso permite controlar o acesso por linha com base no usuário autenticado
+   - Exemplos de políticas estão incluídos no arquivo `supabase_security.sql`
+
+> ⚠️ **Atenção**: Nunca habilite permissões públicas para dados sensíveis. Use sempre a conexão autenticada via backend para operações no banco de dados.
+
+---
+
+> **Observação**: Se estiver usando o SDK do Supabase no frontend, certifique-se de que ele esteja configurado para usar o token JWT adequado para autenticação.
 
 --- 

@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta, datetime
 from authlib.integrations.flask_client import OAuth
 from models import db, User
+from utils import validate_uuid, is_valid_uuid, str_to_uuid
 import json
 import secrets
 import smtplib
@@ -11,6 +12,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 import uuid
+import requests
+from log_oauth import log_oauth_success, log_oauth_failure
 
 auth_bp = Blueprint('auth', __name__)
 oauth = OAuth()
@@ -51,8 +54,12 @@ def setup_oauth(app):
     oauth.init_app(app)
     
     # Use configurações de teste se as variáveis de ambiente não estiverem definidas
-    google_client_id = app.config.get('GOOGLE_CLIENT_ID') or 'test_google_client_id'
-    google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET') or 'test_google_client_secret'
+    google_client_id = app.config.get('GOOGLE_CLIENT_ID')
+    google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
+    
+    # Log para depuração
+    print(f"OAuth Setup - Google Client ID: {google_client_id[:10]}{'...' if google_client_id else ''}")  
+    print(f"OAuth Setup - Google Client Secret: {'Configurado' if google_client_secret else 'Não configurado'}")
     
     github_client_id = app.config.get('GITHUB_CLIENT_ID') or 'test_github_client_id'
     github_client_secret = app.config.get('GITHUB_CLIENT_SECRET') or 'test_github_client_secret'
@@ -80,11 +87,41 @@ def setup_oauth(app):
     # Garante que o usuário de teste existe
     ensure_test_user_exists()
 
+# Função para verificar token do hCaptcha
+def verify_hcaptcha(token):
+    if current_app.config.get('TESTING', False):
+        # Em ambiente de teste, aceita qualquer token
+        return True
+    
+    # Chave secreta do hCaptcha
+    hcaptcha_secret_key = current_app.config.get('HCAPTCHA_SECRET_KEY', '0x0000000000000000000000000000000000000000')
+    
+    # URL de verificação do hCaptcha
+    verify_url = 'https://hcaptcha.com/siteverify'
+    
+    # Dados para verificação
+    data = {
+        'secret': hcaptcha_secret_key,
+        'response': token
+    }
+    
+    # Envia a requisição para verificar o token
+    response = requests.post(verify_url, data=data)
+    result = response.json()
+    
+    # Retorna True se o token for válido, False caso contrário
+    return result.get('success', False)
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    captcha_token = data.get('captchaToken')
+    
+    # Verifica o token do hCaptcha
+    if not verify_hcaptcha(captcha_token):
+        return jsonify({"msg": "Verificação de captcha falhou. Por favor, tente novamente."}), 400
     
     # Garante que o usuário de teste e admin existam
     ensure_test_user_exists()
@@ -95,6 +132,8 @@ def login():
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({"msg": "Credenciais inválidas"}), 401
         
+    # Certifica-se de que o ID do usuário é convertido para string
+    # para garantir compatibilidade entre UUID e outros formatos
     access_token = create_access_token(
         identity=str(user.id),
         expires_delta=timedelta(hours=1)
@@ -116,6 +155,11 @@ def register():
     email = data.get('email')
     password = data.get('password')
     name = data.get('name')
+    captcha_token = data.get('captchaToken')
+    
+    # Verifica o token do hCaptcha
+    if not verify_hcaptcha(captcha_token):
+        return jsonify({"msg": "Verificação de captcha falhou. Por favor, tente novamente."}), 400
     
     if User.query.filter_by(email=email).first():
         return jsonify({"msg": "Email já cadastrado"}), 400
@@ -142,35 +186,66 @@ def register():
 @auth_bp.route('/google')
 def google_login():
     # Usar sempre o fluxo de autenticação real do Google
-    redirect_uri = url_for('auth.google_callback', _external=True)
+    redirect_uri = current_app.config.get('GOOGLE_REDIRECT_URI') or url_for('auth.google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 @auth_bp.route('/google/callback')
 def google_callback():
-    token = oauth.google.authorize_access_token()
-    user_info = token.get('userinfo')
-    
-    if not user_info:
-        return jsonify({"msg": "Erro ao obter informações do usuário"}), 400
+    try:
+        token = oauth.google.authorize_access_token()
+        user_info = token.get('userinfo')
         
-    user = User.query.filter_by(oauth_id=user_info['sub'], oauth_provider='google').first()
-    
-    if not user:
-        user = User(
-            email=user_info['email'],
-            name=user_info['name'],
-            oauth_provider='google',
-            oauth_id=user_info['sub']
-        )
-        db.session.add(user)
-        db.session.commit()
+        if not user_info:
+            log_oauth_failure('google', 'Informações do usuário não disponíveis', 
+                             ip_address=request.remote_addr)
+            return jsonify({"msg": "Erro ao obter informações do usuário"}), 400
+        
+        # Log para depuração
+        print(f"Google OAuth - Usuário autenticado: {user_info.get('email')}")
+        
+        # Procurar usuário por oauth_id
+        user = User.query.filter_by(oauth_id=user_info['sub'], oauth_provider='google').first()
+        
+        # Se não encontrou por oauth_id, tenta por email
+        if not user:
+            user = User.query.filter_by(email=user_info['email']).first()
+            if user:
+                # Atualiza os dados OAuth para o usuário existente
+                user.oauth_provider = 'google'
+                user.oauth_id = user_info['sub']
+                user.email_verified = True
+                print(f"Atualizando usuário existente com dados OAuth: {user.email}")
+                db.session.commit()
+                log_oauth_success('google', user.email, user.id, ip_address=request.remote_addr)
+            else:
+                # Cria um novo usuário
+                print(f"Criando novo usuário via OAuth: {user_info['email']}")
+                user = User(
+                    email=user_info['email'],
+                    name=user_info['name'],
+                    oauth_provider='google',
+                    oauth_id=user_info['sub'],
+                    email_verified=True
+                )
+                db.session.add(user)
+                db.session.commit()
+                log_oauth_success('google', user.email, user.id, ip_address=request.remote_addr)
+        else:
+            # Usuário encontrado por oauth_id
+            log_oauth_success('google', user.email, user.id, ip_address=request.remote_addr)
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Erro no callback do Google: {error_msg}")
+        log_oauth_failure('google', error_msg, ip_address=request.remote_addr)
+        return jsonify({"msg": "Erro na autenticação com Google"}), 500
     
     access_token = create_access_token(
         identity=str(user.id),
         expires_delta=timedelta(hours=1)
     )
     
-    return redirect(f'http://localhost:3000/oauth-callback?token={access_token}')
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+    return redirect(f'{frontend_url}/oauth-callback?token={access_token}')
 
 @auth_bp.route('/github')
 def github_login():
@@ -216,13 +291,22 @@ def github_callback():
         expires_delta=timedelta(hours=1)
     )
     
-    return redirect(f'http://localhost:3000/oauth-callback?token={access_token}')
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+    return redirect(f'{frontend_url}/oauth-callback?token={access_token}')
 
 @auth_bp.route('/me')
 @jwt_required()
 def get_user():
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    # Validação de UUID para compatibilidade com Supabase
+    try:
+        # Tenta converter para UUID caso seja string
+        if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
+            user = User.query.filter_by(id=current_user_id).first()
+        else:
+            user = User.query.get(current_user_id)
+    except Exception as e:
+        return jsonify({"msg": f"Erro ao buscar usuário: {str(e)}"}), 500
     
     if not user:
         return jsonify({"msg": "Usuário não encontrado"}), 404
@@ -238,7 +322,15 @@ def get_user():
 @jwt_required()
 def check_role():
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    # Validação de UUID para compatibilidade com Supabase
+    try:
+        # Tenta converter para UUID caso seja string
+        if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
+            user = User.query.filter_by(id=current_user_id).first()
+        else:
+            user = User.query.get(current_user_id)
+    except Exception as e:
+        return jsonify({"msg": f"Erro ao buscar usuário: {str(e)}"}), 500
     
     if not user:
         return jsonify({"msg": "Usuário não encontrado"}), 404
@@ -361,6 +453,22 @@ def create_admin():
             "role": user.role
         }
     }), 201
+
+@auth_bp.route('/test-captcha', methods=['POST'])
+def test_captcha():
+    """
+    Endpoint de teste para verificar a funcionalidade do hCaptcha
+    """
+    data = request.get_json()
+    captcha_token = data.get('captchaToken')
+    
+    if not captcha_token:
+        return jsonify({"erro": "Token do captcha não fornecido"}), 400
+        
+    if verify_hcaptcha(captcha_token):
+        return jsonify({"mensagem": "Token do captcha válido"})
+    
+    return jsonify({"erro": "Token do captcha inválido"}), 400
 
 # Função auxiliar para gerar tokens de teste
 def _generate_test_token(provider):

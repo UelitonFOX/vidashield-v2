@@ -3,6 +3,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 from models import db, Alert, User
 import random
+import logging
+import traceback
+
+# Configurar logger
+logger = logging.getLogger('VidaShield.alerts')
 
 alerts_bp = Blueprint('alerts', __name__)
 
@@ -94,80 +99,140 @@ def seed_alerts_if_empty():
     db.session.commit()
     print(f"Adicionados {len(alerts_to_add)} alertas de exemplo ao banco de dados")
 
+@alerts_bp.route('/diagnostico', methods=['GET'])
+def diagnose_alerts():
+    """Rota de diagnóstico para identificar problemas com alertas"""
+    try:
+        # Verificar conexão com o banco
+        alert_count = Alert.query.count()
+        
+        # Verificar se há usuários
+        user_count = User.query.all()
+        
+        # Listar alguns alertas para diagnóstico
+        sample_alerts = []
+        for alert in Alert.query.limit(5).all():
+            try:
+                sample_alerts.append({
+                    "id": alert.id,
+                    "type": alert.type,
+                    "severity": alert.severity,
+                    "user_id": alert.user_id,
+                    "details_type": type(alert.details).__name__
+                })
+            except Exception as e:
+                sample_alerts.append({
+                    "id": alert.id,
+                    "error": str(e)
+                })
+        
+        return jsonify({
+            "status": "ok",
+            "alert_count": alert_count,
+            "user_count": len(user_count),
+            "sample_alerts": sample_alerts
+        })
+    except Exception as e:
+        logger.error(f"Erro no diagnóstico de alertas: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
 @alerts_bp.route('', methods=['GET'])
 @jwt_required()
 def get_alerts():
-    # Garantir que existam alertas de exemplo no banco
-    seed_alerts_if_empty()
-    
-    # Parâmetros de paginação e filtro
-    page = request.args.get('page', 1, type=int)
-    limit = request.args.get('limit', 10, type=int)
-    severity = request.args.get('severity', '', type=str)
-    resolved = request.args.get('resolved', '', type=str)
-    
-    # Construir query
-    query = Alert.query
-    
-    # Filtrar por severidade
-    if severity:
-        query = query.filter_by(severity=severity)
-    
-    # Filtrar por status de resolução
-    if resolved == 'true':
-        query = query.filter_by(resolved=True)
-    elif resolved == 'false':
-        query = query.filter_by(resolved=False)
-    
-    # Ordenar por data de criação (mais recentes primeiro)
-    query = query.order_by(Alert.timestamp.desc())
-    
-    # Realizar paginação
-    paginated_alerts = query.paginate(page=page, per_page=limit, error_out=False)
-    
-    # Formatar resultados
-    results = []
-    for alert in paginated_alerts.items:
-        user = User.query.get(alert.user_id) if alert.user_id else None
-        resolver = User.query.get(alert.resolved_by) if alert.resolved_by else None
+    try:
+        logger.info("Iniciando processamento da rota de alertas")
         
-        alert_data = {
-            "id": alert.id,
-            "type": alert.type,
-            "severity": alert.severity,
-            "details": alert.details or {},
-            "timestamp": alert.timestamp.isoformat(),
-            "formatted_date": alert.formatted_date,
-            "resolved": alert.resolved,
-            "resolved_time": alert.resolved_time.isoformat() if alert.resolved_time else None,
-            "resolved_by": alert.resolved_by
+        # Garantir que existam alertas de exemplo no banco
+        seed_alerts_if_empty()
+        
+        # Parâmetros de paginação e filtro
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        severity = request.args.get('severity', '', type=str)
+        resolved = request.args.get('resolved', '', type=str)
+        
+        logger.info(f"Parâmetros: page={page}, limit={limit}, severity={severity}, resolved={resolved}")
+        
+        # Construir query
+        query = Alert.query
+        
+        # Filtrar por severidade
+        if severity:
+            query = query.filter_by(severity=severity)
+        
+        # Filtrar por status de resolução
+        if resolved == 'true':
+            query = query.filter_by(resolved=True)
+        elif resolved == 'false':
+            query = query.filter_by(resolved=False)
+        
+        # Ordenar por data de criação (mais recentes primeiro)
+        query = query.order_by(Alert.timestamp.desc())
+        
+        # Realizar paginação
+        paginated_alerts = query.paginate(page=page, per_page=limit, error_out=False)
+        
+        logger.info(f"Total de alertas encontrados: {paginated_alerts.total}")
+        
+        # Formatar resultados
+        results = []
+        for alert in paginated_alerts.items:
+            try:
+                user = User.query.get(alert.user_id) if alert.user_id else None
+                resolver = User.query.get(alert.resolved_by) if alert.resolved_by else None
+                
+                alert_data = {
+                    "id": alert.id,
+                    "type": alert.type,
+                    "severity": alert.severity,
+                    "details": alert.details or {},
+                    "timestamp": alert.timestamp.isoformat() if alert.timestamp else None,
+                    "formatted_date": alert.formatted_date,
+                    "resolved": alert.resolved,
+                    "resolved_time": alert.resolved_time.isoformat() if alert.resolved_time else None,
+                    "resolved_by": alert.resolved_by
+                }
+                
+                # Adicionar informações do usuário e resolver aos detalhes
+                if user:
+                    alert_data["details"]["user_id"] = user.id
+                    alert_data["details"]["user_email"] = user.email
+                
+                if resolver:
+                    alert_data["resolver_name"] = resolver.name
+                
+                results.append(alert_data)
+            except Exception as e:
+                logger.error(f"Erro ao processar alerta {alert.id}: {str(e)}")
+                logger.error(traceback.format_exc())
+        
+        # Contagem por severidade para o dashboard
+        severity_counts = {
+            "critical": Alert.query.filter_by(severity='critical', resolved=False).count(),
+            "warning": Alert.query.filter_by(severity='warning', resolved=False).count(),
+            "info": Alert.query.filter_by(severity='info', resolved=False).count()
         }
         
-        # Adicionar informações do usuário e resolver aos detalhes
-        if user:
-            alert_data["details"]["user_id"] = user.id
-            alert_data["details"]["user_email"] = user.email
-        
-        if resolver:
-            alert_data["resolver_name"] = resolver.name
-        
-        results.append(alert_data)
-    
-    # Contagem por severidade para o dashboard
-    severity_counts = {
-        "critical": Alert.query.filter_by(severity='critical', resolved=False).count(),
-        "warning": Alert.query.filter_by(severity='warning', resolved=False).count(),
-        "info": Alert.query.filter_by(severity='info', resolved=False).count()
-    }
-    
-    return jsonify({
-        "alerts": results,
-        "total": paginated_alerts.total,
-        "page": page,
-        "pages": paginated_alerts.pages,
-        "severity_counts": severity_counts,
-        "alert_types": alert_types
-    })
+        return jsonify({
+            "alerts": results,
+            "total": paginated_alerts.total,
+            "page": page,
+            "pages": paginated_alerts.pages,
+            "severity_counts": severity_counts,
+            "alert_types": alert_types
+        })
+    except Exception as e:
+        logger.error(f"Erro global na rota de alertas: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 @alerts_bp.route('/<int:alert_id>/resolve', methods=['PUT'])
 @jwt_required()

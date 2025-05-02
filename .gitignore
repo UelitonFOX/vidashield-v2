@@ -59,3 +59,9 @@ Desktop.ini
 backend/fix_admin.py
 backend/db_update.py
 backend/recreate_db.py
+backend/instance/app.db
+backend/instance/app.db.backup
+backend/logs/
+
+# Outros diretórios
+.apresentacao_html_vida_shield/

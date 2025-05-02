@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
+
+// Componente que será usado como fallback enquanto o HCaptcha é carregado
+const HCaptchaFallback = () => (
+  <div className="flex justify-center">
+    <div className="p-4 text-gray-400 text-sm">Carregando verificação...</div>
+  </div>
+);
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,8 +20,16 @@ export const Login: React.FC = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGithubLoading, setIsGithubLoading] = useState(false);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<any>(null);
+  const [HCaptchaReady, setHCaptchaReady] = useState<boolean>(false);
+  const [HCaptchaComponent, setHCaptchaComponent] = useState<any>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+  
+  // Obter a SiteKey do hCaptcha a partir das variáveis de ambiente
+  const hcaptchaSiteKey = process.env.REACT_APP_HCAPTCHA_SITEKEY || 
+                          '866663ec-b850-4a54-8884-8376d11051c4';
 
   // Para facilitar os testes, preenchemos com o usuário de teste
   React.useEffect(() => {
@@ -22,6 +37,25 @@ export const Login: React.FC = () => {
       setEmail('test@example.com');
       setPassword('password');
     }
+  }, []);
+
+  // Carregamento dinâmico do componente HCaptcha
+  useEffect(() => {
+    const loadHCaptcha = async () => {
+      try {
+        // Importação dinâmica sem usar React.lazy
+        const module = await import('@hcaptcha/react-hcaptcha');
+        setHCaptchaComponent(() => module.default);
+        console.log('HCaptcha carregado com sucesso');
+        setHCaptchaReady(true);
+      } catch (error) {
+        console.error('Erro ao carregar o componente HCaptcha:', error);
+        setError('Não foi possível carregar o componente de verificação. Verifique se o pacote @hcaptcha/react-hcaptcha está instalado.');
+        setHCaptchaReady(false);
+      }
+    };
+    
+    loadHCaptcha();
   }, []);
 
   // Verificar se o servidor está online
@@ -49,6 +83,12 @@ export const Login: React.FC = () => {
       return;
     }
     
+    // Reativando a verificação de captcha
+    if (!captchaToken) {
+      setError('Por favor, confirme que você não é um robô');
+      return;
+    }
+    
     setIsLoading(true);
     setError('');
     
@@ -60,7 +100,8 @@ export const Login: React.FC = () => {
         console.log("Teste direto com axios antes do login");
         const testResponse = await axios.post('http://localhost:5000/api/auth/login', {
           email,
-          password
+          password,
+          captchaToken
         }, {
           headers: { 'Content-Type': 'application/json' }
         });
@@ -73,7 +114,8 @@ export const Login: React.FC = () => {
       // Continue com a API normal
       const response = await api.post('/auth/login', {
         email,
-        password
+        password,
+        captchaToken
       });
       
       console.log("Resposta do login:", response.data);
@@ -102,8 +144,61 @@ export const Login: React.FC = () => {
       } else {
         setError('Erro ao fazer login. Tente novamente mais tarde.');
       }
+      
+      // Reset captcha após um erro
+      if (captchaRef.current && typeof captchaRef.current.resetCaptcha === 'function') {
+        captchaRef.current.resetCaptcha();
+      }
+      setCaptchaToken(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onCaptchaVerify = (token: string) => {
+    setCaptchaToken(token);
+    setError('');
+  };
+
+  const onCaptchaExpire = () => {
+    setCaptchaToken(null);
+  };
+
+  const onCaptchaError = (err: any) => {
+    console.error("Erro no hCaptcha:", err);
+    setError('Erro ao verificar captcha. Por favor, tente novamente.');
+    setCaptchaToken(null);
+  };
+
+  // Renderização do componente HCaptcha com importação dinâmica
+  const renderHCaptcha = () => {
+    if (!HCaptchaReady || !HCaptchaComponent) {
+      return <HCaptchaFallback />;
+    }
+    
+    try {
+      const HCaptcha = HCaptchaComponent;
+      return (
+        <div className="flex justify-center">
+          <HCaptcha
+            sitekey={hcaptchaSiteKey}
+            onVerify={onCaptchaVerify}
+            onExpire={onCaptchaExpire}
+            onError={onCaptchaError}
+            ref={captchaRef}
+            theme="dark"
+            size="normal"
+            languageOverride="pt-BR"
+          />
+        </div>
+      );
+    } catch (error) {
+      console.error("Erro ao renderizar HCaptcha:", error);
+      return (
+        <div className="flex justify-center">
+          <div className="p-4 text-red-400 text-sm">Erro ao carregar verificação. Recarregue a página.</div>
+        </div>
+      );
     }
   };
 
@@ -192,13 +287,15 @@ export const Login: React.FC = () => {
                 />
               </div>
 
+              {renderHCaptcha()}
+
               {error && (
                 <div className="text-red-500 text-sm text-center" role="alert">{error}</div>
               )}
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
                 className="primary-button"
                 aria-label="Entrar com e-mail e senha"
               >
@@ -248,9 +345,8 @@ export const Login: React.FC = () => {
               <Link 
                 to="/register" 
                 className="font-medium text-teal-400 hover:text-teal-300"
-                aria-label="Criar nova conta"
               >
-                Cadastre-se
+                Registre-se
               </Link>
             </p>
           </div>
