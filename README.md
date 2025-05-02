@@ -29,6 +29,13 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
 
 ## 🆕 Novidades Recentes
 
+### Implementação de Proteção CSRF (03/05/2025)
+✅ Adicionamos proteção completa contra ataques CSRF:
+- Implementação usando Flask-WTF para gerenciamento de tokens CSRF
+- Tokens automaticamente enviados em requisições não seguras (POST, PUT, DELETE)
+- Verificação no backend para garantir autenticidade das solicitações
+- Integração completa com hCaptcha e Google OAuth
+
 ### Migração para Supabase (22/08/2024)
 ✅ Concluímos a migração do banco de dados local SQLite para o **Supabase PostgreSQL**!
 - Melhor performance e escalabilidade para suportar mais usuários
@@ -54,6 +61,7 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
   * ✓ Autenticação persistente com armazenamento seguro de tokens
   * ✓ Proteção contra bots com hCaptcha nos formulários
   * ✓ Autenticação OAuth com Google e GitHub
+  * ✓ Proteção CSRF em todas as requisições
 
 * **Banco de Dados**:
   * ✓ Migração completa para PostgreSQL (Supabase)
@@ -73,6 +81,8 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
   * ✓ Armazenamento seguro de senhas com bcrypt
   * ✓ Logging de atividades de acesso
   * ✓ Sistema de logs para rastreamento de autenticação OAuth
+  * ✓ Proteção CSRF com Flask-WTF
+  * ✓ Configuração CORS abrangente para todas as rotas
 
 ---
 
@@ -198,7 +208,29 @@ O VidaShield foi projetado com foco em segurança:
 * Logs detalhados para auditoria
 * Sanitização de dados em todas as entradas
 * Proteção contra bots com hCaptcha nos formulários de autenticação
+* Proteção CSRF em todas as requisições não seguras
+* CORS configurado corretamente para permitir comunicação frontend-backend
 * Banco de dados PostgreSQL com políticas de acesso (RLS)
+
+### Proteção CSRF
+
+O sistema implementa proteção CSRF (Cross-Site Request Forgery) para prevenir ataques de requisição forjada:
+
+* **Tokens CSRF** gerados pelo servidor e enviados ao cliente
+* **Verificação automática** de tokens em todas as requisições não seguras (POST, PUT, DELETE)
+* **Integração no frontend** para incluir tokens em cabeçalhos `X-CSRF-TOKEN`
+* **Configuração via Flask-WTF** para gerenciamento integrado com Flask
+* **Endpoint especial** `/api/auth/csrf-token` para obtenção de novos tokens
+
+Para habilitar a proteção CSRF, a configuração já está incluída no projeto. Não é necessário nenhuma alteração adicional além de:
+
+```bash
+# Instalar Flask-WTF
+pip install flask-wtf
+
+# Atualizar requirements.txt
+pip freeze > requirements.txt
+```
 
 ### Integração com hCaptcha
 
@@ -214,6 +246,27 @@ Para aumentar a segurança durante a autenticação, integramos o hCaptcha nas t
   ```
 
 > ⚠️ **Importante**: As chaves de teste do hCaptcha devem ser substituídas por chaves reais em ambiente de produção. Para desenvolvimento, as chaves de teste permitem validação mesmo sem confirmar o captcha.
+
+### Configuração CORS
+
+O sistema está configurado com CORS (Cross-Origin Resource Sharing) global para permitir requisições entre o frontend e backend:
+
+```python
+# No arquivo app.py
+CORS(app, 
+     origins=["http://localhost:3000", "https://vidashield.vercel.app"],
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "X-CSRF-TOKEN"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+```
+
+Esta configuração:
+- Permite requisições do frontend (localhost:3000 e o domínio de produção)
+- Habilita o envio de credenciais em cookies
+- Permite os cabeçalhos necessários, incluindo o token CSRF
+- Suporta todos os métodos HTTP necessários
+
+Para personalizar os domínios permitidos, edite a lista de `origins` no arquivo `app.py`.
 
 ### Configuração do Supabase
 
