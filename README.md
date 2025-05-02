@@ -10,6 +10,8 @@
 [![Made with Python](https://img.shields.io/badge/Python-14354C?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow?style=for-the-badge)](https://github.com/UelitonFOX/vidashield)
 
 ---
@@ -25,6 +27,24 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
 
 ---
 
+## 🆕 Novidades Recentes
+
+### Migração para Supabase (22/08/2024)
+✅ Concluímos a migração do banco de dados local SQLite para o **Supabase PostgreSQL**!
+- Melhor performance e escalabilidade para suportar mais usuários
+- Infraestrutura em nuvem para disponibilidade 24/7
+- Backups automáticos para segurança dos dados
+- Suporte a políticas de segurança avançadas (RLS)
+- Compatibilidade com SQLAlchemy mantida para transição suave
+
+### Reforço de Segurança com hCaptcha
+✅ Implementamos proteção **hCaptcha** nas telas de login e registro:
+- Proteção eficaz contra ataques automatizados e bots
+- Verificação invisível para não afetar a experiência do usuário
+- Validação no backend para garantir autenticidade das solicitações
+
+---
+
 ## ✅ Funcionalidades Já Implementadas
 
 * **Sistema de Autenticação Completo**:
@@ -33,6 +53,12 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
   * ✓ Recuperação de senha via e-mail
   * ✓ Autenticação persistente com armazenamento seguro de tokens
   * ✓ Proteção contra bots com hCaptcha nos formulários
+  * ✓ Autenticação OAuth com Google e GitHub
+
+* **Banco de Dados**:
+  * ✓ Migração completa para PostgreSQL (Supabase)
+  * ✓ Suporte para SQLite em ambiente de desenvolvimento
+  * ✓ Esquema de segurança com Row Level Security
 
 * **Dashboard Moderno**:
   * ✓ Interface responsiva adaptada para diferentes dispositivos
@@ -46,6 +72,7 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
   * ✓ Endpoints protegidos com autenticação JWT
   * ✓ Armazenamento seguro de senhas com bcrypt
   * ✓ Logging de atividades de acesso
+  * ✓ Sistema de logs para rastreamento de autenticação OAuth
 
 ---
 
@@ -63,13 +90,13 @@ As seguintes funcionalidades estão em desenvolvimento ativo:
 
 ## ✨ Funcionalidades Planejadas (v2.0)
 
-* 🆕 **Dashboard completamente redesenhado** com UI moderna e responsiva
-* 🆕 **Gráficos interativos** de acessos com filtros de período (7, 15 e 30 dias)
-* 🆕 **Painéis detalhados** com estatísticas de usuários, tentativas de invasão e alertas
-* 🆕 **Autenticação OAuth** com Google para login seguro e simplificado
-* 🆕 **Design responsivo** que funciona em desktop, tablet e mobile
-* 🆕 **Tema escuro** com paleta de cores profissional para menor fadiga visual
-* 🆕 **Sistema de alertas em tempo real** com notificações importantes
+* ✅ **Dashboard completamente redesenhado** com UI moderna e responsiva
+* ✅ **Gráficos interativos** de acessos com filtros de período (7, 15 e 30 dias)
+* ✅ **Painéis detalhados** com estatísticas de usuários, tentativas de invasão e alertas
+* ✅ **Autenticação OAuth** com Google e GitHub para login seguro e simplificado
+* ✅ **Design responsivo** que funciona em desktop, tablet e mobile
+* ✅ **Tema escuro** com paleta de cores profissional para menor fadiga visual
+* 🔄 **Sistema de alertas em tempo real** com notificações importantes
 
 ---
 
@@ -99,10 +126,12 @@ As seguintes funcionalidades estão em desenvolvimento ativo:
 ### Backend
 * `Python 3.11+` - Linguagem de programação do backend
 * `Flask` - Framework web minimalista e eficiente
-* `PostgreSQL/Supabase` - Banco de dados relacional 
+* `PostgreSQL/Supabase` - Banco de dados relacional em nuvem
+* `SQLAlchemy` - ORM para abstração do banco de dados 
 * `JWT` - Tokens seguros para autenticação
 * `bcrypt` - Criptografia robusta para senhas
 * `hcaptcha` - Biblioteca para verificação de tokens do hCaptcha
+* `Authlib` - Biblioteca para implementação OAuth
 
 ---
 
@@ -121,13 +150,12 @@ vidashield/
 │   └── package.json       # Dependências do frontend
 │
 ├── backend/               # API e lógica do servidor
-│   ├── app/               # Módulos da aplicação
-│   │   ├── auth.py        # Autenticação e segurança
-│   │   ├── dashboard.py   # Endpoints para o dashboard
-│   │   ├── logger.py      # Sistema de logging
-│   │   └── routes.py      # Rotas da API
-│   ├── config/            # Configurações do backend
-│   ├── data/              # Banco de dados e migrações
+│   ├── routes/            # Rotas da API organizadas por funcionalidade
+│   ├── migrations/        # Scripts de migração de banco de dados
+│   ├── templates/         # Templates para e-mails e outras saídas
+│   ├── app.py             # Ponto de entrada da aplicação
+│   ├── models.py          # Definições dos modelos de dados
+│   ├── config.py          # Configurações da aplicação
 │   └── requirements.txt   # Dependências do backend
 │
 └── README.md              # Este arquivo
@@ -170,6 +198,7 @@ O VidaShield foi projetado com foco em segurança:
 * Logs detalhados para auditoria
 * Sanitização de dados em todas as entradas
 * Proteção contra bots com hCaptcha nos formulários de autenticação
+* Banco de dados PostgreSQL com políticas de acesso (RLS)
 
 ### Integração com hCaptcha
 
@@ -185,6 +214,16 @@ Para aumentar a segurança durante a autenticação, integramos o hCaptcha nas t
   ```
 
 > ⚠️ **Importante**: As chaves de teste do hCaptcha devem ser substituídas por chaves reais em ambiente de produção. Para desenvolvimento, as chaves de teste permitem validação mesmo sem confirmar o captcha.
+
+### Configuração do Supabase
+
+Para conectar sua instância ao Supabase, configure as seguintes variáveis de ambiente:
+
+```
+DATABASE_URL=postgres://postgres:[PASSWORD]@[HOST]:[PORT]/postgres
+SUPABASE_URL=https://[PROJECT_ID].supabase.co
+SUPABASE_KEY=[YOUR_SUPABASE_KEY]
+```
 
 ---
 
@@ -221,6 +260,8 @@ source venv/bin/activate  # No Windows: venv\Scripts\activate
 
 # Instalar dependências
 pip install -r requirements.txt
+
+# Configurar variáveis de ambiente (criar arquivo .env baseado no .env.example)
 
 # Iniciar o servidor
 python app.py
