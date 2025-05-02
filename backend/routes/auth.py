@@ -14,6 +14,7 @@ import os
 import uuid
 import requests
 from log_oauth import log_oauth_success, log_oauth_failure
+from flask_wtf.csrf import generate_csrf
 
 auth_bp = Blueprint('auth', __name__)
 oauth = OAuth()
@@ -86,6 +87,18 @@ def setup_oauth(app):
     
     # Garante que o usuário de teste existe
     ensure_test_user_exists()
+
+# Endpoint para obter token CSRF
+@auth_bp.route('/csrf-token', methods=['GET'])
+def get_csrf_token():
+    """
+    Retorna um token CSRF para ser usado em requisições protegidas.
+    Este token deve ser enviado no header X-CSRF-TOKEN nas requisições POST, PUT, DELETE.
+    """
+    token = generate_csrf()
+    response = jsonify({'csrf_token': token})
+    response.headers.set('X-CSRF-TOKEN', token)
+    return response
 
 # Função para verificar token do hCaptcha
 def verify_hcaptcha(token):
