@@ -29,6 +29,15 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
 
 ## 🆕 Novidades Recentes
 
+### Melhorias de Navegação e Filtros (20/05/2025)
+✅ Implementamos melhorias na navegação e sistema de filtros:
+- Cards do Dashboard transformados em links clicáveis para navegação rápida
+- Redirecionamento inteligente com filtros pré-aplicados nas páginas de destino
+- Adição de filtro exclusivo para "Tentativas de Login Bloqueadas"
+- Botões "Aplicar Filtros" nas páginas que aparecem apenas quando existem filtros selecionados
+- Correção do comportamento de filtros aplicados via URL
+- Melhoria na comparação de datas para compatibilidade de timezones
+
 ### Implementação de Proteção CSRF (03/05/2025)
 ✅ Adicionamos proteção completa contra ataques CSRF:
 - Implementação usando Flask-WTF para gerenciamento de tokens CSRF
@@ -183,6 +192,18 @@ O dashboard do VidaShield oferece uma visão clara e abrangente da segurança di
   * Alertas críticos
   * Tentativas de invasão bloqueadas
   * Relatórios exportados
+  * Cards clicáveis para navegação rápida com filtros pré-aplicados
+
+* **Sistema de Navegação Inteligente**:
+  * Clique nos cards para acessar páginas com filtros já aplicados
+  * Indicadores visuais de interatividade nos cards
+  * Redirecionamento contextual baseado no tipo de métrica
+
+* **Sistema de Filtros Avançados**:
+  * Filtros por tipo de log, incluindo tentativas bloqueadas
+  * Filtros por data com suporte a diferentes formatos de timezone
+  * Busca por texto em usuários, ações e IPs
+  * Botões "Aplicar Filtros" que aparecem dinamicamente
 
 * **Gráfico de Acessos**:
   * Visualização de barras para acessos diários
