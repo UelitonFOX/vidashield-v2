@@ -59,6 +59,22 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
 - Verificação invisível para não afetar a experiência do usuário
 - Validação no backend para garantir autenticidade das solicitações
 
+### Integração Completa com Supabase (Setembro/2024)
+✅ Concluímos a integração total com Supabase:
+- Modernização da estrutura de dados com UUID para IDs
+- Implementação de Row Level Security (RLS) para proteção avançada por usuário
+- Políticas de acesso baseadas em função (admin, gerente, usuário)
+- Sistema de tipagem forte para todas as chamadas de API
+- Correção de incompatibilidades entre tipos numéricos e UUID
+
+### Arquitetura de Serviços API Tipados (Setembro/2024)
+✅ Refatoramos completamente os serviços de API:
+- Criação de interfaces TypeScript para todas as entidades (User, Alert, Log, etc.)
+- Organização de serviços API por funcionalidade (authService, usersService, etc.)
+- Tipagem forte para chamadas de API, eliminando "unknown" responses
+- Interceptores para tratamento automático de tokens e erros
+- Mapeamento automático entre formatos do backend e frontend
+
 ---
 
 ## ✅ Funcionalidades Já Implementadas
