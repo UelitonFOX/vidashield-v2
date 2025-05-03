@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+// Interface para resposta CSRF Token
+interface CSRFTokenResponse {
+  csrf_token: string;
+}
+
 // URL base da API (com fallback para localhost)
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -39,7 +44,7 @@ export const checkServerStatus = async (): Promise<boolean> => {
 };
 
 // Função para obter o token CSRF
-export const fetchCSRFToken = async () => {
+export const fetchCSRFToken = async (): Promise<string | null> => {
   try {
     // Verifica primeiro se o servidor está online
     const isOnline = await checkServerStatus();
@@ -48,7 +53,7 @@ export const fetchCSRFToken = async () => {
     }
     
     // Agora tenta obter o token CSRF
-    const response = await api.get('/auth/csrf-token');
+    const response = await api.get<CSRFTokenResponse>('/auth/csrf-token');
     csrfToken = response.data.csrf_token;
     console.log('Token CSRF obtido com sucesso:', csrfToken);
     return csrfToken;
@@ -60,12 +65,15 @@ export const fetchCSRFToken = async () => {
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use(
-  async (config) => {
+  (config) => {
     console.log(`Requisição: ${config.method?.toUpperCase()} ${config.url}`);
     
     const token = localStorage.getItem('token');
     if (token) {
       console.log('Token JWT encontrado, adicionando ao cabeçalho');
+      if (!config.headers) {
+        config.headers = {};
+      }
       config.headers.Authorization = `Bearer ${token}`;
     } else {
       console.log('Nenhum token JWT encontrado para a requisição');
@@ -76,26 +84,30 @@ api.interceptors.request.use(
     if (nonSafeMethods.includes(config.method?.toLowerCase() || '')) {
       // Se não temos um token CSRF, tenta obtê-lo
       if (!csrfToken) {
-        try {
-          console.log('Obtendo token CSRF para requisição não segura');
-          await fetchCSRFToken();
-        } catch (error) {
-          console.error('Falha ao obter token CSRF:', error);
-        }
-      }
-      
-      // Adiciona o token CSRF ao cabeçalho se disponível
-      if (csrfToken) {
-        console.log('Adicionando token CSRF ao cabeçalho');
-        config.headers['X-CSRF-TOKEN'] = csrfToken;
+        console.log('Obtendo token CSRF para requisição não segura');
+        // Em vez de usar await, definimos o token CSRF quando a promessa for resolvida
+        fetchCSRFToken()
+          .then(token => {
+            if (token && config.headers) {
+              config.headers['X-CSRF-TOKEN'] = token;
+            }
+          })
+          .catch(error => {
+            console.error('Falha ao obter token CSRF:', error);
+          });
       } else {
-        console.warn('Requisição sem token CSRF!');
+        // Adiciona o token CSRF ao cabeçalho se disponível
+        console.log('Adicionando token CSRF ao cabeçalho');
+        if (!config.headers) {
+          config.headers = {};
+        }
+        config.headers['X-CSRF-TOKEN'] = csrfToken;
       }
     }
     
     return config;
   },
-  (error) => {
+  (error: any) => {
     console.error('Erro no interceptor de requisição:', error);
     return Promise.reject(error);
   }
@@ -107,7 +119,7 @@ api.interceptors.response.use(
     console.log(`Resposta (${response.status}): ${response.config.method?.toUpperCase()} ${response.config.url}`);
     return response;
   },
-  (error) => {
+  (error: any) => {
     console.error('Erro na resposta da API:', error.message);
     
     if (error.code === 'ECONNABORTED') {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import api from '../services/api';
+import usersService from '../services/api/usersService';
+import { User } from '../services/api/types';
 import { FiEdit, FiKey, FiUserCheck, FiUserMinus, FiUserPlus, FiSearch, FiFilter, FiX, FiAlertCircle } from 'react-icons/fi';
 import './Dashboard.css';
 import './Users.css';
@@ -8,19 +10,20 @@ import { isAdmin, isManagerOrAdmin } from '../services/api/permissionService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
-interface User {
-  id: number;
+// Interface local para o componente
+interface LocalUser {
+  id: string;
   name: string;
   email: string;
   status: 'active' | 'inactive';
-  lastLogin: string;
+  lastLogin?: string;
   role: 'admin' | 'user' | 'manager';
 }
 
 const Users: React.FC = () => {
   const { user: currentUser } = useAuth();
   const location = useLocation();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<LocalUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -36,7 +39,7 @@ const Users: React.FC = () => {
   
   // Modal
   const [showModal, setShowModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<LocalUser | null>(null);
   
   // Verificar se o usuário atual é admin
   const userIsAdmin = isAdmin(currentUser);
@@ -65,18 +68,31 @@ const Users: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users', {
-        params: {
-          page: currentPage,
-          limit: usersPerPage,
-          search: searchTerm,
-          status: statusFilter !== 'all' ? statusFilter : undefined,
-          role: roleFilter !== 'all' ? roleFilter : undefined
-        }
+      
+      // Usar o serviço usersService
+      const data = await usersService.getUsers({
+        page: currentPage,
+        limit: usersPerPage,
+        search: searchTerm,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        role: roleFilter !== 'all' ? roleFilter : undefined
       });
       
-      setUsers(response.data.users);
-      setTotalPages(Math.ceil(response.data.total / usersPerPage));
+      // Converter o formato dos usuários do backend para o formato usado no componente
+      const formattedUsers: LocalUser[] = data.users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        // Mapear status do backend para o formato do componente
+        status: (user.status === 'ativo' || user.status === 'active') ? 'active' : 'inactive',
+        // Mapear role do backend para o formato do componente
+        role: user.role === 'admin' ? 'admin' : 
+              user.role === 'gerente' ? 'manager' : 'user',
+        lastLogin: user.lastLogin
+      }));
+      
+      setUsers(formattedUsers);
+      setTotalPages(Math.ceil(data.total / usersPerPage));
       setLoading(false);
     } catch (err) {
       console.error('Erro ao carregar usuários:', err);
@@ -94,15 +110,16 @@ const Users: React.FC = () => {
     setCurrentPage(1); // Reset para a primeira página ao buscar
   };
   
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: LocalUser) => {
     setSelectedUser(user);
     setShowModal(true);
   };
   
-  const handleResetPassword = async (userId: number) => {
+  const handleResetPassword = async (userId: string) => {
     if (window.confirm('Tem certeza que deseja resetar a senha deste usuário?')) {
       try {
-        await api.post(`/users/${userId}/reset-password`);
+        // Usar a função do serviço
+        await usersService.resetPassword(userId);
         alert('Uma nova senha foi enviada para o e-mail do usuário.');
       } catch (err) {
         console.error('Erro ao resetar senha:', err);
@@ -111,10 +128,11 @@ const Users: React.FC = () => {
     }
   };
   
-  const handlePromoteUser = async (userId: number) => {
+  const handlePromoteUser = async (userId: string) => {
     if (window.confirm('Tem certeza que deseja promover este usuário a administrador?')) {
       try {
-        await api.put(`/users/${userId}/promote`);
+        // Usar a função do serviço
+        await usersService.promoteUser(userId);
         // Atualizar a lista após a promoção
         setUsers(users.map(user => 
           user.id === userId ? { ...user, role: 'admin' } : user
@@ -126,13 +144,15 @@ const Users: React.FC = () => {
     }
   };
   
-  const handleToggleStatus = async (userId: number, currentStatus: 'active' | 'inactive') => {
+  const handleToggleStatus = async (userId: string, currentStatus: 'active' | 'inactive') => {
+    // Converter status para o formato esperado pelo backend
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     const actionText = newStatus === 'active' ? 'ativar' : 'desativar';
     
     if (window.confirm(`Tem certeza que deseja ${actionText} este usuário?`)) {
       try {
-        await api.put(`/users/${userId}/status`, { status: newStatus });
+        // Usar a função do serviço
+        await usersService.updateUserStatus(userId, newStatus);
         // Atualizar a lista após a alteração
         setUsers(users.map(user => 
           user.id === userId ? { ...user, status: newStatus } : user
