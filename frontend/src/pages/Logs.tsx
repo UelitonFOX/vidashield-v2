@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { FiList, FiDownload, FiFilter, FiSearch, FiX, FiCalendar, FiAlertCircle } from 'react-icons/fi';
+import { FiList, FiDownload, FiFilter, FiSearch, FiX, FiCalendar, FiAlertCircle, FiLock } from 'react-icons/fi';
 import api from '../services/api';
 import './Dashboard.css';
 import './Logs.css';
+import { useLocation } from 'react-router-dom';
 
 interface Log {
   id: number;
@@ -24,6 +25,7 @@ interface LogsResponse {
 }
 
 const Logs: React.FC = () => {
+  const location = useLocation();
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +42,51 @@ const Logs: React.FC = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
+  const [isBlocked, setIsBlocked] = useState<boolean | null>(null);
   
+  // Formatar data para o formato YYYY-MM-DD
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  // Ler parâmetros da URL ao carregar a página ou quando a URL mudar
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tipoParam = params.get('tipo');
+    const dataParam = params.get('data');
+    const bloqueioParam = params.get('bloqueio');
+    
+    // Aplicar filtro de tipo apenas se estiver presente
+    if (tipoParam) {
+      setSelectedLogType(tipoParam);
+      
+      // Se o tipo for "login" e tiver o parâmetro "data=hoje", definir a data para hoje
+      if (tipoParam === 'Login bem-sucedido' && dataParam === 'hoje') {
+        const hoje = formatDate(new Date());
+        setFromDate(hoje);
+        setToDate(hoje);
+      }
+      
+      // Se o tipo for "Tentativa de login bloqueado", definir isBlocked para true
+      if (tipoParam === 'Tentativa de login bloqueado' || tipoParam === 'bloqueio') {
+        setIsBlocked(true);
+      }
+    }
+    
+    // Verificar se existe o parâmetro de bloqueio
+    if (bloqueioParam === 'true') {
+      setIsBlocked(true);
+    }
+    
+  }, [location.search]);
+  
+  // Buscar dados quando filtros ou paginação mudarem
   useEffect(() => {
     fetchLogs();
-  }, [currentPage, searchTerm, selectedLogType, fromDate, toDate, selectedUser]);
+  }, [currentPage, searchTerm, selectedLogType, fromDate, toDate, selectedUser, isBlocked]);
   
   const fetchLogs = async () => {
     try {
@@ -56,9 +99,22 @@ const Logs: React.FC = () => {
       
       if (searchTerm) params.append('search', searchTerm);
       if (selectedLogType) params.append('type', selectedLogType);
-      if (fromDate) params.append('from', new Date(fromDate).toISOString());
-      if (toDate) params.append('to', new Date(toDate).toISOString());
+      
+      // Corrigir o problema de offset-naive vs offset-aware datetime
+      if (fromDate) {
+        const fromDateObj = new Date(fromDate);
+        fromDateObj.setHours(0, 0, 0, 0);
+        params.append('from', fromDateObj.toISOString().split('T')[0] + 'T00:00:00Z');
+      }
+      
+      if (toDate) {
+        const toDateObj = new Date(toDate);
+        toDateObj.setHours(23, 59, 59, 999);
+        params.append('to', toDateObj.toISOString().split('T')[0] + 'T23:59:59Z');
+      }
+      
       if (selectedUser) params.append('user_id', selectedUser);
+      if (isBlocked !== null) params.append('blocked', isBlocked.toString());
       
       const response = await api.get<LogsResponse>(`/logs?${params.toString()}`);
       
@@ -82,6 +138,7 @@ const Logs: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1); // Reset para a primeira página ao buscar
+    fetchLogs();
   };
   
   const handlePageChange = (page: number) => {
@@ -94,7 +151,9 @@ const Logs: React.FC = () => {
     setFromDate('');
     setToDate('');
     setSelectedUser('');
+    setIsBlocked(null);
     setCurrentPage(1);
+    fetchLogs();
   };
   
   const handleExport = async () => {
@@ -178,6 +237,30 @@ const Logs: React.FC = () => {
                 </select>
               </div>
               
+              {/* Filtro para tentativas de login bloqueadas */}
+              <div className="filter-group stat-card">
+                <label htmlFor="blocked-filter">
+                  <FiLock color="#339999" /> Bloqueio:
+                </label>
+                <select 
+                  id="blocked-filter"
+                  aria-label="Filtrar por tentativas bloqueadas"
+                  value={isBlocked === null ? '' : isBlocked ? 'true' : 'false'} 
+                  onChange={(e) => {
+                    if (e.target.value === '') {
+                      setIsBlocked(null);
+                    } else {
+                      setIsBlocked(e.target.value === 'true');
+                    }
+                  }}
+                  className="filter-select"
+                >
+                  <option value="">Todos</option>
+                  <option value="true">Bloqueados</option>
+                  <option value="false">Não bloqueados</option>
+                </select>
+              </div>
+              
               {/* Filtro de data inicial */}
               <div className="filter-group stat-card">
                 <label htmlFor="from-date">
@@ -206,16 +289,27 @@ const Logs: React.FC = () => {
                 />
               </div>
               
-              {/* Botão para limpar filtros */}
-              {(searchTerm || selectedLogType || fromDate || toDate || selectedUser) && (
-                <button 
-                  type="button" 
-                  onClick={clearFilters}
-                  className="action-button"
-                >
-                  <FiX size={18} />
-                  <span>Limpar Filtros</span>
-                </button>
+              {/* Botões para aplicar e limpar filtros */}
+              {(searchTerm || selectedLogType || fromDate || toDate || selectedUser || isBlocked !== null) && (
+                <>
+                  <button 
+                    type="button" 
+                    className="action-button primary-button"
+                    onClick={fetchLogs}
+                  >
+                    <FiSearch size={18} />
+                    <span>Aplicar Filtros</span>
+                  </button>
+                  
+                  <button 
+                    type="button" 
+                    onClick={clearFilters}
+                    className="action-button"
+                  >
+                    <FiX size={18} />
+                    <span>Limpar Filtros</span>
+                  </button>
+                </>
               )}
             </div>
           </form>

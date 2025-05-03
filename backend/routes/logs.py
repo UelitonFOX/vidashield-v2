@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 
 logs_bp = Blueprint('logs', __name__)
@@ -16,7 +16,8 @@ log_types = [
     "Exportação de relatório", 
     "Acesso a área restrita",
     "Bloqueio de IP",
-    "Reset de senha"
+    "Reset de senha",
+    "Tentativa de login bloqueado"
 ]
 
 user_ips = [
@@ -68,9 +69,9 @@ def generate_mock_logs(count=100):
         user_id = random.choice(user_ids)
         user_name = user_names[user_id % len(user_names)]
         
-        # Decidir se é login falho para IPs diferentes
+        # Decidir se é login falho ou bloqueado para IPs diferentes
         log_type = random.choice(log_types)
-        if log_type == "Tentativa de login falha":
+        if log_type == "Tentativa de login falha" or log_type == "Tentativa de login bloqueado":
             ip = f"45.67.{random.randint(1, 255)}.{random.randint(1, 255)}"
         else:
             ip = random.choice(user_ips)
@@ -81,6 +82,28 @@ def generate_mock_logs(count=100):
             "user_id": user_id,
             "user_name": user_name,
             "ip_address": ip,
+            "timestamp": log_time.isoformat(),
+            "formatted_date": log_time.strftime("%d/%m/%Y, %H:%M:%S")
+        })
+    
+    # Adicionar algumas tentativas de login bloqueadas específicas
+    for i in range(5):
+        log_time = now - timedelta(
+            days=random.randint(0, 10),
+            hours=random.randint(0, 23),
+            minutes=random.randint(0, 59),
+            seconds=random.randint(0, 59)
+        )
+        
+        user_id = random.choice(user_ids)
+        user_name = user_names[user_id % len(user_names)]
+        
+        logs.append({
+            "id": count + i + 1,
+            "action": "Tentativa de login bloqueado",
+            "user_id": user_id,
+            "user_name": user_name,
+            "ip_address": f"45.67.{random.randint(1, 255)}.{random.randint(1, 255)}",
             "timestamp": log_time.isoformat(),
             "formatted_date": log_time.strftime("%d/%m/%Y, %H:%M:%S")
         })
@@ -103,6 +126,7 @@ def get_logs():
     from_date = request.args.get('from', '', type=str)
     to_date = request.args.get('to', '', type=str)
     user_id = request.args.get('user_id', '', type=str)
+    blocked = request.args.get('blocked', '', type=str)
     
     filtered_logs = mock_logs.copy()
     
@@ -114,6 +138,14 @@ def get_logs():
     if user_id:
         filtered_logs = [log for log in filtered_logs if str(log['user_id']) == user_id]
     
+    # Filtrar por tentativas bloqueadas
+    if blocked:
+        is_blocked = blocked.lower() == 'true'
+        if is_blocked:
+            filtered_logs = [log for log in filtered_logs if 'bloqueado' in log['action'].lower() or 'bloqueio' in log['action'].lower()]
+        else:
+            filtered_logs = [log for log in filtered_logs if 'bloqueado' not in log['action'].lower() and 'bloqueio' not in log['action'].lower()]
+    
     # Filtrar por termos de busca (nome de usuário ou ação)
     if search:
         filtered_logs = [log for log in filtered_logs if 
@@ -124,16 +156,28 @@ def get_logs():
     # Filtrar por intervalo de datas
     if from_date:
         try:
+            # Corrigir problema de comparação de datas, garantindo timezone consistente
             from_datetime = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
-            filtered_logs = [log for log in filtered_logs if datetime.fromisoformat(log['timestamp']) >= from_datetime]
-        except ValueError:
+            if from_datetime.tzinfo is None:
+                from_datetime = from_datetime.replace(tzinfo=timezone.utc)
+                
+            filtered_logs = [log for log in filtered_logs if 
+                            datetime.fromisoformat(log['timestamp']).replace(tzinfo=timezone.utc) >= from_datetime]
+        except ValueError as e:
+            print(f"Erro ao converter data inicial: {e}")
             pass
     
     if to_date:
         try:
+            # Corrigir problema de comparação de datas, garantindo timezone consistente
             to_datetime = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
-            filtered_logs = [log for log in filtered_logs if datetime.fromisoformat(log['timestamp']) <= to_datetime]
-        except ValueError:
+            if to_datetime.tzinfo is None:
+                to_datetime = to_datetime.replace(tzinfo=timezone.utc)
+                
+            filtered_logs = [log for log in filtered_logs if 
+                            datetime.fromisoformat(log['timestamp']).replace(tzinfo=timezone.utc) <= to_datetime]
+        except ValueError as e:
+            print(f"Erro ao converter data final: {e}")
             pass
     
     # Calcular paginação

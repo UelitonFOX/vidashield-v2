@@ -118,6 +118,11 @@ const Dashboard: React.FC = () => {
     setShowUserDropdown(!showUserDropdown);
   };
 
+  // Função para navegar para página com filtros
+  const navigateWithFilter = (path: string) => {
+    navigate(path);
+  };
+
   if (loading) {
     return (
       <div className="dashboard">
@@ -231,7 +236,10 @@ const Dashboard: React.FC = () => {
             
             {/* Stats Grid */}
             <div className="stats-grid">
-              <div className="stat-card gradient-users">
+              <div 
+                className="stat-card gradient-users clickable-card" 
+                onClick={() => navigate('/users?status=active')}
+              >
                 <div className="stat-header">
                   <FiUsers className="stat-icon" />
                   <div className="stat-trend up">
@@ -252,7 +260,10 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="stat-card gradient-inactive">
+              <div 
+                className="stat-card gradient-inactive clickable-card" 
+                onClick={() => navigate('/users?status=inactive')}
+              >
                 <div className="stat-header">
                   <FiUserX className="stat-icon" />
                   <div className="stat-trend down">
@@ -273,7 +284,10 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="stat-card gradient-logins">
+              <div 
+                className="stat-card gradient-logins clickable-card" 
+                onClick={() => navigate('/logs?tipo=Login bem-sucedido&data=hoje')}
+              >
                 <div className="stat-header">
                   <FiCheckCircle className="stat-icon" />
                   <div className="stat-trend up">
@@ -294,7 +308,10 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="stat-card gradient-alerts">
+              <div 
+                className="stat-card gradient-alerts clickable-card" 
+                onClick={() => navigate('/alerts?critico=true')}
+              >
                 <div className="stat-header">
                   <FiAlertTriangle className="stat-icon" />
                   <div className="stat-trend up">
@@ -315,7 +332,10 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="stat-card gradient-security">
+              <div 
+                className="stat-card gradient-security clickable-card" 
+                onClick={() => navigate('/logs?tipo=Tentativa de login bloqueado')}
+              >
                 <div className="stat-header">
                   <FiLock className="stat-icon" />
                   <div className="stat-trend down">
@@ -336,7 +356,10 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="stat-card gradient-reports">
+              <div 
+                className="stat-card gradient-reports clickable-card" 
+                onClick={() => navigate('/logs?tipo=Exportação de relatório')}
+              >
                 <div className="stat-header">
                   <FiFileText className="stat-icon" />
                   <div className="stat-trend up">
