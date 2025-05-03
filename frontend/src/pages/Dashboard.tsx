@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import './Dashboard.css';
 import AccessChart from '../components/AccessChart';
+import InsightsWidget from '../components/InsightsWidget';
 import { 
   FiUsers, 
   FiCheckCircle, 
@@ -175,14 +176,14 @@ const Dashboard: React.FC = () => {
             </div>
             {showUserDropdown && (
               <div className="user-dropdown">
-                <div className="dropdown-item">
+                <Link to="/profile" className="dropdown-item">
                   <FiUser size={18} />
                   <span>Meu Perfil</span>
-                </div>
-                <div className="dropdown-item">
+                </Link>
+                <Link to="/settings" className="dropdown-item">
                   <FiSettings size={18} />
                   <span>Configurações</span>
-                </div>
+                </Link>
                 <div className="dropdown-item logout" onClick={handleLogout}>
                   <FiLogOut size={18} />
                   <span>Sair</span>
@@ -386,55 +387,24 @@ const Dashboard: React.FC = () => {
             {/* Chart */}
             <AccessChart weekData={data.acessos_semana} />
 
-            {/* Alerts */}
-            <section className="alerts-container">
-              <h2 className="section-title">Alertas Recentes</h2>
-              <div className="alerts-list">
-                <div className="alert-item">
-                  <div className="alert-icon critical">
-                    <FiAlertTriangle />
-                  </div>
-                  <div className="alert-content">
-                    <div className="alert-title">Múltiplas falhas de login</div>
-                    <div className="alert-time">há 2 minutos</div>
-                  </div>
-                </div>
-                <div className="alert-item">
-                  <div className="alert-icon warning">
-                    <FiAlertTriangle />
-                  </div>
-                  <div className="alert-content">
-                    <div className="alert-title">Senha do usuário alterada</div>
-                    <div className="alert-time">há 1 hora</div>
-                  </div>
-                </div>
-                <div className="alert-item">
-                  <div className="alert-icon success">
-                    <FiCheckCircle />
-                  </div>
-                  <div className="alert-content">
-                    <div className="alert-title">Novo usuário cadastrado</div>
-                    <div className="alert-time">há 3 horas</div>
-                  </div>
-                </div>
-              </div>
-            </section>
+            {/* Insights Widget (substituindo os Alertas) */}
+            <InsightsWidget />
           </div>
 
           {/* Action Buttons */}
           <div className="action-buttons">
-            <button className="action-button">
+            <Link to="/users/new" className="action-button">
               <FiUserPlus size={20} />
               <span>Adicionar usuário</span>
-            </button>
-            <button className="action-button">
+            </Link>
+            <Link to="/reports/export" className="action-button">
               <FiDownload size={20} />
               <span>Exportar relatório</span>
-            </button>
-            <button className="action-button">
+            </Link>
+            <Link to="/reset-password" className="action-button">
               <FiKey size={20} />
               <span>Resetar senha</span>
-            </button>
+            </Link>
           </div>
 
           {/* Footer */}

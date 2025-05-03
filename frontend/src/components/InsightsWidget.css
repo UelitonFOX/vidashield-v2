@@ -1,0 +1,151 @@
+.insights-container {
+  background-color: #1e2132;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.insights-container:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.insights-container .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.insights-container .section-title {
+  color: #ffffff;
+  font-size: 1.2rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(100% - 50px);
+}
+
+.insight-item {
+  display: flex;
+  background-color: #272b3f;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  align-items: flex-start;
+  border-left: 4px solid #4a5568;
+  animation: fadeIn 0.5s ease;
+}
+
+.insight-item:hover {
+  background-color: #2d3348;
+  transform: translateY(-2px);
+}
+
+.insight-item.security {
+  border-left-color: #f56565;
+}
+
+.insight-item.usage {
+  border-left-color: #4299e1;
+}
+
+.insight-item.trend {
+  border-left-color: #48bb78;
+}
+
+.insight-item.location {
+  border-left-color: #9f7aea;
+}
+
+.insight-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 12px;
+  background-color: #1e2132;
+  color: #ffffff;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.insight-item.security .insight-icon {
+  color: #f56565;
+}
+
+.insight-item.usage .insight-icon {
+  color: #4299e1;
+}
+
+.insight-item.trend .insight-icon {
+  color: #48bb78;
+}
+
+.insight-item.location .insight-icon {
+  color: #9f7aea;
+}
+
+.insight-content {
+  flex: 1;
+}
+
+.insight-content p {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.loading-indicator {
+  color: #a0aec0;
+  text-align: center;
+  padding: 20px 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+} 
