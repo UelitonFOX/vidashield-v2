@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import api from '../services/api';
 import './Alerts.css';
+import { useLocation } from 'react-router-dom';
 
 interface AlertDetail {
   user_id: number;
@@ -51,6 +52,7 @@ interface AlertsResponse {
 }
 
 const Alerts: React.FC = () => {
+  const location = useLocation();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,19 @@ const Alerts: React.FC = () => {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   
+  // Ler parâmetros da URL ao carregar a página ou quando a URL mudar
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const criticoParam = params.get('critico');
+    
+    // Aplicar filtro de criticidade apenas se estiver presente
+    if (criticoParam === 'true') {
+      setSelectedSeverity('critical');
+      setShowResolved(false);
+    }
+  }, [location.search]);
+  
+  // Buscar dados quando filtros ou paginação mudarem
   useEffect(() => {
     fetchAlerts();
   }, [currentPage, selectedSeverity, showResolved, searchTerm]);
@@ -275,9 +290,18 @@ const Alerts: React.FC = () => {
                 </select>
               </div>
               
-              {/* Botão para limpar filtros */}
+              {/* Botões para aplicar e limpar filtros */}
               {(selectedSeverity || showResolved !== null || searchTerm) && (
                 <div className="filter-actions">
+                  <button 
+                    type="button" 
+                    className="btn-primary"
+                    onClick={fetchAlerts}
+                  >
+                    <FiSearch size={18} />
+                    <span>Aplicar Filtros</span>
+                  </button>
+                  
                   <button 
                     type="button" 
                     onClick={clearFilters}

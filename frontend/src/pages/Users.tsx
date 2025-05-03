@@ -6,6 +6,7 @@ import './Dashboard.css';
 import './Users.css';
 import { isAdmin, isManagerOrAdmin } from '../services/api/permissionService';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 interface User {
   id: number;
@@ -18,6 +19,7 @@ interface User {
 
 const Users: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const location = useLocation();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,32 +44,46 @@ const Users: React.FC = () => {
   // Verificar se pode gerenciar (admin ou gerente)
   const canManageUsers = isManagerOrAdmin(currentUser);
   
+  // Ler parâmetros da URL ao carregar a página ou quando a URL mudar
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/users', {
-          params: {
-            page: currentPage,
-            limit: usersPerPage,
-            search: searchTerm,
-            status: statusFilter !== 'all' ? statusFilter : undefined,
-            role: roleFilter !== 'all' ? roleFilter : undefined
-          }
-        });
-        
-        setUsers(response.data.users);
-        setTotalPages(Math.ceil(response.data.total / usersPerPage));
-        setLoading(false);
-      } catch (err) {
-        console.error('Erro ao carregar usuários:', err);
-        setError('Falha ao carregar a lista de usuários. Tente novamente mais tarde.');
-        setLoading(false);
-      }
-    };
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get('status');
     
+    // Aplicar filtros de status apenas se estiverem presentes
+    if (statusParam === 'active' || statusParam === 'ativo') {
+      setStatusFilter('active');
+    } else if (statusParam === 'inactive' || statusParam === 'inativo') {
+      setStatusFilter('inactive');
+    }
+  }, [location.search]);
+  
+  // Buscar dados quando filtros ou paginação mudarem
+  useEffect(() => {
     fetchUsers();
   }, [currentPage, searchTerm, statusFilter, roleFilter]);
+  
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/users', {
+        params: {
+          page: currentPage,
+          limit: usersPerPage,
+          search: searchTerm,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          role: roleFilter !== 'all' ? roleFilter : undefined
+        }
+      });
+      
+      setUsers(response.data.users);
+      setTotalPages(Math.ceil(response.data.total / usersPerPage));
+      setLoading(false);
+    } catch (err) {
+      console.error('Erro ao carregar usuários:', err);
+      setError('Falha ao carregar a lista de usuários. Tente novamente mais tarde.');
+      setLoading(false);
+    }
+  };
   
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -210,14 +226,25 @@ const Users: React.FC = () => {
               </div>
               
               {(searchTerm || statusFilter !== 'all' || roleFilter !== 'all') && (
-                <button 
-                  type="button" 
-                  onClick={clearFilters}
-                  className="action-button"
-                >
-                  <FiX size={18} />
-                  <span>Limpar Filtros</span>
-                </button>
+                <>
+                  <button 
+                    type="button" 
+                    className="action-button primary-button"
+                    onClick={() => fetchUsers()}
+                  >
+                    <FiSearch size={18} />
+                    <span>Aplicar Filtros</span>
+                  </button>
+                  
+                  <button 
+                    type="button" 
+                    onClick={clearFilters}
+                    className="action-button"
+                  >
+                    <FiX size={18} />
+                    <span>Limpar Filtros</span>
+                  </button>
+                </>
               )}
             </div>
           </form>

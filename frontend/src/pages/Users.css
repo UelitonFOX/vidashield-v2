@@ -335,4 +335,14 @@
     padding: 1.5rem;
     width: 90%;
   }
+}
+
+.primary-button {
+  background-color: #339999;
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: #267777;
+  border-color: #267777;
 } 
