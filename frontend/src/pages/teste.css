@@ -1,0 +1,39 @@
+/* Estilos específicos para a página de testes */
+
+/* Botão com borda estilo badge - padrão novo */
+.btn-badge {
+  background-color: #4ade80 !important;
+  color: #000 !important;
+  padding: 0.5rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #4ade80 !important;
+  box-shadow: 0 0 5px rgba(74, 222, 128, 0.2) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  letter-spacing: 0.01em !important;
+}
+
+.btn-badge:hover {
+  background-color: #86efac !important; /* verde mais claro */
+  transform: translateY(-1px) !important;
+}
+
+/* Input com ícone - garantindo posicionamento correto */
+.input-icon-container {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+.input-icon {
+  position: absolute !important;
+  left: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #71717a !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+}
+
+.input-with-icon {
+  padding-left: 2.5rem !important;
+} 
