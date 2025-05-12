@@ -1,37 +1,59 @@
+"""
+Módulo para logging de eventos de autenticação OAuth.
+Registra sucessos e falhas para auditoria de segurança.
+"""
+
 import logging
-import os
 from datetime import datetime
+from models import db, AuthLog
 
-# Configurar o logger
-logger = logging.getLogger('oauth_audit')
-logger.setLevel(logging.INFO)
+logger = logging.getLogger('oauth')
 
-# Garantir que o diretório de logs existe
-log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
-os.makedirs(log_dir, exist_ok=True)
-
-# Definir o arquivo de log
-log_file = os.path.join(log_dir, 'oauth_logins.log')
-
-# Adicionar handler para arquivo
-file_handler = logging.FileHandler(log_file)
-file_handler.setLevel(logging.INFO)
-
-# Definir o formato do log
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-# Adicionar o handler ao logger
-logger.addHandler(file_handler)
-
-def log_oauth_success(provider, user_email, user_id, ip_address=None):
+def log_oauth_success(provider, email, user_id, provider_user_id=None, ip_address=None):
     """
-    Registra um login bem-sucedido via OAuth.
+    Registra um evento de sucesso na autenticação OAuth.
+    
+    Args:
+        provider: O provedor OAuth (google, github, etc)
+        email: Email do usuário
+        user_id: ID do usuário no sistema
+        provider_user_id: ID do usuário no provedor (opcional)
+        ip_address: Endereço IP do cliente (opcional)
     """
-    logger.info(f"LOGIN_SUCCESS - Provider: {provider}, User: {user_email}, ID: {user_id}, IP: {ip_address or 'unknown'}")
+    try:
+        log = AuthLog(
+            user_id=user_id,
+            action=f"oauth_{provider}_success",
+            details=f"Login via {provider.title()} bem-sucedido para {email}" + 
+                    (f" (ID: {provider_user_id})" if provider_user_id else ""),
+            timestamp=datetime.utcnow(),
+            ip_address=ip_address or "N/A"
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"Erro ao registrar sucesso OAuth: {str(e)}")
 
-def log_oauth_failure(provider, error, user_email=None, ip_address=None):
+def log_oauth_failure(provider, reason, email=None, ip_address=None):
     """
-    Registra uma falha de login via OAuth.
+    Registra um evento de falha na autenticação OAuth.
+    
+    Args:
+        provider: O provedor OAuth (google, github, etc)
+        reason: Razão da falha
+        email: Email do usuário (ou 'desconhecido') (opcional)
+        ip_address: Endereço IP do cliente (opcional)
     """
-    logger.error(f"LOGIN_FAILURE - Provider: {provider}, Error: {error}, User: {user_email or 'unknown'}, IP: {ip_address or 'unknown'}")
+    try:
+        email_info = f" para {email}" if email else ""
+        log = AuthLog(
+            user_id=None,
+            action=f"oauth_{provider}_failure",
+            details=f"Falha no login via {provider.title()}{email_info}: {reason}",
+            timestamp=datetime.utcnow(),
+            ip_address=ip_address or "N/A"
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"Erro ao registrar falha OAuth: {str(e)}") 

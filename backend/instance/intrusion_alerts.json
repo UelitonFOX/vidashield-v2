@@ -1,0 +1,46 @@
+[
+  {
+    "id": "17579309-c2b6-43e0-8f7e-d8240552c6ae",
+    "type": "Tentativa de intrus\u00e3o",
+    "severity": "critical",
+    "timestamp": "2025-05-09T14:37:34.865285",
+    "resolved": false,
+    "details": {
+      "email": "admin@clinica.com.br",
+      "ip_address": "45.67.89.123",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "location": "Kiev, Ucr\u00e2nia",
+      "attempts": 5,
+      "message": "Detectadas 5 tentativas falhas de login para o email admin@clinica.com.br"
+    }
+  },
+  {
+    "id": "596dae13-897d-4d69-8402-0df9b8afe34b",
+    "type": "Tentativa de intrus\u00e3o",
+    "severity": "critical",
+    "timestamp": "2025-05-09T12:37:34.865285",
+    "resolved": false,
+    "details": {
+      "email": "atendimento@clinica.com.br",
+      "ip_address": "178.154.200.58",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+      "location": "Moscou, R\u00fassia",
+      "attempts": 8,
+      "message": "Detectadas 8 tentativas falhas de login para o email atendimento@clinica.com.br"
+    }
+  },
+  {
+    "id": "638b250e-57e7-4089-a2f6-070a57336566",
+    "type": "Acesso suspeito",
+    "severity": "warning",
+    "timestamp": "2025-05-08T15:37:34.865285",
+    "resolved": true,
+    "details": {
+      "email": "maria@clinica.com.br",
+      "ip_address": "89.187.175.130",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      "location": "Berlim, Alemanha",
+      "message": "Acesso de localiza\u00e7\u00e3o incomum detectado"
+    }
+  }
+]
