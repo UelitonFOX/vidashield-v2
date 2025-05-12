@@ -1,73 +1,172 @@
-# VidaShield Backend
+# VidaShield API (Branch Notebook)
 
-Este é o backend do sistema VidaShield para monitoramento e proteção de contas de usuários.
+Backend da aplicação VidaShield, desenvolvido em Flask com SQLAlchemy. Esta branch **notebook** está configurada para usar **PostgreSQL via Supabase** como banco de dados principal.
 
-## Guia de Inicialização
+## Configuração do Ambiente
 
-### Iniciando o Backend
+### Requisitos
 
-Para iniciar o servidor backend, **sempre** use o script `start.py` que configura corretamente o ambiente:
+- Python 3.8+
+- PostgreSQL (via Supabase)
+- Pacotes Python listados em `requirements.txt`
+
+### Instalação
+
+1. Clone o repositório e mude para a branch notebook
+   ```bash
+   git clone https://github.com/seu-usuario/vidashield_new.git
+   cd vidashield_new
+   git checkout notebook
+   ```
+
+2. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Configure o arquivo `.env` usando o exemplo `.env.example` como base
+
+## Banco de Dados
+
+### Supabase (PostgreSQL)
+
+Esta branch está configurada para usar PostgreSQL através do Supabase como banco de dados principal.
+
+#### Configuração do Supabase
+
+Para configurar o Supabase, crie um arquivo `.env` na raiz com as seguintes informações:
+
+```
+# Supabase
+SUPABASE_URL=https://seu-projeto-ref.supabase.co
+SUPABASE_KEY=sua-chave-service-role
+SUPABASE_ANON_KEY=sua-chave-anonima
+
+# Banco de Dados PostgreSQL
+DATABASE_URL=postgresql://postgres.seu-projeto-ref:sua-senha@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+```
+
+#### Modelos e UUIDs
+
+Todos os modelos do sistema utilizam UUIDs como chaves primárias para garantir compatibilidade com o Supabase/PostgreSQL. A implementação usa um tipo personalizado `UUIDType` que funciona tanto com PostgreSQL quanto com SQLite para desenvolvimento local.
+
+### SQLite (Desenvolvimento Alternativo)
+
+Para desenvolvimento offline sem Supabase, você pode configurar o SQLite modificando o arquivo `.env`:
+
+```
+# Usar SQLite para desenvolvimento local
+DATABASE_URL='sqlite:///app.db'
+```
+
+## Migrações
+
+O diretório `migrations` contém scripts para migração entre diferentes bancos de dados:
+
+- `migrate_alert_id_to_uuid.py`: Migra a tabela `alert` para usar UUID como chave primária
+- `sync_with_supabase.py`: Sincroniza o esquema do banco de dados local com o Supabase
+- `postgres_migration.sql`: Script SQL para migração direta das tabelas para PostgreSQL
+- `add_email_verified.py`: Adiciona a coluna `email_verified` à tabela de usuários
+
+Para executar uma migração específica:
 
 ```bash
-# Na pasta backend
-python start.py --debug
+python migrations/[script].py
 ```
 
-### Opções disponíveis:
+## Inicialização
 
-- `--env dev`: Usar SQLite local (padrão)
-- `--env prod`: Usar PostgreSQL/Supabase (requer configuração no .env)
-- `--port 5000`: Definir porta (padrão: 5000)
-- `--debug`: Ativar modo de debug
-- `--sync-admin`: Sincronizar usuário admin com Supabase (apenas para ambiente prod)
-
-## Iniciando o Frontend
-
-Para iniciar o cliente React:
+Para iniciar o servidor:
 
 ```bash
-# Na pasta frontend
-npm start
+python app.py
 ```
 
-## Solução de problemas comuns
+## Estrutura do Projeto
 
-### Erro CORS
+- `app.py`: Ponto de entrada do aplicativo, contém a configuração do Flask
+- `config.py`: Configurações do aplicativo
+- `models.py`: Definição dos modelos de dados usando SQLAlchemy
+- `routes/`: Contém as rotas da API
+  - `auth.py`: Autenticação e registro
+  - `user.py`: Gestão de usuários 
+  - `alerts.py`: Gestão de alertas
+- `utils.py`: Funções utilitárias
+- `log_oauth.py`: Funções para logging de eventos de autenticação OAuth
 
-Se você encontrar erros de CORS como este:
+## API Endpoints
 
+### Autenticação
+
+- `POST /api/auth/register` - Registro de novos usuários
+- `POST /api/auth/login` - Login de usuários
+- `GET /api/auth/logout` - Logout de usuários
+- `GET /api/auth/google` - Iniciar autenticação Google OAuth
+- `GET /api/auth/google/callback` - Callback da autenticação Google OAuth
+
+### Usuários
+
+- `GET /api/users` - Listar usuários
+- `GET /api/users/<id>` - Obter usuário específico
+- `PUT /api/users/<id>` - Atualizar usuário
+- `DELETE /api/users/<id>` - Remover usuário
+
+### Alertas
+
+- `GET /api/alerts` - Listar alertas
+- `POST /api/alerts` - Criar alerta
+- `GET /api/alerts/<id>` - Obter alerta específico
+- `PUT /api/alerts/<id>` - Atualizar alerta
+- `DELETE /api/alerts/<id>` - Remover alerta
+- `POST /api/alerts/<id>/resolve` - Resolver alerta
+
+## Segurança
+
+- JWT para autenticação e autorização
+- Google OAuth integrado
+- Validação de dados de entrada
+- Logs de atividades de autenticação
+
+## Logs
+
+Os logs da aplicação são salvos na pasta `logs/`. Você pode ajustar o nível de log no arquivo `config.py`.
+
+## Solução de Problemas
+
+### Erro de Conexão com PostgreSQL
+
+Se estiver enfrentando problemas com a conexão PostgreSQL:
+
+1. Verifique se a senha no `DATABASE_URL` está formatada corretamente
+2. Confirme que o ambiente suporta IPv6 ou use a URL do pooler (aws-0-...)
+3. Verifique as políticas de firewall da sua rede
+
+### Problemas com Tabelas
+
+Se as tabelas não estiverem sendo criadas corretamente:
+
+```python
+from app import app, db
+with app.app_context():
+    db.create_all()
 ```
-Access to XMLHttpRequest at 'http://localhost:5000/api/alerts?page=1&limit=10' from origin 'http://localhost:3000' has been blocked by CORS policy
-```
 
-Certifique-se de:
-1. O servidor backend está rodando na porta 5000
-2. O frontend está rodando na porta 3000
-3. Os dois serviços foram iniciados corretamente
+## Diferenças com a Branch Main
 
-### Erros de banco de dados
+A branch **notebook** contém apenas o backend do VidaShield, com as seguintes diferenças:
 
-Se ocorrerem erros ao conectar com o banco de dados:
+1. Contém apenas o **código do backend**, sem o frontend React
+2. Está **configurada para usar PostgreSQL via Supabase** por padrão
+3. Possui uma estrutura de diretórios simplificada e centralizada na raiz
+4. Ideal para desenvolvimento e teste separado do backend
 
-1. Verifique se o arquivo `.env` está configurado corretamente
-2. Para ambiente local, o SQLite deve estar funcionando corretamente
-3. Para ambiente de produção, verifique se a conexão com o Supabase está configurada
+Para trabalhar com o projeto completo (frontend + backend), use a branch `main`.
 
-## Principais endpoints da API
+## Ambiente de Produção
 
-- `/api/auth/login`: Login com email/senha
-- `/api/auth/google`: Login com Google OAuth
-- `/api/auth/me`: Obter dados do usuário atual
-- `/api/dashboard/data`: Obter dados do dashboard
-- `/api/alerts`: Obter alertas
-- `/api/users`: Listar usuários
-- `/api/logs`: Obter logs do sistema
-- `/api/settings`: Obter/atualizar configurações
+Para produção, certifique-se de:
 
-## Verificação de status
-
-Para verificar se a API está funcionando corretamente, acesse:
-
-```
-http://localhost:5000/ping
-``` 
+1. Configurar `FLASK_ENV='production'`
+2. Usar o PostgreSQL via Supabase como banco de dados
+3. Configurar corretamente as variáveis de segurança (JWT_SECRET_KEY, SECRET_KEY)
+4. Usar um servidor WSGI como Gunicorn 

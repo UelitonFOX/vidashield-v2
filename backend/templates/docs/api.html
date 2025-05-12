@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidaShield API - Documentação</title>
+    <link rel="icon" type="image/svg+xml" href="/static/logo.png">
+    <style>
+        :root {
+            --primary: #1E40AF;
+            --primary-dark: #1E3A8A;
+            --secondary: #64748B;
+            --success: #00966E;
+            --danger: #DC2626;
+            --warning: #F59E0B;
+            --info: #2563EB;
+            --light: #F8FAFC;
+            --dark: #1E293B;
+            --bg-light: #F1F5F9;
+            --card-bg: #FFFFFF;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --border-color: #E2E8F0;
+            --status-online: #10B981;
+            --status-offline: #EF4444;
+            --status-unknown: #F59E0B;
+        }
+        
+        /* Tema Escuro */
+        [data-theme="dark"] {
+            --primary: #3B82F6;
+            --primary-dark: #2563EB;
+            --secondary: #94A3B8;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --info: #3B82F6;
+            --light: #1E293B;
+            --dark: #F8FAFC;
+            --bg-light: #0F172A;
+            --card-bg: #1E293B;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --border-color: #334155;
+            --status-online: #10B981;
+            --status-offline: #EF4444;
+            --status-unknown: #F59E0B;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            margin-right: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .header-version {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .intro {
+            background-color: var(--card-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .intro h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        .intro p {
+            margin-bottom: 1rem;
+            color: var(--secondary);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .api-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .api-item {
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            background-color: var(--bg-light);
+            border-left: 4px solid var(--info);
+        }
+
+        .api-item.auth {
+            border-left-color: var(--primary);
+        }
+
+        .api-item.dashboard {
+            border-left-color: var(--success);
+        }
+
+        .api-item.users {
+            border-left-color: var(--info);
+        }
+
+        .api-item.logs {
+            border-left-color: var(--secondary);
+        }
+
+        .api-item.alerts {
+            border-left-color: var(--warning);
+        }
+
+        .api-item.settings {
+            border-left-color: var(--danger);
+        }
+
+        .api-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .api-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--dark);
+        }
+
+        .api-method {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .api-method.get {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: #2563EB;
+        }
+
+        .api-method.post {
+            background-color: rgba(0, 150, 110, 0.1);
+            color: #00966E;
+        }
+
+        .api-method.put {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+        }
+
+        .api-method.delete {
+            background-color: rgba(220, 38, 38, 0.1);
+            color: #DC2626;
+        }
+
+        .api-url {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            background-color: var(--dark);
+            color: var(--light);
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .api-description {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            margin-top: 0.5rem;
+        }
+
+        .api-notes {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--secondary);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 0.5rem;
+        }
+
+        .security-section {
+            background-color: rgba(220, 38, 38, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid rgba(220, 38, 38, 0.1);
+        }
+
+        .security-section h3 {
+            color: var(--danger);
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+
+        .note {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid #F59E0B;
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 0.25rem 0.25rem 0;
+        }
+
+        .note-title {
+            font-weight: 600;
+            color: #B45309;
+            margin-bottom: 0.25rem;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .header-version {
+                margin-top: 0.5rem;
+            }
+        }
+
+        /* Seletor de tema */
+        .theme-switch-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--card-bg);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-switch-container:hover {
+            background-color: var(--primary);
+        }
+        
+        .theme-switch-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--dark);
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        /* Aplicar cores baseadas em atributos data */
+        .status-indicator[data-status="online"] {
+            background-color: #10B981;
+            box-shadow: 0 0 5px #10B981;
+        }
+
+        .status-indicator[data-status="offline"] {
+            background-color: #EF4444;
+            box-shadow: 0 0 5px #EF4444;
+        }
+
+        .status-indicator[data-status="unknown"] {
+            background-color: #F59E0B;
+            box-shadow: 0 0 5px #F59E0B;
+        }
+        
+        .status-indicator[data-status="loading"] {
+            background-color: #F59E0B;
+            box-shadow: 0 0 5px #F59E0B;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0.5;
+            }
+        }
+        
+        /* Sistema Status Box */
+        .system-status {
+            background-color: var(--card-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .status-item {
+            padding: 1rem;
+            border-radius: 0.375rem;
+            background-color: rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .status-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow);
+        }
+        
+        .status-item-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--primary);
+        }
+        
+        .status-value {
+            font-size: 0.9rem;
+            padding-left: 15px;
+            color: var(--secondary);
+            text-transform: capitalize;
+        }
+        
+        /* Container e título do status do sistema */
+        .system-status-container {
+            margin-bottom: 2rem;
+        }
+        
+        .status-title {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .last-update {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+            text-align: right;
+        }
+        
+        .refresh-btn {
+            display: inline-flex;
+            align-items: center;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-left: 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .refresh-btn svg {
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-container">
+                <img src="/static/logo.png" alt="VidaShield Logo" class="logo">
+                <h1>VidaShield API</h1>
+            </div>
+            <span class="header-version">v2.0</span>
+        </header>
+
+        <section class="intro">
+            <h2>Documentação de APIs</h2>
+            <p>Esta documentação descreve as APIs disponíveis no VidaShield, uma solução completa de segurança digital desenvolvida como parte do Projeto Integrador Talento Tech Paraná.</p>
+            <p>Todas as APIs requerem autenticação via token JWT, exceto as rotas públicas de autenticação marcadas como "Pública".</p>
+            <p>Url Base: <code>http://localhost:5000/api</code></p>
+        </section>
+        
+        <!-- Status do Sistema -->
+        <div class="system-status-container">
+            <h3 class="status-title">Status do Sistema</h3>
+            <div class="last-update">
+                Última atualização: <span id="lastUpdateTime">{{ timestamp }}</span>
+                <button class="refresh-btn" onclick="updateSystemStatus()">
+                    <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path fill="currentColor" d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
+                    </svg>
+                    Atualizar
+                </button>
+            </div>
+            
+            {% if 'local' in db_type.lower() %}
+            <div class="note" style="margin-bottom: 1rem;">
+                <div class="note-title">Ambiente de Desenvolvimento</div>
+                <p>Este servidor está executando em ambiente de desenvolvimento usando SQLite como banco de dados. Em ambiente de produção, será utilizado o PostgreSQL (Supabase).</p>
+            </div>
+            {% endif %}
+            
+            <div class="system-status">
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator status-color-{{ 'online' if status == 'ok' or status == 'online' else 'offline' }}" data-status="{{ 'online' if status == 'ok' or status == 'online' else 'offline' }}" title="Status geral da API: {{ status }}"></span>
+                        API Status
+                    </div>
+                    <div class="status-value">{{ 'Online' if status == 'ok' or status == 'online' else status }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if db_status == 'conectado' else 'offline' }}" title="Status do Banco de Dados"></span>
+                        <span>Banco de Dados</span>
+                    </div>
+                    <div class="status-value">{{ db_status }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="online" title="Tipo de Banco de Dados"></span>
+                        <span>Tipo de BD</span>
+                    </div>
+                    <div class="status-value">{{ db_type }} {% if 'sqlite' in db_type.lower() %}<span style="font-size: 0.8em; color: var(--warning);">(modo de desenvolvimento)</span>{% endif %}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="online" title="Ambiente de Execução"></span>
+                        <span>Ambiente</span>
+                    </div>
+                    <div class="status-value">{{ env }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if endpoints_status.get('auth', '') == 'online' else ('offline' if endpoints_status.get('auth', '') == 'offline' else 'unknown') }}" title="Status da API de Autenticação: {{ endpoints_status.get('auth', 'desconhecido') }}"></span>
+                        Autenticação
+                    </div>
+                    <div class="status-value">{{ endpoints_status.get('auth', 'desconhecido')|title }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if endpoints_status.get('dashboard', '') == 'online' else ('offline' if endpoints_status.get('dashboard', '') == 'offline' else 'unknown') }}" title="Status da API de Dashboard: {{ endpoints_status.get('dashboard', 'desconhecido') }}"></span>
+                        Dashboard
+                    </div>
+                    <div class="status-value">{{ endpoints_status.get('dashboard', 'desconhecido')|title }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if endpoints_status.get('users', '') == 'online' else ('offline' if endpoints_status.get('users', '') == 'offline' else 'unknown') }}" title="Status da API de Usuários: {{ endpoints_status.get('users', 'desconhecido') }}"></span>
+                        Usuários
+                    </div>
+                    <div class="status-value">{{ endpoints_status.get('users', 'desconhecido')|title }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if endpoints_status.get('logs', '') == 'online' else ('offline' if endpoints_status.get('logs', '') == 'offline' else 'unknown') }}" title="Status da API de Logs: {{ endpoints_status.get('logs', 'desconhecido') }}"></span>
+                        Logs
+                    </div>
+                    <div class="status-value">{{ endpoints_status.get('logs', 'desconhecido')|title }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if endpoints_status.get('alerts', '') == 'online' else ('offline' if endpoints_status.get('alerts', '') == 'offline' else 'unknown') }}" title="Status da API de Alertas: {{ endpoints_status.get('alerts', 'desconhecido') }}"></span>
+                        Alertas
+                    </div>
+                    <div class="status-value">{{ endpoints_status.get('alerts', 'desconhecido')|title }}</div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-item-header">
+                        <span class="status-indicator" data-status="{{ 'online' if endpoints_status.get('settings', '') == 'online' else ('offline' if endpoints_status.get('settings', '') == 'offline' else 'unknown') }}" title="Status da API de Configurações: {{ endpoints_status.get('settings', 'desconhecido') }}"></span>
+                        Configurações
+                    </div>
+                    <div class="status-value">{{ endpoints_status.get('settings', 'desconhecido')|title }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="note">
+            <div class="note-title">📝 Nota sobre o Banco de Dados</div>
+            <p>Este sistema utiliza diferentes bancos de dados dependendo do ambiente:</p>
+            <ul>
+                <li><strong>Desenvolvimento:</strong> SQLite (local) para facilitar a configuração e testes</li>
+                <li><strong>Produção:</strong> PostgreSQL (Supabase) para maior robustez e escalabilidade</li>
+            </ul>
+            <p>O ambiente atual está configurado como <strong>{{ env }}</strong> e utilizando <strong>{{ db_type }}</strong>.</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Autenticação (Auth)</h2>
+            </div>
+            <div class="api-list">
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Login</span>
+                        <span class="api-method post">POST</span>
+                    </div>
+                    <div class="api-url">/api/auth/login</div>
+                    <div class="api-description">Realiza autenticação de usuário via email e senha.</div>
+                    <div class="api-notes">Pública | Retorna token JWT e informações do usuário</div>
+                </div>
+                
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Registro</span>
+                        <span class="api-method post">POST</span>
+                    </div>
+                    <div class="api-url">/api/auth/register</div>
+                    <div class="api-description">Registra um novo usuário no sistema.</div>
+                    <div class="api-notes">Pública | Novos usuários ficam com status 'pendente'</div>
+                </div>
+                
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Recuperar Senha</span>
+                        <span class="api-method post">POST</span>
+                    </div>
+                    <div class="api-url">/api/auth/forgot-password</div>
+                    <div class="api-description">Envia email com link para redefinição de senha.</div>
+                    <div class="api-notes">Pública | Token de redefinição com expiração de 1 hora</div>
+                </div>
+                
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Redefinir Senha</span>
+                        <span class="api-method post">POST</span>
+                    </div>
+                    <div class="api-url">/api/auth/reset-password</div>
+                    <div class="api-description">Redefine a senha do usuário com token válido.</div>
+                    <div class="api-notes">Pública | Requer token válido enviado por email</div>
+                </div>
+                
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Verificar Token</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/auth/me</div>
+                    <div class="api-description">Verifica o token JWT atual e retorna informações do usuário logado.</div>
+                    <div class="api-notes">Protegida | Retorna id, email, name, role, is_active e status</div>
+                </div>
+                
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Logout</span>
+                        <span class="api-method post">POST</span>
+                    </div>
+                    <div class="api-url">/api/auth/logout</div>
+                    <div class="api-description">Realiza logout do usuário no sistema.</div>
+                    <div class="api-notes">Protegida | Requer Bearer token no cabeçalho</div>
+                </div>
+                
+                <div class="api-item auth">
+                    <div class="api-title">
+                        <span class="api-name">Token CSRF</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/auth/csrf-token</div>
+                    <div class="api-description">Obtém um token CSRF para proteção contra ataques cross-site.</div>
+                    <div class="api-notes">Pública | Necessário para requisições não-GET</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Dashboard</h2>
+            </div>
+            <div class="api-list">
+                <div class="api-item dashboard">
+                    <div class="api-title">
+                        <span class="api-name">Estatísticas Gerais</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/dashboard/stats</div>
+                    <div class="api-description">Retorna estatísticas gerais para o dashboard.</div>
+                    <div class="api-notes">Protegida | Inclui contadores de usuários, logs e alertas</div>
+                </div>
+                
+                <div class="api-item dashboard">
+                    <div class="api-title">
+                        <span class="api-name">Gráfico de Acessos</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/dashboard/access-chart?days={7|15|30}</div>
+                    <div class="api-description">Retorna dados para o gráfico de acessos por período.</div>
+                    <div class="api-notes">Protegida | Parâmetro 'days' define o período (7, 15 ou 30 dias)</div>
+                </div>
+                
+                <div class="api-item dashboard">
+                    <div class="api-title">
+                        <span class="api-name">Alertas Recentes</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/dashboard/recent-alerts</div>
+                    <div class="api-description">Retorna os alertas mais recentes para o dashboard.</div>
+                    <div class="api-notes">Protegida | Limitado aos 5 alertas mais recentes</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Usuários (Users)</h2>
+            </div>
+            <div class="api-list">
+                <div class="api-item users">
+                    <div class="api-title">
+                        <span class="api-name">Listar Usuários</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/users</div>
+                    <div class="api-description">Retorna a lista de usuários do sistema.</div>
+                    <div class="api-notes">Protegida | Requer permissão de administrador</div>
+                </div>
+                
+                <div class="api-item users">
+                    <div class="api-title">
+                        <span class="api-name">Detalhes do Usuário</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/users/{id}</div>
+                    <div class="api-description">Retorna detalhes de um usuário específico.</div>
+                    <div class="api-notes">Protegida | Usuários podem ver apenas seus próprios dados</div>
+                </div>
+                
+                <div class="api-item users">
+                    <div class="api-title">
+                        <span class="api-name">Atualizar Usuário</span>
+                        <span class="api-method put">PUT</span>
+                    </div>
+                    <div class="api-url">/api/users/{id}</div>
+                    <div class="api-description">Atualiza dados de um usuário específico.</div>
+                    <div class="api-notes">Protegida | Usuários podem editar apenas seus próprios dados</div>
+                </div>
+                
+                <div class="api-item users">
+                    <div class="api-title">
+                        <span class="api-name">Alterar Status</span>
+                        <span class="api-method put">PUT</span>
+                    </div>
+                    <div class="api-url">/api/users/{id}/status</div>
+                    <div class="api-description">Altera o status de um usuário (ativo/inativo/pendente).</div>
+                    <div class="api-notes">Protegida | Requer permissão de administrador</div>
+                </div>
+                
+                <div class="api-item users">
+                    <div class="api-title">
+                        <span class="api-name">Alterar Senha</span>
+                        <span class="api-method put">PUT</span>
+                    </div>
+                    <div class="api-url">/api/users/{id}/password</div>
+                    <div class="api-description">Altera a senha de um usuário.</div>
+                    <div class="api-notes">Protegida | Requer senha atual para validação</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Logs de Acesso</h2>
+            </div>
+            <div class="api-list">
+                <div class="api-item logs">
+                    <div class="api-title">
+                        <span class="api-name">Listar Logs</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/logs?page={page}&limit={limit}</div>
+                    <div class="api-description">Retorna logs de acesso com paginação.</div>
+                    <div class="api-notes">Protegida | Suporta filtros por data, ação e usuário</div>
+                </div>
+                
+                <div class="api-item logs">
+                    <div class="api-title">
+                        <span class="api-name">Detalhes do Log</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/logs/{id}</div>
+                    <div class="api-description">Retorna detalhes de um log específico.</div>
+                    <div class="api-notes">Protegida | Inclui informações detalhadas da atividade</div>
+                </div>
+                
+                <div class="api-item logs">
+                    <div class="api-title">
+                        <span class="api-name">Exportar Logs</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/logs/export?format={csv|json}</div>
+                    <div class="api-description">Exporta logs para CSV ou JSON.</div>
+                    <div class="api-notes">Protegida | Requer permissão de administrador</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Alertas (Alerts)</h2>
+            </div>
+            <div class="api-list">
+                <div class="api-item alerts">
+                    <div class="api-title">
+                        <span class="api-name">Listar Alertas</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/alerts?page={page}&limit={limit}</div>
+                    <div class="api-description">Retorna alertas com paginação.</div>
+                    <div class="api-notes">Protegida | Suporta filtros por severidade e status</div>
+                </div>
+                
+                <div class="api-item alerts">
+                    <div class="api-title">
+                        <span class="api-name">Detalhes do Alerta</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/alerts/{id}</div>
+                    <div class="api-description">Retorna detalhes de um alerta específico.</div>
+                    <div class="api-notes">Protegida | Inclui informações completas do alerta</div>
+                </div>
+                
+                <div class="api-item alerts">
+                    <div class="api-title">
+                        <span class="api-name">Criar Alerta</span>
+                        <span class="api-method post">POST</span>
+                    </div>
+                    <div class="api-url">/api/alerts</div>
+                    <div class="api-description">Cria um novo alerta no sistema.</div>
+                    <div class="api-notes">Protegida | Requer tipo e severidade</div>
+                </div>
+                
+                <div class="api-item alerts">
+                    <div class="api-title">
+                        <span class="api-name">Resolver Alerta</span>
+                        <span class="api-method put">PUT</span>
+                    </div>
+                    <div class="api-url">/api/alerts/{id}/resolve</div>
+                    <div class="api-description">Marca um alerta como resolvido.</div>
+                    <div class="api-notes">Protegida | Requer permissão de administrador ou gerente</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Configurações (Settings)</h2>
+            </div>
+            <div class="api-list">
+                <div class="api-item settings">
+                    <div class="api-title">
+                        <span class="api-name">Obter Configurações</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/settings</div>
+                    <div class="api-description">Retorna as configurações do sistema.</div>
+                    <div class="api-notes">Protegida | Configurações sensíveis são filtradas por nível de acesso</div>
+                </div>
+                
+                <div class="api-item settings">
+                    <div class="api-title">
+                        <span class="api-name">Atualizar Configurações</span>
+                        <span class="api-method put">PUT</span>
+                    </div>
+                    <div class="api-url">/api/settings</div>
+                    <div class="api-description">Atualiza as configurações do sistema.</div>
+                    <div class="api-notes">Protegida | Requer permissão de administrador</div>
+                </div>
+                
+                <div class="api-item settings">
+                    <div class="api-title">
+                        <span class="api-name">Verificar Versão</span>
+                        <span class="api-method get">GET</span>
+                    </div>
+                    <div class="api-url">/api/settings/version</div>
+                    <div class="api-description">Retorna informações sobre a versão atual do sistema.</div>
+                    <div class="api-notes">Pública | Utilizada para verificação de compatibilidade</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="security-section">
+            <h3>Informações de Segurança</h3>
+            <p>Todas as rotas das APIs do VidaShield são protegidas das seguintes formas:</p>
+            <ul>
+                <li><strong>JWT (JSON Web Tokens):</strong> Para autenticação de usuários</li>
+                <li><strong>CSRF Protection:</strong> Para evitar ataques Cross-Site Request Forgery</li>
+                <li><strong>CORS configurado:</strong> Para permitir apenas origens confiáveis</li>
+                <li><strong>Validação de dados:</strong> Todos os inputs são validados e sanitizados</li>
+                <li><strong>hCaptcha:</strong> Para proteção contra bots nos formulários de autenticação</li>
+            </ul>
+        </div>
+        
+        <div class="note">
+            <div class="note-title">Observação Importante</div>
+            <p>Esta página de documentação é apenas para referência durante o desenvolvimento. Para ambientes de produção, é recomendado utilizar uma solução de documentação mais completa como Swagger/OpenAPI.</p>
+        </div>
+        
+        <footer class="footer">
+            <p>VidaShield - Sistema de Segurança Digital para Clínicas</p>
+            <p>© 2024 Talento Tech PR 15 - Todos os direitos reservados</p>
+            <a href="https://github.com/UelitonFOX/vidashield" target="_blank" rel="noopener" class="btn btn-primary">GitHub do Projeto</a>
+        </footer>
+    </div>
+    
+    <!-- Seletor de Tema -->
+    <div class="theme-switch-container" onclick="toggleTheme()">
+        <svg class="theme-switch-icon" id="theme-icon" viewBox="0 0 24 24">
+            <path id="moon-icon" fill="currentColor" d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8s8,3.59,8,8S16.41,20,12,20z M12,6c-3.3,0-6,2.7-6,6s2.7,6,6,6s6-2.7,6-6S15.3,6,12,6z M12,15c-1.65,0-3-1.35-3-3s1.35-3,3-3s3,1.35,3,3S13.65,15,12,15z" style="display: none;" />
+            <path id="sun-icon" fill="currentColor" d="M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z" style="display: block;" />
+        </svg>
+    </div>
+    
+    <script>
+        // Função para alternar entre tema claro e escuro
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            
+            // Salvar preferência no localStorage
+            localStorage.setItem('vidashield-theme', newTheme);
+            
+            // Alternar ícones
+            if (newTheme === 'dark') {
+                document.getElementById('sun-icon').style.display = 'block';
+                document.getElementById('moon-icon').style.display = 'none';
+            } else {
+                document.getElementById('sun-icon').style.display = 'none';
+                document.getElementById('moon-icon').style.display = 'block';
+            }
+        }
+        
+        // Aplicar tema salvo ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('vidashield-theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                
+                // Configurar ícone correto
+                if (savedTheme === 'dark') {
+                    document.getElementById('sun-icon').style.display = 'block';
+                    document.getElementById('moon-icon').style.display = 'none';
+                } else {
+                    document.getElementById('sun-icon').style.display = 'none';
+                    document.getElementById('moon-icon').style.display = 'block';
+                }
+            }
+            
+            // Iniciar atualização de status
+            updateSystemStatus();
+            // Programar atualizações periódicas (a cada 30 segundos)
+            setInterval(updateSystemStatus, 30000);
+        });
+        
+        // Função para atualizar o status do sistema
+        function updateSystemStatus() {
+            console.log("Atualizando status do sistema...");
+            
+            // Marcar todos os indicadores como carregando inicialmente
+            document.querySelectorAll('.status-indicator').forEach(indicator => {
+                indicator.setAttribute('data-status', 'loading');
+            });
+            
+            // Fazer requisição AJAX para obter dados atualizados
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Dados recebidos:", data);
+                    
+                    // Atualizar status da API
+                    const statusIndicators = document.querySelectorAll('.status-indicator');
+                    const statusValues = document.querySelectorAll('.status-value');
+                    
+                    // Atualizar status principal
+                    if (statusIndicators[0] && statusValues[0]) {
+                        const isOnline = data.status === 'ok' || data.status === 'online';
+                        statusIndicators[0].setAttribute('data-status', isOnline ? 'online' : 'offline');
+                        statusValues[0].textContent = isOnline ? 'Online' : data.status;
+                        statusIndicators[0].title = "Status geral da API: " + data.status;
+                    }
+                    
+                    // Atualizar status do banco de dados
+                    if (statusIndicators[1] && statusValues[1]) {
+                        const isOnline = data.database === 'conectado';
+                        statusIndicators[1].setAttribute('data-status', isOnline ? 'online' : 'offline');
+                        statusValues[1].textContent = data.db_type;
+                        statusIndicators[1].title = "Status do banco de dados: " + data.database;
+                    }
+                    
+                    // Atualizar status dos endpoints
+                    if (data.endpoints) {
+                        const endpoints = ['auth', 'dashboard', 'users', 'logs', 'alerts', 'settings'];
+                        endpoints.forEach((endpoint, index) => {
+                            const i = index + 2; // Os dois primeiros são API geral e banco de dados
+                            if (statusIndicators[i] && statusValues[i]) {
+                                const status = data.endpoints[endpoint] || 'desconhecido';
+                                console.log(`Status do endpoint ${endpoint}:`, status);
+                                
+                                // Definir o valor do atributo data-status com base no status
+                                if (status === 'online') {
+                                    statusIndicators[i].setAttribute('data-status', 'online');
+                                } else if (status === 'offline') {
+                                    statusIndicators[i].setAttribute('data-status', 'offline');
+                                } else {
+                                    statusIndicators[i].setAttribute('data-status', 'unknown');
+                                }
+                                
+                                statusValues[i].textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                                statusIndicators[i].title = `Status da API de ${endpoint}: ${status}`;
+                            }
+                        });
+                    }
+                    
+                    // Adicionar tempos de resposta aos tooltips se disponível
+                    if (data.response_times) {
+                        const endpoints = ['auth', 'dashboard', 'users', 'logs', 'alerts', 'settings'];
+                        endpoints.forEach((endpoint, index) => {
+                            const i = index + 2;
+                            if (statusIndicators[i] && data.response_times[endpoint]) {
+                                const responseTime = data.response_times[endpoint];
+                                const currentTitle = statusIndicators[i].title;
+                                statusIndicators[i].title = `${currentTitle} (${responseTime}ms)`;
+                            }
+                        });
+                    }
+                    
+                    // Atualizar timestamp da última atualização
+                    const now = new Date();
+                    const formattedDate = now.toLocaleDateString('pt-BR') + ' ' + 
+                                        now.toLocaleTimeString('pt-BR');
+                    document.getElementById('lastUpdateTime').textContent = formattedDate;
+                })
+                .catch(error => {
+                    console.error('Erro ao atualizar status:', error);
+                    
+                    // Marcar todos como offline em caso de erro
+                    document.querySelectorAll('.status-indicator').forEach(indicator => {
+                        indicator.setAttribute('data-status', 'offline');
+                    });
+                });
+        }
+    </script>
+</body>
+</html> 

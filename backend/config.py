@@ -5,6 +5,9 @@ import logging
 # Carrega variáveis de ambiente do arquivo .env
 load_dotenv()
 
+# Obtém o diretório atual do script
+current_dir = os.path.abspath(os.path.dirname(__file__))
+
 class Config:
     # URL do frontend
     FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
@@ -26,7 +29,7 @@ class Config:
     # Configurações do banco de dados
     # Prioriza a variável de ambiente DATABASE_URL (PostgreSQL/Supabase)
     # Em ambiente de desenvolvimento local, pode-se usar um banco SQLite
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(current_dir, "app.db")}')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Configurações de segurança

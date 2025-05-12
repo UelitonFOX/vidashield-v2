@@ -4,6 +4,8 @@ from models import db, User
 from datetime import datetime, timedelta
 import random
 import logging
+import os
+import json
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -127,80 +129,113 @@ def get_random_insight():
 @dashboard_bp.route('/insights/multiple', methods=['GET'])
 @jwt_required()
 def get_multiple_insights():
-    """Retorna múltiplos insights aleatórios sobre segurança ou uso do sistema."""
-    try:
-        current_user_id = get_jwt_identity()
-        count = request.args.get('count', default=4, type=int)
-        count = min(max(1, count), 10)  # Limita entre 1 e 10 insights
-        
-        # Lista de insights disponíveis (igual à função de insight único)
-        insights = [
-            {
-                "type": "security",
-                "text": f"🚨 IP {_random_ip()} teve {random.randint(1, 5)} tentativas bloqueadas nas últimas {random.randint(1, 3)}h."
-            },
-            {
-                "type": "security",
-                "text": f"🔁 Usuário {_random_email()} trocou a senha {random.randint(1, 3)} vezes em {random.randint(3, 10)} dias."
-            },
-            {
-                "type": "trend",
-                "text": f"📉 Acesso caiu {random.randint(10, 30)}% em relação à semana passada."
-            },
-            {
-                "type": "trend", 
-                "text": f"📈 Aumento de {random.randint(5, 40)}% em exportações de relatórios este mês."
-            },
-            {
-                "type": "location",
-                "text": f"🧭 Mais acessos vindos de {_random_city()} nas últimas 24h."
-            },
-            {
-                "type": "usage",
-                "text": f"📊 Horário de pico de acessos: {random.randint(8, 11)}h às {random.randint(13, 18)}h."
-            },
-            {
-                "type": "security",
-                "text": f"🚨 {random.randint(2, 8)} tentativas de login do dispositivo não reconhecido."
-            },
-            {
-                "type": "usage",
-                "text": f"🔄 {random.randint(1, 10)} novos usuários cadastrados na última semana."
-            }
-        ]
-        
-        # Gerar alguns insights adicionais com valores aleatórios
-        additional_insights = [
-            {
-                "type": "trend",
-                "text": f"📊 {random.randint(60, 95)}% dos usuários estão usando autenticação de dois fatores."
-            },
-            {
-                "type": "security",
-                "text": f"🔐 {random.randint(3, 12)} senhas consideradas fracas foram alteradas esta semana."
-            },
-            {
-                "type": "location",
-                "text": f"🌍 Acessos de {random.randint(2, 7)} países diferentes nas últimas 24h."
-            },
-            {
-                "type": "usage",
-                "text": f"⏱️ Tempo médio de sessão: {random.randint(8, 35)} minutos por usuário."
-            }
-        ]
-        
-        # Combinar as duas listas
-        all_insights = insights + additional_insights
-        
-        # Embaralhar e selecionar o número solicitado
-        random.shuffle(all_insights)
-        selected_insights = all_insights[:count]
-        
-        return jsonify(selected_insights), 200
+    """
+    Retorna insights de segurança para o dashboard
+    """
+    # Lista de possíveis insights (em produção, seriam gerados a partir de dados reais)
+    insights_list = [
+        {"type": "security", "text": "🚨 192.168.1.105 teve 4 tentativas bloqueadas nas últimas 2h."},
+        {"type": "security", "text": "🔁 Usuário pedro@clinica.com.br trocou a senha 2 vezes em 5 dias."},
+        {"type": "trend", "text": "📈 Aumento de 25% em acessos na última semana."},
+        {"type": "location", "text": "🧭 Mais acessos vindos de Londrina nas últimas 24h."},
+        {"type": "security", "text": "⚠️ 3 logins foram realizados fora do horário comercial."},
+        {"type": "trend", "text": "📊 Terça-feira é o dia com maior número de acessos (média de 42)."},
+        {"type": "security", "text": "🔑 Usuário admin@clinica.com.br fez login em 3 dispositivos diferentes."},
+        {"type": "location", "text": "🌎 Detectado acesso de IP internacional (bloqueado automaticamente)."}
+    ]
     
+    # Pegar alertas da última hora e criar insights dinâmicos
+    try:
+        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
+        if os.path.exists(alerts_file):
+            with open(alerts_file, 'r') as f:
+                alerts = json.load(f)
+            
+            # Criar insights dinâmicos baseados nos alertas recentes
+            now = datetime.now()
+            one_hour_ago = now - timedelta(hours=1)
+            
+            for alert in alerts:
+                if alert.get('timestamp'):
+                    try:
+                        alert_time = datetime.fromisoformat(alert.get('timestamp'))
+                        if alert_time > one_hour_ago:
+                            # Adicionar insight baseado no alerta recente
+                            if alert.get('type') == "Tentativa de intrusão":
+                                email = alert.get('details', {}).get('email', 'desconhecido')
+                                local = alert.get('details', {}).get('location', 'localização desconhecida')
+                                insights_list.append({
+                                    "type": "realtime", 
+                                    "text": f"⚠️ AGORA: Tentativa de intrusão detectada para {email} vinda de {local}."
+                                })
+                    except:
+                        pass  # Ignorar erros de parsing de data
+    except:
+        pass  # Ignorar erros de leitura do arquivo
+    
+    # Escolher aleatoriamente alguns insights para retornar
+    count = min(int(request.args.get('count', 4)), len(insights_list))
+    selected_insights = random.sample(insights_list, count)
+    
+    return jsonify(selected_insights)
+
+@dashboard_bp.route('/dashboard/recent-alerts', methods=['GET'])
+def get_recent_alerts():
+    """
+    Retorna os alertas mais recentes para o dashboard
+    """
+    try:
+        # Buscar alertas do arquivo
+        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
+        
+        if not os.path.exists(alerts_file):
+            # Se não existir, criar dados de exemplo
+            from routes.alerts import create_sample_alerts
+            create_sample_alerts()
+            
+        with open(alerts_file, 'r') as f:
+            alerts = json.load(f)
+        
+        # Ordenar por data (mais recentes primeiro)
+        alerts.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        
+        # Pegar os 5 mais recentes
+        recent_alerts = alerts[:5]
+        
+        return jsonify({
+            "success": True,
+            "alerts": recent_alerts
+        })
+        
     except Exception as e:
-        logging.error(f"Erro ao buscar múltiplos insights: {str(e)}")
-        return jsonify({"error": "Erro ao buscar insights"}), 500
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@dashboard_bp.route('/dashboard/access-chart', methods=['GET'])
+def get_access_chart():
+    """
+    Retorna dados para o gráfico de acessos dos últimos 7 dias
+    """
+    # Em produção, isso viria do banco de dados
+    # Simulando dados para o gráfico
+    
+    # Gerar dias da semana (últimos 7 dias)
+    days = []
+    for i in range(6, -1, -1):
+        day = datetime.now() - timedelta(days=i)
+        days.append(day.strftime('%d/%m'))
+    
+    # Gerar dados de acesso
+    valid_access = [random.randint(15, 40) for _ in range(7)]
+    blocked_attempts = [random.randint(1, 8) for _ in range(7)]
+    
+    return jsonify({
+        "days": days,
+        "valid_access": valid_access,
+        "blocked_attempts": blocked_attempts
+    })
 
 def _random_ip():
     """Gera um IP aleatório para simulação."""

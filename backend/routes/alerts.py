@@ -5,6 +5,9 @@ from models import db, Alert, User
 import random
 import logging
 import traceback
+import os
+import json
+import uuid
 
 # Configurar logger
 logger = logging.getLogger('VidaShield.alerts')
@@ -141,137 +144,205 @@ def diagnose_alerts():
             "traceback": traceback.format_exc()
         }), 500
 
-@alerts_bp.route('', methods=['GET'])
-@jwt_required()
+@alerts_bp.route('/alerts', methods=['GET'])
 def get_alerts():
+    """
+    Retorna alertas filtrados por tipo, severidade, status de resolução e limite
+    """
+    # Parâmetros de consulta
+    alert_type = request.args.get('type')
+    severity = request.args.get('severity')
+    resolved = request.args.get('resolved')
+    limit = request.args.get('limit', default=10, type=int)
+    
     try:
-        logger.info("Iniciando processamento da rota de alertas")
+        # Buscar dados do arquivo de alertas (simular banco de dados)
+        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
         
-        # Garantir que existam alertas de exemplo no banco
-        seed_alerts_if_empty()
+        if not os.path.exists(alerts_file):
+            # Se o arquivo não existe, criar alguns alertas simulados
+            create_sample_alerts()
         
-        # Parâmetros de paginação e filtro
-        page = request.args.get('page', 1, type=int)
-        limit = request.args.get('limit', 10, type=int)
-        severity = request.args.get('severity', '', type=str)
-        resolved = request.args.get('resolved', '', type=str)
+        # Ler alertas do arquivo
+        with open(alerts_file, 'r') as f:
+            alerts = json.load(f)
         
-        logger.info(f"Parâmetros: page={page}, limit={limit}, severity={severity}, resolved={resolved}")
+        # Aplicar filtros
+        if alert_type:
+            alerts = [alert for alert in alerts if alert.get('type') == alert_type]
         
-        # Construir query
-        query = Alert.query
-        
-        # Filtrar por severidade
         if severity:
-            query = query.filter_by(severity=severity)
+            alerts = [alert for alert in alerts if alert.get('severity') == severity]
         
-        # Filtrar por status de resolução
-        if resolved == 'true':
-            query = query.filter_by(resolved=True)
-        elif resolved == 'false':
-            query = query.filter_by(resolved=False)
+        if resolved is not None:
+            # Converter string para booleano
+            is_resolved = resolved.lower() in ('true', 'yes', '1')
+            alerts = [alert for alert in alerts if alert.get('resolved') == is_resolved]
         
-        # Ordenar por data de criação (mais recentes primeiro)
-        query = query.order_by(Alert.timestamp.desc())
+        # Ordenar alertas por timestamp (mais recentes primeiro)
+        alerts.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         
-        # Realizar paginação
-        paginated_alerts = query.paginate(page=page, per_page=limit, error_out=False)
-        
-        logger.info(f"Total de alertas encontrados: {paginated_alerts.total}")
-        
-        # Formatar resultados
-        results = []
-        for alert in paginated_alerts.items:
-            try:
-                user = User.query.get(alert.user_id) if alert.user_id else None
-                resolver = User.query.get(alert.resolved_by) if alert.resolved_by else None
-                
-                alert_data = {
-                    "id": alert.id,
-                    "type": alert.type,
-                    "severity": alert.severity,
-                    "details": alert.details or {},
-                    "timestamp": alert.timestamp.isoformat() if alert.timestamp else None,
-                    "formatted_date": alert.formatted_date,
-                    "resolved": alert.resolved,
-                    "resolved_time": alert.resolved_time.isoformat() if alert.resolved_time else None,
-                    "resolved_by": alert.resolved_by
-                }
-                
-                # Adicionar informações do usuário e resolver aos detalhes
-                if user:
-                    alert_data["details"]["user_id"] = user.id
-                    alert_data["details"]["user_email"] = user.email
-                
-                if resolver:
-                    alert_data["resolver_name"] = resolver.name
-                
-                results.append(alert_data)
-            except Exception as e:
-                logger.error(f"Erro ao processar alerta {alert.id}: {str(e)}")
-                logger.error(traceback.format_exc())
-        
-        # Contagem por severidade para o dashboard
-        severity_counts = {
-            "critical": Alert.query.filter_by(severity='critical', resolved=False).count(),
-            "warning": Alert.query.filter_by(severity='warning', resolved=False).count(),
-            "info": Alert.query.filter_by(severity='info', resolved=False).count()
-        }
+        # Aplicar limite
+        alerts = alerts[:limit]
         
         return jsonify({
-            "alerts": results,
-            "total": paginated_alerts.total,
-            "page": page,
-            "pages": paginated_alerts.pages,
-            "severity_counts": severity_counts,
-            "alert_types": alert_types
+            "success": True,
+            "alerts": alerts,
+            "count": len(alerts),
+            "total": len(alerts)  # Em um banco real, este seria o total sem limite
         })
+    
     except Exception as e:
-        logger.error(f"Erro global na rota de alertas: {str(e)}")
-        logger.error(traceback.format_exc())
         return jsonify({
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "success": False,
+            "error": str(e)
         }), 500
 
-@alerts_bp.route('/<int:alert_id>/resolve', methods=['PUT'])
-@jwt_required()
+@alerts_bp.route('/alerts/<alert_id>', methods=['GET'])
+def get_alert(alert_id):
+    """
+    Retorna os detalhes de um alerta específico
+    """
+    try:
+        # Buscar dados do arquivo de alertas
+        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
+        
+        if not os.path.exists(alerts_file):
+            return jsonify({
+                "success": False,
+                "error": "Nenhum alerta encontrado"
+            }), 404
+        
+        # Ler alertas do arquivo
+        with open(alerts_file, 'r') as f:
+            alerts = json.load(f)
+        
+        # Buscar alerta pelo ID
+        alert = next((a for a in alerts if a.get('id') == alert_id), None)
+        
+        if not alert:
+            return jsonify({
+                "success": False,
+                "error": "Alerta não encontrado"
+            }), 404
+        
+        return jsonify({
+            "success": True,
+            "alert": alert
+        })
+    
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@alerts_bp.route('/alerts/<alert_id>/resolve', methods=['PUT'])
 def resolve_alert(alert_id):
-    # Recuperar o ID do usuário logado
-    current_user_id = get_jwt_identity()
+    """
+    Marca um alerta como resolvido
+    """
+    try:
+        # Buscar dados do arquivo de alertas
+        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
+        
+        if not os.path.exists(alerts_file):
+            return jsonify({
+                "success": False,
+                "error": "Nenhum alerta encontrado"
+            }), 404
+        
+        # Ler alertas do arquivo
+        with open(alerts_file, 'r') as f:
+            alerts = json.load(f)
+        
+        # Buscar e atualizar alerta pelo ID
+        alert = next((a for a in alerts if a.get('id') == alert_id), None)
+        
+        if not alert:
+            return jsonify({
+                "success": False,
+                "error": "Alerta não encontrado"
+            }), 404
+        
+        # Marcar como resolvido
+        alert['resolved'] = True
+        alert['resolved_at'] = datetime.now().isoformat()
+        
+        # Salvar alertas atualizados
+        with open(alerts_file, 'w') as f:
+            json.dump(alerts, f, indent=2)
+        
+        return jsonify({
+            "success": True,
+            "message": "Alerta marcado como resolvido",
+            "alert": alert
+        })
     
-    # Buscar o alerta
-    alert = Alert.query.get(alert_id)
-    
-    if not alert:
-        return jsonify({"error": "Alerta não encontrado"}), 404
-    
-    if alert.resolved:
-        return jsonify({"error": "Alerta já foi resolvido"}), 400
-    
-    # Atualizar status do alerta
-    alert.resolved = True
-    alert.resolved_time = datetime.now()
-    alert.resolved_by = int(current_user_id)
-    
-    # Salvar no banco de dados
-    db.session.commit()
-    
-    # Buscar informações do usuário que resolveu
-    resolver = User.query.get(int(current_user_id))
-    
-    return jsonify({
-        "message": "Alerta marcado como resolvido",
-        "alert": {
-            "id": alert.id,
-            "type": alert.type,
-            "severity": alert.severity,
-            "details": alert.details,
-            "timestamp": alert.timestamp.isoformat(),
-            "formatted_date": alert.formatted_date,
-            "resolved": alert.resolved,
-            "resolved_time": alert.resolved_time.isoformat(),
-            "resolved_by": alert.resolved_by,
-            "resolver_name": resolver.name if resolver else None
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+def create_sample_alerts():
+    """
+    Criar alertas de amostra para testes
+    """
+    sample_alerts = [
+        {
+            "id": str(uuid.uuid4()),
+            "type": "Tentativa de intrusão",
+            "severity": "critical",
+            "timestamp": (datetime.now() - timedelta(hours=1)).isoformat(),
+            "resolved": False,
+            "details": {
+                "email": "admin@clinica.com.br",
+                "ip_address": "45.67.89.123",
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "location": "Kiev, Ucrânia",
+                "attempts": 5,
+                "message": "Detectadas 5 tentativas falhas de login para o email admin@clinica.com.br"
+            }
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "type": "Tentativa de intrusão",
+            "severity": "critical",
+            "timestamp": (datetime.now() - timedelta(hours=3)).isoformat(),
+            "resolved": False,
+            "details": {
+                "email": "atendimento@clinica.com.br",
+                "ip_address": "178.154.200.58",
+                "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+                "location": "Moscou, Rússia",
+                "attempts": 8,
+                "message": "Detectadas 8 tentativas falhas de login para o email atendimento@clinica.com.br"
+            }
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "type": "Acesso suspeito",
+            "severity": "warning",
+            "timestamp": (datetime.now() - timedelta(days=1)).isoformat(),
+            "resolved": True,
+            "details": {
+                "email": "maria@clinica.com.br",
+                "ip_address": "89.187.175.130",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                "location": "Berlim, Alemanha",
+                "message": "Acesso de localização incomum detectado"
+            }
         }
-    }) 
+    ]
+    
+    # Criar diretório se não existir
+    os.makedirs('instance', exist_ok=True)
+    
+    # Salvar alertas
+    with open(os.path.join('instance', 'intrusion_alerts.json'), 'w') as f:
+        json.dump(sample_alerts, f, indent=2)
+
+# Criar dados de teste na primeira execução
+if not os.path.exists(os.path.join('instance', 'intrusion_alerts.json')):
+    create_sample_alerts() 
