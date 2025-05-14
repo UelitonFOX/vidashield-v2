@@ -10,7 +10,7 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     # URL do frontend
-    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3001')
 
     # Configurações do OAuth
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -18,9 +18,16 @@ class Config:
     GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
     GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
 
-    # URLs de callback
+    # URLs de callback - IMPORTANTE: estas URLs precisam corresponder exatamente às configuradas no console do Google
     GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/api/auth/google/callback')
     GITHUB_REDIRECT_URI = 'http://localhost:5000/api/auth/github/callback'
+    
+    # URLs alternativas para OAuth (backup)
+    OAUTH_REDIRECT_URLS = [
+        'http://localhost:3000/auth/callback',
+        'http://localhost:3001/auth/callback',
+        'http://localhost:5000/api/auth/google/callback'
+    ]
 
     # Configurações do hCaptcha
     HCAPTCHA_SITE_KEY = os.getenv('HCAPTCHA_SITE_KEY', '866663ec-b850-4a54-8884-8376d11051c4')  # Chave pública - apenas para frontend

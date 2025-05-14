@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VidaShield Dashboard</title>
+    <!-- Script para redirecionar para a porta correta quando vier do OAuth -->
+    <script>
+      (function() {
+        // Verificar se é uma URL de callback
+        if (window.location.pathname.indexOf('/auth/callback') === 0) {
+          const expectedPort = '3001'; // A porta que sabemos que a aplicação está rodando
+          const currentPort = window.location.port;
+          
+          // Se estamos na porta errada
+          if (currentPort !== expectedPort && currentPort === '3000') {
+            console.log('Redirecionando da porta ' + currentPort + ' para ' + expectedPort);
+            // Construir a nova URL com a porta correta
+            const newUrl = window.location.protocol + '//' + 
+                          window.location.hostname + ':' + expectedPort + 
+                          window.location.pathname + 
+                          window.location.search;
+            
+            // Redirecionar
+            window.location.href = newUrl;
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

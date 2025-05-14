@@ -10,7 +10,7 @@ import os
 import logging
 import platform
 import datetime
-from flask import Flask, jsonify, request, render_template, send_from_directory
+from flask import Flask, jsonify, request, render_template, send_from_directory, redirect
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from config import Config
@@ -24,6 +24,9 @@ from routes.alerts import alerts_bp
 from routes.settings import settings_bp
 from routes.reports import reports_bp
 from logging.handlers import RotatingFileHandler
+from flask_migrate import Migrate
+from werkzeug.exceptions import HTTPException
+import traceback
 
 # Criar pasta para logs se não existir
 os.makedirs('logs', exist_ok=True)
@@ -42,10 +45,11 @@ file_handler.setFormatter(logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 ))
 
+# Inicializar app Flask
 app = Flask(__name__)
-app.config.from_object(Config)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-in-production')
+app.config.from_object(Config())
+app.secret_key = app.config.get('SECRET_KEY')  # Necessário para o Flask Session
+app.config['JWT_SECRET_KEY'] = app.config.get('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=1)
 
 # Inicializar proteção CSRF
@@ -58,14 +62,17 @@ csrf.exempt(auth_bp)
 app.config['CORS_ALLOW_HEADERS'] = ['Content-Type', 'Authorization', 'X-CSRF-TOKEN']
 app.config['CORS_ALWAYS_SEND'] = True
 app.config['CORS_SUPPORTS_CREDENTIALS'] = True
-app.config['CORS_ORIGINS'] = ['http://localhost:3000', 'https://vidashield.vercel.app']
-app.config['CORS_ALLOW_ALL_ORIGINS'] = True
+app.config['CORS_ORIGINS'] = ['http://localhost:3001']
+app.config['CORS_ALLOW_ALL_ORIGINS'] = False
 
 # Aplicar CORS a toda a aplicação
-CORS(app)
+CORS(app, origins=["http://localhost:3001"], supports_credentials=True)
 
 # Configurar banco de dados
 db.init_app(app)
+
+# Configurar migrações do banco de dados
+migrate = Migrate(app, db)
 
 # Configurar JWT
 jwt = JWTManager(app)
@@ -99,26 +106,56 @@ def handle_csrf_error(e):
 # Adicionar headers CORS em cada resposta
 @app.after_request
 def add_cors_headers(response):
+    app.logger.info(f"Requisição: {request.method} {request.path} de {request.headers.get('Origin', '*')}")
+    
     origin = request.headers.get('Origin', '*')
     
-    # Permitir todas as origens em desenvolvimento
-    response.headers['Access-Control-Allow-Origin'] = origin
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRF-TOKEN'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    response.headers['Access-Control-Max-Age'] = '86400' # 24 horas
-    
-    # Registrar informações de requisição para debug
-    app.logger.info(f"Requisição: {request.method} {request.path} de {origin}")
+    # Permitir apenas o frontend local
+    allowed_origins = ["http://localhost:3001"]
+        
+    # Se a origem da requisição é permitida
+    if origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 
+                           'Content-Type, Authorization, X-CSRF-TOKEN')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
     app.logger.info(f"Resposta: {response.status_code}")
-    
     return response
+
+# Registrar erros HTTP não tratados
+@app.errorhandler(HTTPException)
+def handle_http_exception(e):
+    app.logger.error(f"Erro HTTP {e.code}: {e.description}")
+    return jsonify({"error": e.description}), e.code
+
+# Registrar erros não tratados
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.error(f"Erro não tratado: {str(e)}")
+    traceback.print_exc()
+    return jsonify({"error": "Erro interno do servidor", "details": str(e)}), 500
 
 # Rota OPTIONS para todas as URLs
 @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
 @app.route('/<path:path>', methods=['OPTIONS'])
 def options_handler(path):
     return jsonify({}), 200
+
+# Rota para tratar recursos estáticos na raiz que podem causar erros 405
+@app.route('/favicon.ico')
+def serve_favicon():
+    return "", 204
+
+@app.route('/apple-touch-icon.png')
+@app.route('/apple-touch-icon-precomposed.png')
+def serve_apple_icon():
+    return "", 204
+
+@app.route('/robots.txt')
+def serve_robots():
+    return "User-agent: *\nDisallow: /", 200
 
 # Rota para debug de cabeçalhos
 @app.route('/api/debug/headers')
@@ -139,101 +176,32 @@ def debug_headers():
 def serve_static(filename):
     return send_from_directory('static', filename)
 
-# Rota para a documentação da API
-@app.route('/docs')
-def api_docs():
-    """
-    Exibe uma página HTML com documentação das APIs disponíveis.
-    
-    Returns:
-        Página HTML renderizada com documentação das APIs
-    """
-    # Verificar o status do banco de dados e APIs
-    context = get_system_status()
-    return render_template('docs/api.html', **context)
-
 # Rota raiz que redireciona para a documentação
 @app.route('/')
 def index():
     """
-    Rota raiz que redireciona para a documentação da API.
-    
-    Returns:
-        Página HTML com informações básicas e link para documentação
+    Rota raiz que redireciona para o endpoint de ping
     """
-    # Obter status do sistema
-    context = get_system_status()
-    return render_template('docs/api.html', **context)
+    return redirect('/api/ping')
 
-def get_system_status():
-    """
-    Verifica o status do sistema e retorna informações para o template.
-    
-    Returns:
-        Dicionário com informações de status do sistema
-    """
-    # Verificar o status do banco de dados
-    db_status = "conectado"
-    db_type = "desconhecido"
-    
-    try:
-        # Testar conexão com banco
-        with app.app_context():
-            from sqlalchemy import text
-            result = db.session.execute(text("SELECT 1")).scalar()
-            db_status = "conectado" if result == 1 else "erro: resultado inesperado"
-            
-            # Verificar o tipo de banco
-            url = str(db.engine.url)
-            if 'sqlite' in url:
-                db_type = "SQLite (local)"
-            elif 'postgresql' in url or 'postgres' in url:
-                db_type = "PostgreSQL (Supabase)"
-            else:
-                db_type = url.split('://')[0] if '://' in url else url
-    except Exception as e:
-        db_status = f"erro: {str(e)}"
-    
-    # Verificar status dos endpoints principais
-    endpoints_status = {
-        "auth": check_endpoint_status("/api/auth/csrf-token"),
-        "dashboard": check_endpoint_status("/api/dashboard/stats"),
-        "users": check_endpoint_status("/api/users"),
-        "logs": check_endpoint_status("/api/logs"),
-        "alerts": check_endpoint_status("/api/alerts"),
-        "settings": check_endpoint_status("/api/settings/version"),
-        "reports": check_endpoint_status("/api/reports")
-    }
-    
-    return {
-        "status": "online",
-        "version": "2.0",
-        "db_status": db_status,
-        "db_type": db_type,
-        "env": os.getenv('FLASK_ENV', 'development'),
-        "timestamp": datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "endpoints_status": endpoints_status
-    }
+# Rota de validação de funcionamento da API
+@app.route('/api/ping')
+def ping():
+    return jsonify({
+        "status": "success",
+        "message": "API está funcionando",
+        "timestamp": datetime.datetime.now().isoformat(),
+        "environment": app.config.get('ENV', 'production')
+    })
 
-def check_endpoint_status(endpoint):
-    """
-    Verifica se um endpoint está respondendo corretamente.
-    
-    Args:
-        endpoint: URL do endpoint a ser verificado
-        
-    Returns:
-        Status do endpoint (online/offline)
-    """
-    try:
-        # Verificamos apenas se a rota existe, não se está funcionando completamente
-        # Para simplificar, consideramos que se o endpoint está registrado, está online
-        for rule in app.url_map.iter_rules():
-            if endpoint in rule.rule:
-                return "online"
-        return "desconhecido"
-    except:
-        return "offline"
+# API Documentação
+@app.route('/docs')
+def docs():
+    return jsonify({
+        "status": "success",
+        "message": "Documentação da API (implementação futura)",
+        "version": "1.0.0"
+    })
 
 # Criar tabelas e usuários padrão
 with app.app_context():
@@ -242,140 +210,21 @@ with app.app_context():
         db.create_all()
         app.logger.info("Banco de dados inicializado com sucesso!")
         
-        # Configurar OAuth
+        # Configurar OAuth 
         setup_oauth(app)
         
-        # Garantir que os usuários padrão existam
-        ensure_test_user_exists()
-        ensure_default_admin_exists()
+        try:
+            # Garantir que os usuários padrão existam
+            ensure_test_user_exists()
+            ensure_default_admin_exists()
+            app.logger.info("Usuários padrão verificados com sucesso")
+        except Exception as user_error:
+            app.logger.warning(f"Erro ao configurar usuários padrão: {user_error}")
     except Exception as e:
         app.logger.error(f"Erro ao inicializar o banco de dados: {e}")
         if os.getenv('FLASK_ENV') != 'production':
             # Em desenvolvimento, reexibir o erro para facilitar debug
-            raise
-    
-# Rota de verificação de status
-@app.route('/ping')
-def ping():
-    db_status = "conectado"
-    db_type = "desconhecido"
-    try:
-        # Testar conexão com banco de forma direta
-        with app.app_context():
-            from sqlalchemy import text, inspect
-            from sqlalchemy.engine import Engine
-            
-            # Executar uma query simples para testar a conexão
-            result = db.session.execute(text("SELECT 1")).scalar()
-            db_status = "conectado" if result == 1 else "erro: resultado inesperado"
-            
-            # Verificar o tipo de banco de maneira mais direta
-            try:
-                # Tentar obter o nome da conexão diretamente
-                conn = db.engine.raw_connection()
-                if hasattr(conn, 'dbapi_connection'):
-                    # Para PostgreSQL
-                    adapter_name = type(conn.dbapi_connection).__module__
-                    if 'psycopg2' in adapter_name or 'postgresql' in adapter_name:
-                        db_type = "postgresql (supabase)"
-                    # Para SQLite
-                    elif 'sqlite3' in adapter_name:
-                        db_type = "sqlite (local)"
-                    else:
-                        db_type = adapter_name
-                else:
-                    # Método alternativo usando URL da conexão
-                    url = str(db.engine.url)
-                    if 'sqlite' in url:
-                        db_type = "sqlite (local)"
-                    elif 'postgresql' in url or 'postgres' in url:
-                        db_type = "postgresql (supabase)"
-                    else:
-                        db_type = url.split('://')[0] if '://' in url else url
-            except Exception as dialect_error:
-                app.logger.warning(f"Não foi possível determinar o tipo de banco exato: {dialect_error}")
-                db_type = "tipo desconhecido (mas conectado)"
-            
-    except Exception as e:
-        db_status = f"erro: {str(e)}"
-        app.logger.error(f"Erro ao verificar conexão com banco: {e}")
-    
-    return jsonify({
-        "status": "ok", 
-        "message": "API VidaShield está online!",
-        "database": db_status,
-        "db_type": db_type,
-        "env": os.getenv('FLASK_ENV', 'development')
-    })
-
-# Rota para status completo do sistema (para consumo pela documentação ou clientes API)
-@app.route('/api/status')
-def api_status():
-    """
-    Retorna o status completo do sistema, incluindo banco de dados e endpoints.
-    
-    Returns:
-        JSON com status do sistema
-    """
-    db_status = "conectado"
-    db_type = "desconhecido"
-    
-    try:
-        # Testar conexão com banco
-        with app.app_context():
-            from sqlalchemy import text
-            result = db.session.execute(text("SELECT 1")).scalar()
-            db_status = "conectado" if result == 1 else "erro: resultado inesperado"
-            
-            # Verificar o tipo de banco
-            url = str(db.engine.url)
-            if 'sqlite' in url:
-                db_type = "SQLite (local)"
-            elif 'postgresql' in url or 'postgres' in url:
-                db_type = "PostgreSQL (Supabase)"
-            else:
-                db_type = url.split('://')[0] if '://' in url else url
-    except Exception as e:
-        db_status = f"erro: {str(e)}"
-        app.logger.error(f"Erro ao verificar conexão com banco: {e}")
-    
-    # Verificar status dos endpoints principais
-    endpoints_status = {
-        "auth": check_endpoint_status("/api/auth/csrf-token"),
-        "dashboard": check_endpoint_status("/api/dashboard/stats"),
-        "users": check_endpoint_status("/api/users"),
-        "logs": check_endpoint_status("/api/logs"),
-        "alerts": check_endpoint_status("/api/alerts"),
-        "settings": check_endpoint_status("/api/settings/version"),
-        "reports": check_endpoint_status("/api/reports")
-    }
-    
-    # Adicionar tempos de resposta para endpoints disponíveis
-    response_times = {}
-    for endpoint, status in endpoints_status.items():
-        if status == "online":
-            try:
-                # Medir tempo de resposta aproximado (simples)
-                import time
-                route = next((r.rule for r in app.url_map.iter_rules() if endpoint in r.rule), None)
-                if route:
-                    start = time.time()
-                    # Apenas verificamos o registro da rota
-                    end = time.time()
-                    response_times[endpoint] = round((end - start) * 1000, 2)  # em ms
-            except Exception:
-                pass
-    
-    return jsonify({
-        "status": "ok", 
-        "version": "2.0",
-        "timestamp": datetime.datetime.now().isoformat(),
-        "database": db_status,
-        "db_type": db_type,
-        "env": os.getenv('FLASK_ENV', 'development'),
-        "endpoints": endpoints_status,
-        "response_times": response_times
-    })
+            app.logger.error(traceback.format_exc())
 
 def print_welcome_message():
     """Imprime uma mensagem de boas-vindas formatada no terminal"""
@@ -436,16 +285,7 @@ def print_welcome_message():
     
     print("\n".join(message))
 
+# Mensagem de início
 if __name__ == '__main__':
-    debug_mode = os.getenv('FLASK_ENV') != 'production'
-    if debug_mode:
-        app.logger.info("Iniciando servidor em modo de desenvolvimento")
-        
-    # Criar diretório static se não existir
-    os.makedirs(os.path.join(os.path.dirname(__file__), 'static'), exist_ok=True)
-    
-    # Imprimir mensagem de boas-vindas
     print_welcome_message()
-    
-    # Iniciar servidor
-    app.run(debug=debug_mode, host='0.0.0.0') 
+    app.run(host='0.0.0.0', debug=True, port=5000) 
