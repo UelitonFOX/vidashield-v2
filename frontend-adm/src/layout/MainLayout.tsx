@@ -78,6 +78,8 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
 
   // Função para obter iniciais do nome
   const getInitials = (name: string = '') => {
+    if (!name) return 'US';
+    
     return name
       .split(' ')
       .map(part => part.charAt(0))
@@ -91,14 +93,30 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
     return currentPath === path ? "text-green-400 font-medium" : "text-zinc-400 hover:text-green-400";
   };
 
-  // Função para abrir modal de ajuda
-  const handleOpenAjuda = () => {
-    openModal("Central de Ajuda", <AjudaModalContent />, "xl");
+  // Função para obter a URL da imagem do usuário
+  const getUserAvatarUrl = () => {
+    // Verificar primeiro se o usuário tem photo ou avatar
+    if (user?.photo) return user.photo;
+    if (user?.avatar) return user.avatar;
+    return undefined; // Usando undefined em vez de null para compatibilidade com o tipo string | undefined
   };
 
-  // Função para abrir modal de notificações
-  const handleOpenNotificacoes = () => {
-    openModal("Notificações", <NotificacoesModalContent />, "md");
+  // Função para obter o nome do usuário ou um valor padrão
+  const getUserName = () => {
+    return user?.name || "Usuário";
+  };
+
+  // Função para obter o papel/função do usuário
+  const getUserRole = () => {
+    const role = user?.role || "usuário";
+    // Traduzir papéis comuns
+    const roleMap: Record<string, string> = {
+      admin: "Administrador",
+      manager: "Gerente",
+      user: "Usuário",
+      usuario: "Usuário"
+    };
+    return roleMap[role.toLowerCase()] || role;
   };
 
   // Formatar data do último acesso (se disponível)
@@ -110,6 +128,16 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  // Função para abrir modal de ajuda
+  const handleOpenAjuda = () => {
+    openModal("Central de Ajuda", <AjudaModalContent />, "xl");
+  };
+
+  // Função para abrir modal de notificações
+  const handleOpenNotificacoes = () => {
+    openModal("Notificações", <NotificacoesModalContent />, "md");
   };
 
   // Função para fazer logout
@@ -128,22 +156,22 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
                             border-2 border-green-400/40 shadow-glow-soft
                             flex items-center justify-center text-green-400 font-bold text-xl
                             mb-2">
-              {user?.photo ? (
+              {getUserAvatarUrl() ? (
                 <img 
-                  src={user.photo} 
-                  alt={user.name} 
+                  src={getUserAvatarUrl()} 
+                  alt={getUserName()} 
                   className="w-full h-full rounded-full object-cover" 
                 />
               ) : (
-                getInitials(user?.name)
+                getInitials(getUserName())
               )}
             </div>
             
             <div className="text-center">
-              <div className="text-sm font-medium text-white">{user?.name || "Usuário"}</div>
+              <div className="text-sm font-medium text-white">{getUserName()}</div>
               <div className="mt-1">
                 <span className="bg-green-400/20 text-green-400 px-2 py-0.5 rounded text-xs">
-                  {user?.role || "Usuário"}
+                  {getUserRole()}
                 </span>
               </div>
             </div>

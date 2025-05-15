@@ -568,12 +568,7 @@ def github_callback():
 def get_user():
     # Se for uma requisição OPTIONS, retornar resposta vazia com cabeçalhos CORS
     if request.method == 'OPTIONS':
-        response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-TOKEN')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
-        response.headers.add('Access-Control-Max-Age', '86400')  # 24 horas
-        return response
+        return jsonify({})
         
     # Logging para debug
     print("=== ROTA /api/auth/me ===")
@@ -588,53 +583,59 @@ def get_user():
         
     # Validação de UUID para compatibilidade com Supabase
     try:
-        # Tenta converter para UUID caso seja string
+        # Simplificando a lógica de busca de usuário
+        user = None
         if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
             user = User.query.filter_by(id=current_user_id).first()
         else:
             user = User.query.get(current_user_id)
+        
+        # Se não encontrou o usuário, tentar buscar pelo ID como string
+        if not user and isinstance(current_user_id, str):
+            # Verificar se é um número que foi convertido para string
+            try:
+                if current_user_id.isdigit():
+                    user = User.query.get(int(current_user_id))
+            except Exception as e:
+                print(f"Erro ao tentar converter ID: {str(e)}")
     except Exception as e:
         print(f"Erro ao buscar usuário: {str(e)}")
         return jsonify({"msg": f"Erro ao buscar usuário: {str(e)}"}), 500
     
     # Verificar se o usuário existe, está ativo E tem status 'ativo'
-    if not user or not user.is_active or user.status != 'ativo':
+    if not user:
         # Log para depuração
-        print(f"/me: Usuário {current_user_id} não encontrado, inativo ou com status diferente de 'ativo'. Status: {user.status if user else 'N/A'}, IsActive: {user.is_active if user else 'N/A'}")
+        print(f"/me: Usuário {current_user_id} não encontrado")
+        # Retorna 401 para indicar que o usuário não está autorizado
+        return jsonify({"msg": "Usuário não encontrado"}), 401
+        
+    if not user.is_active or user.status != 'ativo':
+        # Log para depuração
+        print(f"/me: Usuário {current_user_id} inativo ou com status diferente de 'ativo'. Status: {user.status}, IsActive: {user.is_active}")
         # Retorna 401 para indicar que o usuário não está autorizado
         return jsonify({"msg": "Usuário não autorizado ou inativo"}), 401
     
     response_data = {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "is_active": user.is_active,
-            "status": user.status  # Incluindo o status na resposta
-        }
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "is_active": user.is_active,
+        "status": user.status,  # Incluindo o status na resposta
+        "avatar": user.avatar if hasattr(user, 'avatar') else None,
+        "photo": user.photo if hasattr(user, 'photo') else None
     }
     print(f"Retornando dados do usuário: {user.email}")
     
-    # Adicionar manualmente cabeçalhos CORS
-    response = jsonify(response_data)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-TOKEN')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
-    
-    return response
+    # Não adicionar manualmente cabeçalhos CORS, deixar o Flask-CORS fazer isso
+    return jsonify(response_data)
 
 @auth_bp.route('/check-role', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def check_role():
-    # Se for uma requisição OPTIONS, retornar resposta vazia com cabeçalhos CORS
+    # Se for uma requisição OPTIONS, retornar resposta vazia
     if request.method == 'OPTIONS':
-        response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-TOKEN')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
-        response.headers.add('Access-Control-Max-Age', '86400')  # 24 horas
-        return response
+        return jsonify({})
         
     current_user_id = get_jwt_identity()
     
@@ -643,11 +644,21 @@ def check_role():
         
     # Validação de UUID para compatibilidade com Supabase
     try:
-        # Tenta converter para UUID caso seja string
+        # Simplificando a lógica de busca de usuário
+        user = None
         if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
             user = User.query.filter_by(id=current_user_id).first()
         else:
             user = User.query.get(current_user_id)
+        
+        # Se não encontrou o usuário, tentar buscar pelo ID como string
+        if not user and isinstance(current_user_id, str):
+            # Verificar se é um número que foi convertido para string
+            try:
+                if current_user_id.isdigit():
+                    user = User.query.get(int(current_user_id))
+            except Exception as e:
+                print(f"Erro ao tentar converter ID: {str(e)}")
     except Exception as e:
         return jsonify({"msg": f"Erro ao buscar usuário: {str(e)}"}), 500
     
@@ -660,13 +671,8 @@ def check_role():
         "role": user.role
     }
     
-    # Adicionar manualmente cabeçalhos CORS
-    response = jsonify(response_data)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-CSRF-TOKEN')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
-    
-    return response
+    # Não adicionar manualmente cabeçalhos CORS
+    return jsonify(response_data)
 
 @auth_bp.route('/recover', methods=['POST'])
 def recover_password():

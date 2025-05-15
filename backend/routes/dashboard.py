@@ -6,6 +6,7 @@ import random
 import logging
 import os
 import json
+from utils import is_valid_uuid  # Importar função de validação de UUID
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -14,9 +15,33 @@ dashboard_bp = Blueprint('dashboard', __name__)
 def get_dashboard_data():
     # Obter o usuário atual para personalizar os dados
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    
+    # Logging para debug
+    current_app.logger.info(f"Dashboard API acessada por usuário ID: {current_user_id}")
+    
+    # Buscar usuário com lógica mais robusta
+    user = None
+    try:
+        # Tentar buscar o usuário de diferentes formas
+        if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
+            user = User.query.filter_by(id=current_user_id).first()
+        else:
+            user = User.query.get(current_user_id)
+        
+        # Se não encontrou o usuário, tentar buscar pelo ID como string
+        if not user and isinstance(current_user_id, str):
+            # Verificar se é um número que foi convertido para string
+            try:
+                if current_user_id.isdigit():
+                    user = User.query.get(int(current_user_id))
+            except Exception as e:
+                current_app.logger.error(f"Erro ao tentar converter ID: {str(e)}")
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar usuário: {str(e)}")
+        return jsonify({"error": f"Erro ao buscar usuário: {str(e)}"}), 500
     
     if not user:
+        current_app.logger.warning(f"Usuário com ID {current_user_id} não encontrado")
         return jsonify({"error": "Usuário não encontrado"}), 404
     
     # Gerar alguns dados de exemplo para o dashboard
@@ -27,6 +52,7 @@ def get_dashboard_data():
     
     # Gerar dados de acessos para a última semana
     acessos_semana = [random.randint(5, 30) for _ in range(7)]
+    tentativas_bloqueadas = [random.randint(0, 5) for _ in range(7)]
     
     # Gerar alguns alertas recentes
     tipos_alerta = ['critical', 'warning', 'success']
@@ -61,15 +87,19 @@ def get_dashboard_data():
         reverse=True
     )
     
+    current_app.logger.info(f"Dados do dashboard gerados com sucesso para usuário: {user.email}")
+    
     return jsonify({
         "total_usuarios": total_usuarios,
         "logins_hoje": logins_hoje,
         "alertas_criticos": alertas_criticos,
         "acessos_semana": acessos_semana,
+        "tentativas_bloqueadas": tentativas_bloqueadas,
         "alertas_recentes": alertas_recentes,
         "user": {
             "name": user.name,
-            "email": user.email
+            "email": user.email,
+            "role": user.role
         }
     })
 

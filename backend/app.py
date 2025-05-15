@@ -65,8 +65,10 @@ app.config['CORS_SUPPORTS_CREDENTIALS'] = True
 app.config['CORS_ORIGINS'] = ['http://localhost:3001']
 app.config['CORS_ALLOW_ALL_ORIGINS'] = False
 
-# Aplicar CORS a toda a aplicação
-CORS(app, origins=["http://localhost:3001"], supports_credentials=True)
+# Aplicar CORS a toda a aplicação - esta é a única configuração CORS que usaremos
+CORS(app, origins=["http://localhost:3001"], supports_credentials=True, allow_headers=[
+    'Content-Type', 'Authorization', 'X-CSRF-TOKEN'
+])
 
 # Configurar banco de dados
 db.init_app(app)
@@ -103,24 +105,31 @@ def handle_csrf_error(e):
     app.logger.error(f"URL: {request.url}, Método: {request.method}, IP: {request.remote_addr}")
     return jsonify({"msg": "INVALID_CSRF: Token CSRF inválido ou ausente. Por favor, atualize a página e tente novamente."}), 400
 
-# Adicionar headers CORS em cada resposta
+# Remover a adição manual de headers CORS que estava causando duplicidade
+# @app.after_request
+# def add_cors_headers(response):
+#     app.logger.info(f"Requisição: {request.method} {request.path} de {request.headers.get('Origin', '*')}")
+    
+#     origin = request.headers.get('Origin', '*')
+    
+#     # Permitir apenas o frontend local
+#     allowed_origins = ["http://localhost:3001"]
+        
+#     # Se a origem da requisição é permitida
+#     if origin in allowed_origins:
+#         response.headers.add('Access-Control-Allow-Origin', origin)
+#         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+#         response.headers.add('Access-Control-Allow-Headers', 
+#                            'Content-Type, Authorization, X-CSRF-TOKEN')
+#         response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
+#     app.logger.info(f"Resposta: {response.status_code}")
+#     return response
+
+# Substituir pelo logger de requisições simplificado
 @app.after_request
-def add_cors_headers(response):
+def log_response(response):
     app.logger.info(f"Requisição: {request.method} {request.path} de {request.headers.get('Origin', '*')}")
-    
-    origin = request.headers.get('Origin', '*')
-    
-    # Permitir apenas o frontend local
-    allowed_origins = ["http://localhost:3001"]
-        
-    # Se a origem da requisição é permitida
-    if origin in allowed_origins:
-        response.headers.add('Access-Control-Allow-Origin', origin)
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 
-                           'Content-Type, Authorization, X-CSRF-TOKEN')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        
     app.logger.info(f"Resposta: {response.status_code}")
     return response
 

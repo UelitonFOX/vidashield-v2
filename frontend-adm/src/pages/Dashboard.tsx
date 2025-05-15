@@ -131,11 +131,25 @@ export const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Tentativa de buscar dados reais - utilizando endpoints relativos
-        const statsResponse = await fetch("/api/dashboard/data");
+        // Configurar headers com token JWT
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        };
+
+        // URL absoluta do backend
+        const BASE_URL = 'http://localhost:5000/api';
+        
+        // Tentativa de buscar dados reais
+        const statsResponse = await fetch(`${BASE_URL}/dashboard/data`, {
+          method: 'GET',
+          headers,
+          credentials: 'include' // Importante para CORS com cookies
+        });
         
         if (!statsResponse.ok) {
-          throw new Error(`Erro na requisição: ${statsResponse.status} ${statsResponse.statusText}`);
+          throw new Error(`Erro na requisição de estatísticas: ${statsResponse.status} ${statsResponse.statusText}`);
         }
         
         const contentType = statsResponse.headers.get("content-type");
@@ -151,21 +165,39 @@ export const Dashboard = () => {
 
         // Processando resposta como JSON
         const statsData = await statsResponse.json();
+        console.log("Dados de estatísticas carregados:", statsData);
         
         // Buscando insights e alertas apenas se a primeira chamada for bem-sucedida
         const [insightsResponse, alertasResponse] = await Promise.all([
-          fetch("/api/dashboard/insights/multiple?count=4"),
-          fetch("/api/alerts?limit=5&resolved=false")
+          fetch(`${BASE_URL}/dashboard/insights/multiple?count=4`, {
+            method: 'GET',
+            headers,
+            credentials: 'include'
+          }),
+          fetch(`${BASE_URL}/alerts?limit=5&resolved=false`, {
+            method: 'GET',
+            headers,
+            credentials: 'include'
+          })
         ]);
 
         // Verificar se as requisições foram bem-sucedidas
-        if (!insightsResponse.ok || !alertasResponse.ok) {
-          throw new Error("Falha ao obter dados adicionais da API");
+        if (!insightsResponse.ok) {
+          console.error(`Erro ao obter insights: ${insightsResponse.status}`);
+          throw new Error("Falha ao obter insights da API");
+        }
+        
+        if (!alertasResponse.ok) {
+          console.error(`Erro ao obter alertas: ${alertasResponse.status}`);
+          throw new Error("Falha ao obter alertas da API");
         }
 
         // Processar os dados obtidos
         const insightsData = await insightsResponse.json();
         const alertasData = await alertasResponse.json();
+        
+        console.log("Insights carregados:", insightsData);
+        console.log("Alertas carregados:", alertasData);
 
         // Mapear/formatar os dados conforme necessário
         setStatsData({
@@ -197,10 +229,15 @@ export const Dashboard = () => {
 
         // Obter usuários bloqueados - filtrar alertas do tipo "Tentativa de intrusão"
         try {
-          const usuariosBlockResponse = await fetch("/api/alerts?type=Tentativa de intrusão&limit=10");
+          const usuariosBlockResponse = await fetch(`${BASE_URL}/alerts?type=Tentativa de intrusão&limit=10`, {
+            method: 'GET',
+            headers,
+            credentials: 'include'
+          });
           
           if (usuariosBlockResponse.ok) {
             const bloqueadosData = await usuariosBlockResponse.json();
+            console.log("Dados de usuários bloqueados:", bloqueadosData);
             
             // Mapear dados de alertas para o formato de usuários bloqueados
             const usuariosBloqueados = bloqueadosData.alerts?.map((alerta: any) => ({
@@ -215,6 +252,9 @@ export const Dashboard = () => {
             })) || [];
             
             setUsuariosBloqueados(usuariosBloqueados);
+          } else {
+            console.warn("Erro ao carregar dados de usuários bloqueados:", usuariosBlockResponse.status);
+            setUsuariosBloqueados(getMockUsuariosBloqueados());
           }
         } catch (e) {
           console.warn("Erro ao carregar dados de usuários bloqueados, usando dados mockados:", e);

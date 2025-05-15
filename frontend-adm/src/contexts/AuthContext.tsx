@@ -3,11 +3,14 @@ import axios from 'axios';
 import api, { fetchCSRFToken } from '../services/api';
 
 export interface User {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
-  role?: 'admin' | 'manager' | 'user';
+  role?: string;
   photo?: string;
+  avatar?: string;
+  status?: string;
+  is_active?: boolean;
 }
 
 interface AuthContextType {
@@ -48,6 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (error) {
             console.error('Erro ao validar token armazenado:', error);
             localStorage.removeItem('token');
+            setUser(null);
+            setToken(null);
           }
         }
       } catch (error) {
@@ -76,42 +81,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Faz uma requisição para obter os dados do usuário
       console.log("Obtendo dados do usuário...");
       
-      // Tente diretamente com Axios para detectar problemas de CORS ou conectividade
-      try {
-        console.log("Testando conexão direta com axios...");
-        const testResponse = await axios.get('http://localhost:5000/api/auth/me', {
-          headers: { Authorization: `Bearer ${newToken}` },
-          withCredentials: true // Importante para enviar cookies CSRF
-        });
-        console.log("Teste axios direto bem-sucedido:", testResponse.data);
-      } catch (axiosError: any) {
-        console.error("Erro na chamada direta com axios:", axiosError.message);
-        console.error("Detalhes do erro axios:", axiosError.response?.data || 'Sem dados de resposta');
-      }
-      
-      // Continue com a API normal
+      // Usar diretamente a instância API configurada
       const response = await api.get('/auth/me');
+      
+      // Log completo para depuração
+      console.log("Resposta completa da API:", response.data);
       
       if (!response.data) {
         throw new Error("Resposta da API não contém dados do usuário");
       }
       
-      // Log completo para depuração
-      console.log("Resposta completa da API:", response.data);
-      
       // Verificar a estrutura da resposta e extrair os dados do usuário
-      const userData = {
-        id: response.data.id || 0,
-        name: response.data.name || response.data.displayName || 'Usuário',
+      const userData: User = {
+        id: response.data.id,
+        name: response.data.name || 'Usuário',
         email: response.data.email || 'sem.email@exemplo.com',
         role: response.data.role || 'user',
-        photo: response.data.photo || response.data.picture || response.data.avatar || null
+        photo: response.data.photo || response.data.avatar,  // Verificar ambos os campos
+        avatar: response.data.avatar || response.data.photo,  // Verificar ambos os campos
+        status: response.data.status,
+        is_active: response.data.is_active
       };
       
       console.log("Dados de usuário tratados:", userData);
       setUser(userData);
       setToken(newToken);
       localStorage.setItem('token', newToken);
+      return userData;
     } catch (error: any) {
       console.error('Erro detalhado ao validar token:', error.response?.status, error.response?.data || error.message);
       
@@ -124,14 +120,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(null);
       delete axios.defaults.headers.common['Authorization'];
       delete api.defaults.headers.common['Authorization'];
+      localStorage.removeItem('token');
       throw error;
     }
   };
 
   const login = async (newToken: string) => {
     console.log("Realizando login com novo token:", newToken.substring(0, 15) + "...");
-    await validateAndSetToken(newToken);
-    console.log("Login realizado com sucesso");
+    const userData = await validateAndSetToken(newToken);
+    console.log("Login realizado com sucesso:", userData);
   };
 
   const logout = () => {
@@ -146,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     token,
-    isAuthenticated: !!token,
+    isAuthenticated: !!token && !!user,  // Só está autenticado se tiver token E dados do usuário
     login,
     logout,
     loading
