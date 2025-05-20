@@ -27,6 +27,7 @@ const Reports: React.FC = () => {
   const handleExportPDF = () => {
     const doc = new jsPDF();
     doc.text('Relatório de Métricas', 20, 10);
+    // @ts-ignore
     doc.autoTable({
       head: [['Tipo', 'Valor']],
       body: mockLoginData.map(d => ['Login Bloqueado', d.blocked]),

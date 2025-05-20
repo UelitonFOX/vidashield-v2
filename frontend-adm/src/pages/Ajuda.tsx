@@ -379,3 +379,4 @@ export const Ajuda = ({ modalView = false }: AjudaProps) => {
   // Se for a página completa, remove o wrapper MainLayout
   return <AjudaContent />;
 }; 
+export default Ajuda;
