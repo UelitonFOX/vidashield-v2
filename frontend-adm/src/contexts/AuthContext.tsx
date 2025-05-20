@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import api, { fetchCSRFToken } from '../services/api';
+import { useAuth0 } from '@auth0/auth0-react';
+import api, { setTokenProvider } from '../services/api';
 
 export interface User {
   id: string | number;
@@ -11,15 +11,19 @@ export interface User {
   avatar?: string;
   status?: string;
   is_active?: boolean;
+  permissions?: string[];
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (token: string) => Promise<void>;
-  logout: () => void;
+  login: (redirectPath?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  logout: (options?: any) => void;
   loading: boolean;
+  refreshUserData: () => Promise<void>;
+  getToken: () => Promise<string | null>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,120 +37,227 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
+  const { 
+    isAuthenticated, 
+    isLoading, 
+    user: auth0User, 
+    logout: auth0Logout, 
+    loginWithRedirect, 
+    getAccessTokenSilently 
+  } = useAuth0();
+  
+  const [token, setToken] = useState<string | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
+  // Configurar o provedor de token para o API
   useEffect(() => {
-    const initAuth = async () => {
-      setLoading(true);
+    // Configurar o serviço de API para usar nosso método getToken
+    setTokenProvider(async () => {
+      // Se já temos o token em cache, usar ele
+      if (token) return token;
+      
+      // Caso contrário, obter o token fresco
       try {
-        // Obter token CSRF ao iniciar a aplicação
-        await fetchCSRFToken();
-
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-          try {
-            await validateAndSetToken(storedToken);
-          } catch (error) {
-            console.error('Erro ao validar token armazenado:', error);
-            localStorage.removeItem('token');
-            setUser(null);
-            setToken(null);
-          }
-        }
+        const newToken = await getAccessTokenSilently();
+        setToken(newToken);
+        return newToken;
       } catch (error) {
-        console.error('Erro ao inicializar autenticação:', error);
-      } finally {
-        setLoading(false);
+        console.error('Erro ao obter token para API:', error);
+        return null;
+      }
+    });
+  }, [token, getAccessTokenSilently]);
+
+  // Obter token quando autenticado
+  useEffect(() => {
+    const fetchToken = async () => {
+      if (isAuthenticated && auth0User) {
+        try {
+          console.log("Obtendo token para usuário autenticado");
+          const accessToken = await getAccessTokenSilently();
+          setToken(accessToken);
+          setAuthInitialized(true);
+        } catch (error) {
+          console.error('Erro ao obter token:', error);
+          setAuthInitialized(true);
+        }
+      } else if (!isLoading) {
+        setAuthInitialized(true);
       }
     };
 
-    initAuth();
-  }, []);
+    fetchToken();
+  }, [isAuthenticated, auth0User, getAccessTokenSilently, isLoading]);
 
-  const validateAndSetToken = async (newToken: string) => {
-    console.log("Validando token...");
+  // Mapear usuário do Auth0 para o formato do nosso contexto
+  const mapUser = (): User | null => {
+    if (!auth0User) return null;
+
+    // Log para depuração
+    console.log('Auth0 user data:', auth0User);
     
-    if (!newToken) {
-      console.error("Token vazio fornecido para validação");
-      throw new Error("Token inválido");
+    // Extrair permissões do token
+    const permissions = auth0User['https://vidashield.app/permissions'] || [];
+    
+    console.log('Permissões detectadas:', permissions);
+    
+    // Determinar role com base nas permissões
+    let role = 'usuario';
+    
+    // Verificar se há qualquer permissão administrativa para atribuir o papel de admin
+    if (Array.isArray(permissions)) {
+      if (permissions.includes('super_admin') || 
+          permissions.includes('admin:all') || 
+          permissions.includes('read:users') || 
+          permissions.includes('manage:users') ||
+          permissions.includes('manage:settings')) {
+        role = 'admin';
+      } else if (permissions.includes('manager') || permissions.includes('manage:own')) {
+        role = 'manager';
+      }
+    }
+
+    // Verificar claims específicos do token que podem indicar papel de admin
+    if (auth0User['https://vidashield.app/role'] === 'admin' || 
+        auth0User.role === 'admin' ||
+        auth0User.roles?.includes('admin')) {
+      role = 'admin';
     }
     
+    // Em ambiente de desenvolvimento, forçar o papel de administrador para testes
+    if (import.meta.env.DEV) {
+      role = 'admin';
+      console.log('Ambiente de desenvolvimento: forçando role de administrador para testes');
+    }
+    
+    console.log('Role determinada:', role);
+
+    return {
+      id: auth0User.sub || '',
+      name: auth0User.name || '',
+      email: auth0User.email || '',
+      photo: auth0User.picture,
+      avatar: auth0User.picture,
+      role,
+      status: 'ativo',
+      is_active: true,
+      permissions: Array.isArray(permissions) ? permissions : []
+    };
+  };
+
+  // Obter token do Auth0
+  const getToken = async (): Promise<string | null> => {
+    if (token) return token;
+    
     try {
-      // Configura o token no axios para todas as requisições
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      
-      // Faz uma requisição para obter os dados do usuário
-      console.log("Obtendo dados do usuário...");
-      
-      // Usar diretamente a instância API configurada
-      const response = await api.get('/auth/me');
-      
-      // Log completo para depuração
-      console.log("Resposta completa da API:", response.data);
-      
-      if (!response.data) {
-        throw new Error("Resposta da API não contém dados do usuário");
-      }
-      
-      // Verificar a estrutura da resposta e extrair os dados do usuário
-      const userData: User = {
-        id: response.data.id,
-        name: response.data.name || 'Usuário',
-        email: response.data.email || 'sem.email@exemplo.com',
-        role: response.data.role || 'user',
-        photo: response.data.photo || response.data.avatar,  // Verificar ambos os campos
-        avatar: response.data.avatar || response.data.photo,  // Verificar ambos os campos
-        status: response.data.status,
-        is_active: response.data.is_active
-      };
-      
-      console.log("Dados de usuário tratados:", userData);
-      setUser(userData);
+      const newToken = await getAccessTokenSilently();
       setToken(newToken);
-      localStorage.setItem('token', newToken);
-      return userData;
-    } catch (error: any) {
-      console.error('Erro detalhado ao validar token:', error.response?.status, error.response?.data || error.message);
+      return newToken;
+    } catch (error) {
+      console.error('Erro ao obter token:', error);
+      return null;
+    }
+  };
+
+  // Login - redirecionar para Auth0
+  const login = async (redirectPath?: string): Promise<void> => {
+    try {
+      // Obter o URL de callback das variáveis de ambiente ou usar o padrão
+      const callbackUrl = import.meta.env.VITE_AUTH0_CALLBACK_URL || 
+                          window.location.origin + '/callback';
+                          
+      console.log("Redirecionando para Auth0 com callback:", callbackUrl);
       
-      if (error.response?.status === 0 || error.message.includes('Network Error')) {
-        console.error('ERRO DE REDE: Verifique se o servidor backend está rodando em http://localhost:5000');
-      }
-      
-      // Limpar o token em caso de erro
-      setUser(null);
-      setToken(null);
-      delete axios.defaults.headers.common['Authorization'];
-      delete api.defaults.headers.common['Authorization'];
-      localStorage.removeItem('token');
+      await loginWithRedirect({
+        appState: { returnTo: redirectPath || '/dashboard' },
+        authorizationParams: {
+          redirect_uri: callbackUrl
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
       throw error;
     }
   };
 
-  const login = async (newToken: string) => {
-    console.log("Realizando login com novo token:", newToken.substring(0, 15) + "...");
-    const userData = await validateAndSetToken(newToken);
-    console.log("Login realizado com sucesso:", userData);
+  // Login específico com Google
+  const loginWithGoogle = async (): Promise<void> => {
+    try {
+      // Obter o URL de callback das variáveis de ambiente ou usar o padrão
+      const callbackUrl = import.meta.env.VITE_AUTH0_CALLBACK_URL || 
+                          window.location.origin + '/callback';
+                          
+      console.log("Tentando login com Google usando callback:", callbackUrl);
+      
+      await loginWithRedirect({
+        appState: { returnTo: '/dashboard' },
+        authorizationParams: {
+          connection: 'google-oauth2',
+          redirect_uri: callbackUrl
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao fazer login com Google:', error);
+      throw error;
+    }
   };
 
-  const logout = () => {
-    console.log("Realizando logout");
-    setUser(null);
+  // Logout - abordagem de duas etapas sem redirecionamento do Auth0
+  const handleLogout = (options?: any) => {
+    // Limpar todos os tokens e dados de sessão
     setToken(null);
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-    delete api.defaults.headers.common['Authorization'];
+    localStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_token');
+    
+    // Limpar cookies do Auth0
+    document.cookie = 'auth0.is.authenticated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    
+    // Definir flag para indicar que acabamos de fazer logout
+    sessionStorage.setItem('just_logged_out', 'true');
+    
+    // Registrar que estamos fazendo logout local
+    console.log('Realizando logout local e redirecionando para página de login personalizada');
+    
+    // Fazer logout no Auth0 (importante para eliminar a sessão no Auth0)
+    // Usando as opções fornecidas ou as padrões
+    auth0Logout(options || {
+      logoutParams: {
+        returnTo: window.location.origin + '/login'
+      }
+    });
   };
 
+  // Atualizar dados do usuário - aqui poderíamos buscar dados adicionais da API
+  const refreshUserData = async (): Promise<void> => {
+    try {
+      // Atualizar o token
+      const newToken = await getAccessTokenSilently({ cacheMode: 'off' });
+      setToken(newToken);
+
+      // Opcionalmente, buscar dados adicionais do usuário da nossa API
+      try {
+        const response = await api.get('/auth/me');
+        // Podemos fazer algo com os dados adicionais retornados, se necessário
+        console.log('Dados atualizados do usuário:', response.data);
+      } catch (error) {
+        console.warn('Não foi possível obter dados adicionais do usuário da API');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar dados do usuário:', error);
+    }
+  };
+
+  // Valores para o contexto
   const value = {
-    user,
+    user: mapUser(),
     token,
-    isAuthenticated: !!token && !!user,  // Só está autenticado se tiver token E dados do usuário
+    isAuthenticated,
     login,
-    logout,
-    loading
+    loginWithGoogle,
+    logout: handleLogout,
+    loading: isLoading || !authInitialized,
+    refreshUserData,
+    getToken
   };
 
   return (
@@ -154,4 +265,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-}; 
+};

@@ -1,121 +1,124 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import authService from '../services/api/authService';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import '../styles/vidashield.css';
 import { 
-  Mail, 
-  Lock, 
+  Shield, 
   LogIn, 
-  Shield,
-  AlertCircle,
-  Eye,
-  EyeOff 
+  AlertCircle, 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  Lock
 } from 'lucide-react';
 
 const Login = () => {
+  const { loginWithRedirect, isAuthenticated, isLoading, error } = useAuth0();
+  const { login, loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const { login, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  
-  // Redirecionar se já estiver autenticado
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+  const [localLoginError, setLocalLoginError] = useState<string | null>(null);
+  const [attemptingLogin, setAttemptingLogin] = useState(false);
+  const [justLoggedOut, setJustLoggedOut] = useState(false);
 
-  // Função para lidar com o login por email e senha
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // Verificar se o usuário acabou de fazer logout
+    const checkLogoutState = () => {
+      const logoutFlag = sessionStorage.getItem('just_logged_out');
+      if (logoutFlag) {
+        console.log('Usuário acabou de fazer logout, mantendo na tela de login');
+        setJustLoggedOut(true);
+        // Limpar a flag após usá-la
+        sessionStorage.removeItem('just_logged_out');
+        
+        // Garantir que qualquer sessão persistente do Auth0 seja limpa
+        document.cookie = 'auth0.is.authenticated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      }
+    };
+    
+    checkLogoutState();
+  }, []);
+
+  useEffect(() => {
+    // Só redirecionar para o dashboard se estiver autenticado E não acabou de fazer logout
+    if (isAuthenticated && !isLoading && !justLoggedOut) {
+      console.log("[Login] Usuário já autenticado, redirecionando para dashboard");
+      navigate('/dashboard', { replace: true });
+    } else if (isAuthenticated && justLoggedOut) {
+      // Se acabou de fazer logout mas ainda está autenticado, forçar novo logout
+      console.log("[Login] Usuário ainda autenticado após logout, forçando nova limpeza");
+      document.cookie = 'auth0.is.authenticated=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    }
+  }, [isAuthenticated, isLoading, navigate, justLoggedOut]);
+
+  const handleLogin = () => {
+    setAttemptingLogin(true);
+    setLocalLoginError(null);
+    login('/dashboard').catch(() => {
+      setAttemptingLogin(false);
+      setLocalLoginError('Erro na autenticação. Tente novamente.');
+    });
+  };
+
+  const handleGoogleLogin = () => {
+    setAttemptingLogin(true);
+    setLocalLoginError(null);
+    
+    console.log("[Login] Iniciando login com Google");
+    
+    loginWithGoogle().catch((error) => {
+      console.error("[Login] Erro no login com Google:", error);
+      setAttemptingLogin(false);
+      setLocalLoginError('Erro na autenticação com Google. Tente novamente.');
+    });
+  };
+
+  const handleEmailPasswordLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
-      setError('Por favor, preencha todos os campos');
+      setLocalLoginError('Preencha todos os campos');
       return;
     }
     
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Chamar o serviço de autenticação
-      const response = await authService.login(email, password);
-      
-      if (response && response.access_token) {
-        // Se login bem-sucedido, salvar o token no contexto e no localStorage
-        await login(response.access_token);
-        
-        if (rememberMe) {
-          localStorage.setItem('email', email);
-        } else {
-          localStorage.removeItem('email');
-        }
-        
-        // Redirecionar para o dashboard
-        navigate('/dashboard');
-      } else {
-        setError('Resposta de autenticação inválida');
-      }
-    } catch (err: any) {
-      console.error('Erro ao fazer login:', err);
-      
-      if (err.response?.status === 401) {
-        setError('Credenciais inválidas. Por favor, verifique seu email e senha.');
-      } else if (err.response?.data?.msg) {
-        setError(err.response.data.msg);
-      } else {
-        setError('Erro ao conectar com o servidor. Por favor, tente novamente.');
-      }
-    } finally {
-      setLoading(false);
-    }
+    setAttemptingLogin(true);
+    setLocalLoginError(null);
+    
+    loginWithRedirect({
+      appState: { returnTo: '/dashboard' },
+      authorizationParams: {
+        connection: 'Username-Password-Authentication',
+        login_hint: email
+      },
+    });
   };
 
-  // Função para lidar com o login do Google
-  const handleGoogleLogin = () => {
-    // Este endpoint no backend DEVE aceitar GET e redirecionar para o Google.
-    // A URL será resolvida pelo proxy do Vite para http://localhost:5000/api/auth/google
-    const backendGoogleAuthInitiationUrl = '/api/auth/google';
-    
-    // URL de callback no frontend para onde o Google (via backend) deve redirecionar após a autenticação.
-    // Usamos window.location.origin para garantir que a porta atual seja usada
-    const currentOrigin = window.location.origin;
-    console.log("URL de origem atual para callback:", currentOrigin);
-    
-    // URL completa incluindo o caminho de callback
-    const frontendCallbackUrl = `${currentOrigin}/auth/callback`;
-    console.log("URL de callback completa:", frontendCallbackUrl);
-    
-    // Codificar a URL para uso na query string
-    const encodedCallbackUrl = encodeURIComponent(frontendCallbackUrl);
-    
-    // Construir a URL completa com o redirect_uri para que o backend saiba 
-    // para onde redirecionar após processar o callback do Google
-    const fullUrl = `${backendGoogleAuthInitiationUrl}?redirect_uri=${encodedCallbackUrl}`;
-
-    console.log("Redirecionando para o backend para iniciar autenticação Google:", fullUrl);
-    window.location.href = fullUrl;
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
-  // Verificar se há email salvo no localStorage (Remember me)
-  useEffect(() => {
-    const savedEmail = localStorage.getItem('email');
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
-    }
-  }, []);
+  if (isLoading || attemptingLogin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-900 p-4">
+        <div className="text-center">
+          <Shield className="mx-auto h-16 w-16 text-green-400 mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-4">Autenticando...</h1>
+          <div className="mt-8">
+            <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="mt-4 text-zinc-400">Verificando suas credenciais</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-900 p-4">
       <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
-      
-      {/* Logo e nome do produto */}
+
       <div className="mb-8 flex flex-col items-center">
         <div className="flex items-center justify-center mb-4">
           <Shield className="w-12 h-12 text-green-400 mr-2" />
@@ -127,109 +130,86 @@ const Login = () => {
           Sistema de Gerenciamento de Segurança Digital para Clínicas Médicas
         </p>
       </div>
-      
-      {/* Card de login */}
+
       <div className="w-full max-w-md bg-zinc-800 rounded-xl shadow-xl border border-zinc-700 overflow-hidden">
-        {/* Cabeçalho */}
         <div className="p-6 border-b border-zinc-700">
           <h2 className="text-xl font-bold text-green-300">Login Administrativo</h2>
           <p className="text-zinc-400 text-sm mt-1">Acesse a plataforma de administração</p>
         </div>
-        
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && (
+
+        <div className="p-6 space-y-5">
+          {(error || localLoginError) && (
             <div className="p-3 rounded-lg bg-red-950/50 border border-red-800 flex items-center text-red-400 text-sm">
               <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span>{error}</span>
+              <span>{localLoginError || 'Erro na autenticação. Tente novamente.'}</span>
             </div>
           )}
-          
-          {/* Campo de Email */}
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
-              Email
-            </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
-                <Mail className="w-5 h-5" />
-              </span>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-lg bg-zinc-900 border border-zinc-700 py-2.5 pl-10 pr-3 text-zinc-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-zinc-500"
-                placeholder="nome@clinica.com.br"
-                required
-              />
+
+          <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm text-zinc-300 block">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 w-5 h-5" />
+                <input 
+                  id="email"
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Digite seu email"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-10 py-2.5 text-zinc-300 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
             </div>
-          </div>
-          
-          {/* Campo de Senha */}
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
-              Senha
-            </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
-                <Lock className="w-5 h-5" />
-              </span>
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-lg bg-zinc-900 border border-zinc-700 py-2.5 pl-10 pr-10 text-zinc-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-zinc-500"
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-500 hover:text-zinc-300 transition-colors"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm text-zinc-300 block">Senha</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 w-5 h-5" />
+                <input 
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-10 py-2.5 text-zinc-300 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+                <button 
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
-          </div>
-          
-          {/* Lembrar-me e Esqueci minha senha */}
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded bg-zinc-900 border-zinc-700 text-green-500 focus:ring-green-500 focus:ring-offset-zinc-800"
-              />
-              <label htmlFor="remember-me" className="ml-2 text-zinc-400">
-                Lembrar-me
-              </label>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-green-500 focus:ring-0 focus:ring-offset-0"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-zinc-400">
+                  Lembrar-me
+                </label>
+              </div>
+              
+              <a href="#" className="text-sm text-green-400 hover:text-green-300 transition-colors">
+                Esqueceu a senha?
+              </a>
             </div>
-            <a href="#" className="text-green-400 hover:text-green-300 transition-colors">
-              Esqueci minha senha
-            </a>
-          </div>
-          
-          {/* Botão de Login */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center items-center py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-zinc-800 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-2"></div>
-            ) : (
-              <>
-                <LogIn className="w-5 h-5 mr-2" />
-                Entrar
-              </>
-            )}
-          </button>
-          
-          {/* Separador */}
+
+            <button
+              type="submit"
+              className="w-full flex justify-center items-center py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-zinc-800"
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              Entrar
+            </button>
+          </form>
+
           <div className="relative py-3">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-zinc-700"></div>
@@ -238,24 +218,44 @@ const Login = () => {
               <span className="px-4 bg-zinc-800 text-zinc-500 text-sm">Ou continue com</span>
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleLogin}
+              className="flex justify-center items-center py-2.5 px-4 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              Auth0
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="flex justify-center items-center py-2.5 px-4 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
+                />
+              </svg>
+              Google
+            </button>
+          </div>
           
-          {/* Botão de Login com Google */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full flex justify-center items-center py-2.5 px-4 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
-          >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
-              />
-            </svg>
-            Google
-          </button>
-        </form>
-        
-        {/* Rodapé */}
+          <div className="mt-4 text-center">
+            <a 
+              href="https://dev-uhfy4gh2szxayskh.us.auth0.com/u/login"
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-green-400 hover:text-green-300 text-sm underline"
+            >
+              Ir para página de login Auth0 (Debug)
+            </a>
+          </div>
+        </div>
+
         <div className="p-6 border-t border-zinc-700 bg-zinc-850 text-center text-zinc-400 text-sm">
           Não possui uma conta?{' '}
           <a href="#" className="text-green-400 hover:text-green-300 transition-colors">
@@ -263,8 +263,7 @@ const Login = () => {
           </a>
         </div>
       </div>
-      
-      {/* Rodapé com informações legais */}
+
       <div className="mt-8 text-center text-zinc-500 text-xs">
         <p>© 2025 VidaShield. Todos os direitos reservados.</p>
         <p className="mt-1">
@@ -281,4 +280,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import authService, { oauthLogin } from '../services/api/authService';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import authService from '../services/api/authService';
 
 const AuthCallback: React.FC = () => {
   const location = useLocation();
