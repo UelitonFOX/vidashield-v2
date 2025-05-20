@@ -10,7 +10,7 @@
       (function() {
         // Verificar se é uma URL de callback
         if (window.location.pathname.indexOf('/auth/callback') === 0) {
-          const expectedPort = '3001'; // A porta que sabemos que a aplicação está rodando
+          const expectedPort = window.location.port || '3000'; // Pega da URL atual se existir, fallback 3000
           const currentPort = window.location.port;
           
           // Se estamos na porta errada
