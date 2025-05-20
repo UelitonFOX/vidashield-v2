@@ -9,7 +9,7 @@ import {
   Settings,
   Shield
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { UserProfileSidebar } from './UserProfileSidebar';
 import "../styles/vidashield.css";
 

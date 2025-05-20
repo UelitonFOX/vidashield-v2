@@ -1,4 +1,4 @@
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import { UserCircle, LogOut, RefreshCw } from "lucide-react";
 import "../styles/vidashield.css";
 import { useEffect } from "react";
@@ -7,20 +7,20 @@ export const UserProfileSidebar = () => {
   const { user, logout, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Log para depuração
     console.log("UserProfileSidebar - Estado do usuário:", user);
     console.log("UserProfileSidebar - Autenticado:", isAuthenticated);
   }, [user, isAuthenticated]);
-
   const handleLogout = () => {
-    logout();
+    logout({
+      logoutParams: {
+        returnTo: window.location.origin + '/login'
+      }
+    });
   };
 
   const handleRefresh = () => {
     window.location.reload();
   };
-
-  // Verificar se não há dados de usuário mesmo estando autenticado
   if (isAuthenticated && !user) {
     console.warn("UserProfileSidebar - Usuário autenticado mas sem dados!");
   }
@@ -64,4 +64,4 @@ export const UserProfileSidebar = () => {
       </div>
     </div>
   );
-}; 
+};

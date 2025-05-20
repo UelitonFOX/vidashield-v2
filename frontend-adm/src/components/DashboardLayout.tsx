@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import ConditionalSidebar from './ConditionalSidebar';
+import Header from './Header';
 import { 
   FiSettings, 
   FiHelpCircle, 
@@ -36,7 +37,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
   }, []);
 
   const handleLogout = () => {
-    logout();
+    logout({
+      logoutParams: {
+        returnTo: window.location.origin + '/login'
+      }
+    });
     navigate('/login');
   };
 
@@ -46,6 +51,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
 
   return (
     <div className="dashboard">
+      <Header />
       {/* Header */}
       <header className="dashboard-header">
         <div className="logo">
