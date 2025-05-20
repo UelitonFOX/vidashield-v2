@@ -1,289 +1,512 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, User
+from models import db, User, Alert, AuthLog
 from datetime import datetime, timedelta
-import random
 import logging
-import os
-import json
-from utils import is_valid_uuid  # Importar função de validação de UUID
+from sqlalchemy import func, desc
+from utils.uuid_helpers import is_valid_uuid  # Importar função de validação de UUID
 
 dashboard_bp = Blueprint('dashboard', __name__)
+logger = logging.getLogger('VidaShield.dashboard')
 
 @dashboard_bp.route('/data', methods=['GET'])
 @jwt_required()
 def get_dashboard_data():
-    # Obter o usuário atual para personalizar os dados
-    current_user_id = get_jwt_identity()
-    
-    # Logging para debug
-    current_app.logger.info(f"Dashboard API acessada por usuário ID: {current_user_id}")
-    
-    # Buscar usuário com lógica mais robusta
-    user = None
+    """
+    Retorna dados para o dashboard principal com estatísticas reais
+    """
     try:
-        # Tentar buscar o usuário de diferentes formas
-        if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
-            user = User.query.filter_by(id=current_user_id).first()
-        else:
-            user = User.query.get(current_user_id)
+        # Obter o usuário atual para personalizar os dados
+        current_user_id = get_jwt_identity()
         
-        # Se não encontrou o usuário, tentar buscar pelo ID como string
-        if not user and isinstance(current_user_id, str):
-            # Verificar se é um número que foi convertido para string
-            try:
-                if current_user_id.isdigit():
-                    user = User.query.get(int(current_user_id))
-            except Exception as e:
-                current_app.logger.error(f"Erro ao tentar converter ID: {str(e)}")
-    except Exception as e:
-        current_app.logger.error(f"Erro ao buscar usuário: {str(e)}")
-        return jsonify({"error": f"Erro ao buscar usuário: {str(e)}"}), 500
-    
-    if not user:
-        current_app.logger.warning(f"Usuário com ID {current_user_id} não encontrado")
-        return jsonify({"error": "Usuário não encontrado"}), 404
-    
-    # Gerar alguns dados de exemplo para o dashboard
-    # Em um sistema real, isso viria do banco de dados
-    total_usuarios = random.randint(50, 200)
-    logins_hoje = random.randint(10, 50)
-    alertas_criticos = random.randint(0, 5)
-    
-    # Gerar dados de acessos para a última semana
-    acessos_semana = [random.randint(5, 30) for _ in range(7)]
-    tentativas_bloqueadas = [random.randint(0, 5) for _ in range(7)]
-    
-    # Gerar alguns alertas recentes
-    tipos_alerta = ['critical', 'warning', 'success']
-    mensagens_alerta = [
-        'Tentativa de acesso não autorizado',
-        'Senha fraca detectada',
-        'Login realizado com sucesso',
-        'Arquivo sensível acessado',
-        'Backup concluído com sucesso',
-        'Atualização de segurança disponível',
-        'Dispositivo não reconhecido tentou autenticação'
-    ]
-    
-    alertas_recentes = []
-    for i in range(1, 6):  # 5 alertas recentes
-        tipo = random.choice(tipos_alerta)
-        tempo_atras = timedelta(
-            minutes=random.randint(1, 60 * 24)
-        )  # Entre 1 minuto e 24 horas atrás
-        tempo = (datetime.now() - tempo_atras).strftime('%Hh%M - %d/%m')
+        # Logging para debug
+        logger.info(f"Dashboard API acessada por usuário ID: {current_user_id}")
         
-        alertas_recentes.append({
-            "id": i,
-            "tipo": tipo,
-            "mensagem": random.choice(mensagens_alerta),
-            "tempo": tempo
+        # Buscar usuário com lógica mais robusta
+        user = None
+        try:
+            # Tentar buscar o usuário de diferentes formas
+            if isinstance(current_user_id, str) and is_valid_uuid(current_user_id):
+                user = User.query.filter_by(id=current_user_id).first()
+            else:
+                user = User.query.get(current_user_id)
+            
+            # Se não encontrou o usuário, tentar buscar pelo ID como string
+            if not user and isinstance(current_user_id, str):
+                # Verificar se é um número que foi convertido para string
+                try:
+                    if current_user_id.isdigit():
+                        user = User.query.get(int(current_user_id))
+                except Exception as e:
+                    logger.error(f"Erro ao tentar converter ID: {str(e)}")
+        except Exception as e:
+            logger.error(f"Erro ao buscar usuário: {str(e)}")
+            return jsonify({"error": f"Erro ao buscar usuário: {str(e)}"}), 500
+        
+        if not user:
+            logger.warning(f"Usuário com ID {current_user_id} não encontrado")
+            return jsonify({"error": "Usuário não encontrado"}), 404
+        
+        # Buscar dados reais do banco de dados
+        # 1. Total de usuários ativos
+        total_usuarios = User.query.filter_by(is_active=True).count()
+        
+        # 2. Logins hoje (contagem de logs de autenticação do tipo 'login' das últimas 24h)
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        logins_hoje = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            AuthLog.timestamp >= today_start
+        ).count()
+        
+        # 3. Alertas críticos não resolvidos
+        alertas_criticos = Alert.query.filter_by(
+            severity='critical',
+            resolved=False
+        ).count()
+        
+        # 4. Acessos por dia na última semana
+        # Criar uma lista de 7 dias (de hoje para trás)
+        days = []
+        acessos_semana = []
+        tentativas_bloqueadas = []
+        
+        for i in range(6, -1, -1):  # Do dia 6 (6 dias atrás) até o dia 0 (hoje)
+            day_date = datetime.now() - timedelta(days=i)
+            day_start = day_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            # Acessos bem-sucedidos
+            day_logins = AuthLog.query.filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == True,
+                AuthLog.timestamp >= day_start,
+                AuthLog.timestamp <= day_end
+            ).count()
+            
+            # Tentativas bloqueadas (login falhos)
+            day_failed = AuthLog.query.filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == False,
+                AuthLog.timestamp >= day_start,
+                AuthLog.timestamp <= day_end
+            ).count()
+            
+            days.append(day_date.strftime('%d/%m'))
+            acessos_semana.append(day_logins)
+            tentativas_bloqueadas.append(day_failed)
+        
+        # 5. Buscar alguns alertas recentes (últimas 24h)
+        recent_alerts = Alert.query.order_by(
+            Alert.timestamp.desc()
+        ).limit(5).all()
+        
+        # Converter para formato de dicionário
+        alertas_recentes = []
+        for alert in recent_alerts:
+            alertas_recentes.append({
+                "id": alert.id,
+                "tipo": alert.severity,  # Usar severity como tipo (critical, warning, success)
+                "mensagem": alert.type,  # Tipo de alerta como mensagem
+                "tempo": alert.timestamp.strftime('%Hh%M - %d/%m') if alert.timestamp else 'N/A',
+            })
+        
+        logger.info(f"Dados do dashboard gerados com sucesso para usuário: {user.email}")
+        
+        return jsonify({
+            "total_usuarios": total_usuarios,
+            "logins_hoje": logins_hoje,
+            "alertas_criticos": alertas_criticos,
+            "acessos_semana": acessos_semana,
+            "tentativas_bloqueadas": tentativas_bloqueadas,
+            "alertas_recentes": alertas_recentes,
+            "labels_dias": days,
+            "user": {
+                "name": user.name,
+                "email": user.email,
+                "role": user.role
+            }
         })
-    
-    # Ordenar alertas por tempo (mais recentes primeiro)
-    alertas_recentes.sort(
-        key=lambda x: datetime.strptime(x["tempo"].split(" - ")[0], "%Hh%M"), 
-        reverse=True
-    )
-    
-    current_app.logger.info(f"Dados do dashboard gerados com sucesso para usuário: {user.email}")
-    
-    return jsonify({
-        "total_usuarios": total_usuarios,
-        "logins_hoje": logins_hoje,
-        "alertas_criticos": alertas_criticos,
-        "acessos_semana": acessos_semana,
-        "tentativas_bloqueadas": tentativas_bloqueadas,
-        "alertas_recentes": alertas_recentes,
-        "user": {
-            "name": user.name,
-            "email": user.email,
-            "role": user.role
-        }
-    })
+    except Exception as e:
+        logger.error(f"Erro ao gerar dados do dashboard: {str(e)}")
+        return jsonify({"error": f"Erro ao gerar dados do dashboard: {str(e)}"}), 500
 
 @dashboard_bp.route('/insights/random', methods=['GET'])
 @jwt_required()
 def get_random_insight():
-    """Retorna um insight aleatório sobre segurança ou uso do sistema."""
+    """
+    Retorna um insight real baseado em dados do banco.
+    Prioriza insights que possam ser relevantes.
+    """
     try:
-        current_user_id = get_jwt_identity()
+        # Buscar dados relevantes do banco de dados
+        insights = []
         
-        # Obter dados do banco de dados (simulação)
-        # Aqui deveria integrar com queries reais 
-        insights = [
-            {
+        # Insight 1: Tentativas de login bloqueadas recentes (últimas 24h)
+        last_24h = datetime.now() - timedelta(hours=24)
+        blocked_logins = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == False,
+            AuthLog.timestamp >= last_24h
+        ).count()
+        
+        if blocked_logins > 0:
+            insights.append({
                 "type": "security",
-                "text": f"🚨 IP {_random_ip()} teve {random.randint(1, 5)} tentativas bloqueadas nas últimas {random.randint(1, 3)}h."
-            },
-            {
+                "text": f"🚨 {blocked_logins} tentativas de login bloqueadas nas últimas 24h."
+            })
+        
+        # Insight 2: Usuários que trocaram senha recentemente
+        password_changes = AuthLog.query.filter(
+            AuthLog.action.like('%password%change%'),
+            AuthLog.timestamp >= (datetime.now() - timedelta(days=7))
+        ).count()
+        
+        if password_changes > 0:
+            insights.append({
                 "type": "security",
-                "text": f"🔁 Usuário {_random_email()} trocou a senha {random.randint(1, 3)} vezes em {random.randint(3, 10)} dias."
-            },
-            {
+                "text": f"🔁 {password_changes} usuários alteraram suas senhas na última semana."
+            })
+        
+        # Insight 3: Alertas críticos não resolvidos
+        critical_alerts = Alert.query.filter_by(
+            severity='critical',
+            resolved=False
+        ).count()
+        
+        if critical_alerts > 0:
+            insights.append({
+                "type": "security",
+                "text": f"⚠️ {critical_alerts} alertas críticos estão pendentes de resolução."
+            })
+        
+        # Insight 4: Acessos fora do horário comercial (entre 22h e 6h)
+        off_hours_logins = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            db.or_(
+                db.and_(func.extract('hour', AuthLog.timestamp) >= 22),
+                db.and_(func.extract('hour', AuthLog.timestamp) <= 6)
+            ),
+            AuthLog.timestamp >= (datetime.now() - timedelta(days=3))
+        ).count()
+        
+        if off_hours_logins > 0:
+            insights.append({
+                "type": "security",
+                "text": f"⏰ {off_hours_logins} logins foram realizados fora do horário comercial nos últimos 3 dias."
+            })
+        
+        # Insight 5: Novos usuários
+        new_users = User.query.filter(
+            User.created_at >= (datetime.now() - timedelta(days=7))
+        ).count()
+        
+        if new_users > 0:
+            insights.append({
                 "type": "trend",
-                "text": f"📉 Acesso caiu {random.randint(10, 30)}% em relação à semana passada."
-            },
-            {
-                "type": "trend", 
-                "text": f"📈 Aumento de {random.randint(5, 40)}% em exportações de relatórios este mês."
-            },
-            {
-                "type": "location",
-                "text": f"🧭 Mais acessos vindos de {_random_city()} nas últimas 24h."
-            },
-            {
-                "type": "usage",
-                "text": f"📊 Horário de pico de acessos: {random.randint(8, 11)}h às {random.randint(13, 18)}h."
-            },
-            {
-                "type": "security",
-                "text": f"🚨 {random.randint(2, 8)} tentativas de login do dispositivo não reconhecido."
-            },
-            {
-                "type": "usage",
-                "text": f"🔄 {random.randint(1, 10)} novos usuários cadastrados na última semana."
-            }
-        ]
+                "text": f"👥 {new_users} novos usuários foram registrados na última semana."
+            })
         
-        # Selecionar um insight aleatoriamente
-        random_insight = random.choice(insights)
+        # Insight 6: Comparação de acessos com a semana anterior
+        this_week_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=datetime.now().weekday())
+        last_week_start = this_week_start - timedelta(days=7)
         
-        return jsonify(random_insight), 200
+        this_week_logins = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            AuthLog.timestamp >= this_week_start
+        ).count()
+        
+        last_week_logins = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            AuthLog.timestamp >= last_week_start,
+            AuthLog.timestamp < this_week_start
+        ).count()
+        
+        if last_week_logins > 0:
+            percent_change = round(((this_week_logins - last_week_logins) / last_week_logins) * 100)
+            trend_emoji = "📈" if percent_change > 0 else "📉"
+            
+            insights.append({
+                "type": "trend",
+                "text": f"{trend_emoji} Acessos {abs(percent_change)}% {'maior' if percent_change > 0 else 'menor'} em relação à semana passada."
+            })
+        
+        # Se não tivermos insights baseados em dados reais, fornecer um insight genérico
+        if not insights:
+            insights = [
+                {
+                    "type": "security",
+                    "text": "🔒 Sistema de monitoramento de segurança ativo e funcionando normalmente."
+                }
+            ]
+        
+        # Escolher aleatoriamente um insight da lista gerada
+        import random
+        selected_insight = random.choice(insights)
+        
+        return jsonify(selected_insight), 200
     
     except Exception as e:
-        logging.error(f"Erro ao buscar insight aleatório: {str(e)}")
-        return jsonify({"error": "Erro ao buscar insight"}), 500
+        logger.error(f"Erro ao buscar insight: {str(e)}")
+        return jsonify({"error": f"Erro ao buscar insight: {str(e)}"}), 500
 
 @dashboard_bp.route('/insights/multiple', methods=['GET'])
 @jwt_required()
 def get_multiple_insights():
     """
-    Retorna insights de segurança para o dashboard
+    Retorna múltiplos insights de segurança para o dashboard
+    baseados em dados reais do banco
     """
-    # Lista de possíveis insights (em produção, seriam gerados a partir de dados reais)
-    insights_list = [
-        {"type": "security", "text": "🚨 192.168.1.105 teve 4 tentativas bloqueadas nas últimas 2h."},
-        {"type": "security", "text": "🔁 Usuário pedro@clinica.com.br trocou a senha 2 vezes em 5 dias."},
-        {"type": "trend", "text": "📈 Aumento de 25% em acessos na última semana."},
-        {"type": "location", "text": "🧭 Mais acessos vindos de Londrina nas últimas 24h."},
-        {"type": "security", "text": "⚠️ 3 logins foram realizados fora do horário comercial."},
-        {"type": "trend", "text": "📊 Terça-feira é o dia com maior número de acessos (média de 42)."},
-        {"type": "security", "text": "🔑 Usuário admin@clinica.com.br fez login em 3 dispositivos diferentes."},
-        {"type": "location", "text": "🌎 Detectado acesso de IP internacional (bloqueado automaticamente)."}
-    ]
-    
-    # Pegar alertas da última hora e criar insights dinâmicos
     try:
-        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
-        if os.path.exists(alerts_file):
-            with open(alerts_file, 'r') as f:
-                alerts = json.load(f)
+        # Obter número de insights solicitados
+        count = min(int(request.args.get('count', 4)), 8)
+        
+        # Lista para armazenar os insights gerados
+        insights = []
+        
+        # Insight 1: Tentativas de login bloqueadas (últimas 24h)
+        last_24h = datetime.now() - timedelta(hours=24)
+        blocked_logins = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == False,
+            AuthLog.timestamp >= last_24h
+        ).count()
+        
+        if blocked_logins > 0:
+            insights.append({
+                "type": "security",
+                "text": f"🚨 {blocked_logins} tentativas de login bloqueadas nas últimas 24h."
+            })
+        
+        # Insight 2: Alertas recentes 
+        recent_alerts = Alert.query.filter(
+            Alert.timestamp >= (datetime.now() - timedelta(hours=48))
+        ).count()
+        
+        if recent_alerts > 0:
+            insights.append({
+                "type": "security",
+                "text": f"⚠️ {recent_alerts} alertas gerados nas últimas 48h."
+            })
+        
+        # Insight 3: Usuários ativos hoje
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        active_users_today = db.session.query(func.count(db.distinct(AuthLog.user_id))).filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            AuthLog.timestamp >= today_start
+        ).scalar()
+        
+        if active_users_today > 0:
+            insights.append({
+                "type": "trend",
+                "text": f"👤 {active_users_today} usuários ativos hoje."
+            })
+        
+        # Insight 4: Alertas críticos não resolvidos
+        critical_alerts = Alert.query.filter_by(
+            severity='critical',
+            resolved=False
+        ).count()
+        
+        if critical_alerts > 0:
+            insights.append({
+                "type": "security",
+                "text": f"🚨 {critical_alerts} alertas críticos pendentes."
+            })
+        
+        # Insight 5: Comparação de logins com o dia anterior
+        yesterday_start = today_start - timedelta(days=1)
+        yesterday_end = today_start - timedelta(microseconds=1)
+        
+        logins_today = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            AuthLog.timestamp >= today_start
+        ).count()
+        
+        logins_yesterday = AuthLog.query.filter(
+            AuthLog.action.like('%login%'),
+            AuthLog.success == True,
+            AuthLog.timestamp >= yesterday_start,
+            AuthLog.timestamp <= yesterday_end
+        ).count()
+        
+        if logins_yesterday > 0:
+            percent_change = round(((logins_today - logins_yesterday) / logins_yesterday) * 100)
+            if abs(percent_change) > 10:  # Só mostrar se a diferença for significativa
+                trend_emoji = "📈" if percent_change > 0 else "📉"
+                insights.append({
+                    "type": "trend",
+                    "text": f"{trend_emoji} Acessos hoje {abs(percent_change)}% {'maior' if percent_change > 0 else 'menor'} que ontem."
+                })
+        
+        # Insight 6: Dia da semana com mais logins
+        if db.engine.dialect.name == 'postgresql':  # Se estivermos usando PostgreSQL
+            day_counts = db.session.query(
+                func.to_char(AuthLog.timestamp, 'Day').label('day_of_week'),
+                func.count(AuthLog.id).label('count')
+            ).filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == True,
+                AuthLog.timestamp >= (datetime.now() - timedelta(days=30))
+            ).group_by('day_of_week').order_by(desc('count')).first()
             
-            # Criar insights dinâmicos baseados nos alertas recentes
-            now = datetime.now()
-            one_hour_ago = now - timedelta(hours=1)
+            if day_counts:
+                day, count = day_counts
+                insights.append({
+                    "type": "trend",
+                    "text": f"📊 {day.strip()} é o dia com mais acessos no sistema."
+                })
+        
+        # Insight 7: Horário de pico de acesso
+        if db.engine.dialect.name == 'postgresql':  # Se estivermos usando PostgreSQL
+            hour_counts = db.session.query(
+                func.extract('hour', AuthLog.timestamp).label('hour'),
+                func.count(AuthLog.id).label('count')
+            ).filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == True,
+                AuthLog.timestamp >= (datetime.now() - timedelta(days=14))
+            ).group_by('hour').order_by(desc('count')).first()
             
-            for alert in alerts:
-                if alert.get('timestamp'):
-                    try:
-                        alert_time = datetime.fromisoformat(alert.get('timestamp'))
-                        if alert_time > one_hour_ago:
-                            # Adicionar insight baseado no alerta recente
-                            if alert.get('type') == "Tentativa de intrusão":
-                                email = alert.get('details', {}).get('email', 'desconhecido')
-                                local = alert.get('details', {}).get('location', 'localização desconhecida')
-                                insights_list.append({
-                                    "type": "realtime", 
-                                    "text": f"⚠️ AGORA: Tentativa de intrusão detectada para {email} vinda de {local}."
-                                })
-                    except:
-                        pass  # Ignorar erros de parsing de data
-    except:
-        pass  # Ignorar erros de leitura do arquivo
-    
-    # Escolher aleatoriamente alguns insights para retornar
-    count = min(int(request.args.get('count', 4)), len(insights_list))
-    selected_insights = random.sample(insights_list, count)
-    
-    return jsonify(selected_insights)
+            if hour_counts:
+                hour, count = hour_counts
+                insights.append({
+                    "type": "usage",
+                    "text": f"🕒 Horário de pico de acessos: {int(hour)}h00."
+                })
+        
+        # Insight 8: IPs mais comuns (ou com mais falhas)
+        if 'ip_address' in [c.name for c in AuthLog.__table__.columns]:
+            ip_blocks = db.session.query(
+                AuthLog.ip_address,
+                func.count(AuthLog.id).label('count')
+            ).filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == False,
+                AuthLog.timestamp >= (datetime.now() - timedelta(days=7)),
+                AuthLog.ip_address.isnot(None)
+            ).group_by(AuthLog.ip_address).order_by(desc('count')).first()
+            
+            if ip_blocks and ip_blocks[0]:
+                ip, count = ip_blocks
+                insights.append({
+                    "type": "security",
+                    "text": f"🔒 IP {ip} teve {count} tentativas bloqueadas na última semana."
+                })
+        
+        # Se ainda não tivermos insights suficientes, adicionar alguns genéricos
+        static_insights = [
+            {"type": "security", "text": "🔒 Sistema de monitoramento de segurança ativo."},
+            {"type": "trend", "text": "📊 Performance do sistema estável nas últimas 24h."},
+            {"type": "usage", "text": "✅ Backup automático configurado e funcionando."},
+            {"type": "security", "text": "🔔 Alertas de segurança configurados corretamente."}
+        ]
+        
+        # Se precisarmos de mais insights para atingir o count solicitado
+        while len(insights) < count:
+            # Adicionar insights estáticos restantes
+            remaining_static = [i for i in static_insights if i not in insights]
+            if not remaining_static:
+                break
+            insights.append(remaining_static[0])
+            static_insights.remove(remaining_static[0])
+        
+        # Limitar ao número solicitado
+        insights = insights[:count]
+        
+        return jsonify(insights)
+    except Exception as e:
+        logger.error(f"Erro ao buscar múltiplos insights: {str(e)}")
+        return jsonify([{"type": "error", "text": "Erro ao buscar insights"}]), 500
 
-@dashboard_bp.route('/dashboard/recent-alerts', methods=['GET'])
+@dashboard_bp.route('/recent-alerts', methods=['GET'])
+@jwt_required()
 def get_recent_alerts():
     """
     Retorna os alertas mais recentes para o dashboard
     """
     try:
-        # Buscar alertas do arquivo
-        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
+        # Pegar o limite da query string
+        limit = int(request.args.get('limit', 5))
         
-        if not os.path.exists(alerts_file):
-            # Se não existir, criar dados de exemplo
-            from routes.alerts import create_sample_alerts
-            create_sample_alerts()
-            
-        with open(alerts_file, 'r') as f:
-            alerts = json.load(f)
+        # Buscar alertas ordenados por data (mais recentes primeiro)
+        alerts = Alert.query.order_by(Alert.timestamp.desc()).limit(limit).all()
         
-        # Ordenar por data (mais recentes primeiro)
-        alerts.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        # Converter para dicionário
+        alerts_dict = [alert.to_dict() for alert in alerts]
         
-        # Pegar os 5 mais recentes
-        recent_alerts = alerts[:5]
+        # Verificar se temos alertas
+        if not alerts:
+            # Se não temos alertas, gerar alguns para demonstração
+            from routes.alerts import seed_alerts_if_empty
+            seed_alerts_if_empty()
+            # Buscar novamente
+            alerts = Alert.query.order_by(Alert.timestamp.desc()).limit(limit).all()
+            alerts_dict = [alert.to_dict() for alert in alerts]
         
         return jsonify({
             "success": True,
-            "alerts": recent_alerts
+            "alerts": alerts_dict
         })
         
     except Exception as e:
+        logger.error(f"Erro ao buscar alertas recentes: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
 
-@dashboard_bp.route('/dashboard/access-chart', methods=['GET'])
+@dashboard_bp.route('/access-chart', methods=['GET'])
+@jwt_required()
 def get_access_chart():
     """
     Retorna dados para o gráfico de acessos dos últimos 7 dias
+    baseado em dados reais do banco de dados
     """
-    # Em produção, isso viria do banco de dados
-    # Simulando dados para o gráfico
-    
-    # Gerar dias da semana (últimos 7 dias)
-    days = []
-    for i in range(6, -1, -1):
-        day = datetime.now() - timedelta(days=i)
-        days.append(day.strftime('%d/%m'))
-    
-    # Gerar dados de acesso
-    valid_access = [random.randint(15, 40) for _ in range(7)]
-    blocked_attempts = [random.randint(1, 8) for _ in range(7)]
-    
-    return jsonify({
-        "days": days,
-        "valid_access": valid_access,
-        "blocked_attempts": blocked_attempts
-    })
-
-def _random_ip():
-    """Gera um IP aleatório para simulação."""
-    return f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
-
-def _random_email():
-    """Gera um email aleatório para simulação."""
-    names = ["joao", "maria", "pedro", "ana", "carlos", "lucia", "rafael", "beatriz"]
-    domains = ["exemplo.com", "teste.com.br", "empresa.net", "org.br", "tech.com"]
-    
-    name = random.choice(names)
-    domain = random.choice(domains)
-    
-    return f"{name}@{domain}"
-
-def _random_city():
-    """Retorna uma cidade aleatória para simulação."""
-    cities = ["Maringá", "Curitiba", "Londrina", "Cascavel", "Ponta Grossa", 
-              "Foz do Iguaçu", "São Paulo", "Rio de Janeiro", "Brasília"]
-    
-    return random.choice(cities) 
+    try:
+        # Gerar dias da semana (últimos 7 dias)
+        days = []
+        valid_access = []
+        blocked_attempts = []
+        
+        for i in range(6, -1, -1):  # Do dia 6 (6 dias atrás) até o dia 0 (hoje)
+            day_date = datetime.now() - timedelta(days=i)
+            day_start = day_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            # Obter o rótulo do dia
+            days.append(day_date.strftime('%d/%m'))
+            
+            # Acessos bem-sucedidos
+            successful = AuthLog.query.filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == True,
+                AuthLog.timestamp >= day_start,
+                AuthLog.timestamp <= day_end
+            ).count()
+            
+            # Tentativas bloqueadas
+            blocked = AuthLog.query.filter(
+                AuthLog.action.like('%login%'),
+                AuthLog.success == False,
+                AuthLog.timestamp >= day_start,
+                AuthLog.timestamp <= day_end
+            ).count()
+            
+            valid_access.append(successful)
+            blocked_attempts.append(blocked)
+        
+        return jsonify({
+            "days": days,
+            "valid_access": valid_access,
+            "blocked_attempts": blocked_attempts
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar dados do gráfico de acessos: {str(e)}")
+        return jsonify({"error": str(e)}), 500 

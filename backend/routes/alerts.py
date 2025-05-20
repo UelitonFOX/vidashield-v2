@@ -27,6 +27,29 @@ alert_types = [
     {"id": 9, "name": "Sessão expirada", "severity": "info"},
 ]
 
+# Nova rota para dashboard com dados mock (API simples)
+@alerts_bp.route('', methods=['GET'])
+def get_alerts_mock():
+    """
+    Retorna uma lista de alertas mock para o dashboard
+    """
+    logger.info("Acessando rota GET /api/alerts (mock data)")
+    
+    # Extrair parâmetros de consulta (opcionais)
+    limit = request.args.get('limit', default=10, type=int)
+    resolved = request.args.get('resolved')
+    
+    # Lista fixa de alertas mock para demo
+    mock_alerts = [
+        {"id": 1, "title": "Tentativa suspeita detectada", "date": "2025-05-15", "resolved": False},
+        {"id": 2, "title": "Login bloqueado por IP inválido", "date": "2025-05-15", "resolved": False},
+        {"id": 3, "title": "Múltiplas tentativas de login", "date": "2025-05-14", "resolved": True},
+        {"id": 4, "title": "Acesso a dados sensíveis", "date": "2025-05-14", "resolved": False},
+        {"id": 5, "title": "Nova conta criada", "date": "2025-05-12", "resolved": True}
+    ]
+    
+    return jsonify(mock_alerts), 200
+
 # Função para gerar alertas de exemplo no banco de dados
 def seed_alerts_if_empty():
     # Verificar se já existem alertas
@@ -144,81 +167,78 @@ def diagnose_alerts():
             "traceback": traceback.format_exc()
         }), 500
 
-@alerts_bp.route('/alerts', methods=['GET'])
+@alerts_bp.route('', methods=['GET'])
+@jwt_required()
 def get_alerts():
     """
-    Retorna alertas filtrados por tipo, severidade, status de resolução e limite
+    Retorna uma lista de alertas do banco de dados com filtros
     """
-    # Parâmetros de consulta
-    alert_type = request.args.get('type')
-    severity = request.args.get('severity')
-    resolved = request.args.get('resolved')
-    limit = request.args.get('limit', default=10, type=int)
-    
     try:
-        # Buscar dados do arquivo de alertas (simular banco de dados)
-        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
+        logger.info("Acessando rota GET /api/alerts")
         
-        if not os.path.exists(alerts_file):
-            # Se o arquivo não existe, criar alguns alertas simulados
-            create_sample_alerts()
+        # Extrair parâmetros de consulta (opcionais)
+        limit = request.args.get('limit', default=10, type=int)
+        offset = request.args.get('offset', default=0, type=int)
+        alert_type = request.args.get('type')
+        severity = request.args.get('severity')
+        resolved_param = request.args.get('resolved')
         
-        # Ler alertas do arquivo
-        with open(alerts_file, 'r') as f:
-            alerts = json.load(f)
+        # Construir query base
+        query = Alert.query
         
-        # Aplicar filtros
+        # Aplicar filtros se fornecidos
         if alert_type:
-            alerts = [alert for alert in alerts if alert.get('type') == alert_type]
+            query = query.filter(Alert.type == alert_type)
         
         if severity:
-            alerts = [alert for alert in alerts if alert.get('severity') == severity]
+            query = query.filter(Alert.severity == severity)
         
-        if resolved is not None:
+        if resolved_param is not None:
             # Converter string para booleano
-            is_resolved = resolved.lower() in ('true', 'yes', '1')
-            alerts = [alert for alert in alerts if alert.get('resolved') == is_resolved]
+            is_resolved = resolved_param.lower() in ('true', 'yes', '1')
+            query = query.filter(Alert.resolved == is_resolved)
         
-        # Ordenar alertas por timestamp (mais recentes primeiro)
-        alerts.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        # Obter o total de alertas que correspondem aos filtros (antes de aplicar limit/offset)
+        total_count = query.count()
         
-        # Aplicar limite
-        alerts = alerts[:limit]
+        # Aplicar ordenação, limit e offset
+        alerts = query.order_by(Alert.timestamp.desc()).offset(offset).limit(limit).all()
+        
+        # Converter para dicionário
+        alerts_dict = [alert.to_dict() for alert in alerts]
+        
+        # Verificar se temos alertas
+        if not alerts:
+            # Se não temos alertas, vamos gerar alguns de exemplo para demonstração
+            seed_alerts_if_empty()
+            # Tentar buscar novamente
+            alerts = query.order_by(Alert.timestamp.desc()).offset(offset).limit(limit).all()
+            alerts_dict = [alert.to_dict() for alert in alerts]
         
         return jsonify({
             "success": True,
-            "alerts": alerts,
-            "count": len(alerts),
-            "total": len(alerts)  # Em um banco real, este seria o total sem limite
-        })
+            "alerts": alerts_dict,
+            "count": len(alerts_dict),
+            "total": total_count
+        }), 200
     
     except Exception as e:
+        logger.error(f"Erro ao buscar alertas: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
 
-@alerts_bp.route('/alerts/<alert_id>', methods=['GET'])
+@alerts_bp.route('/<alert_id>', methods=['GET'])
+@jwt_required()
 def get_alert(alert_id):
     """
     Retorna os detalhes de um alerta específico
     """
     try:
-        # Buscar dados do arquivo de alertas
-        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
-        
-        if not os.path.exists(alerts_file):
-            return jsonify({
-                "success": False,
-                "error": "Nenhum alerta encontrado"
-            }), 404
-        
-        # Ler alertas do arquivo
-        with open(alerts_file, 'r') as f:
-            alerts = json.load(f)
-        
         # Buscar alerta pelo ID
-        alert = next((a for a in alerts if a.get('id') == alert_id), None)
+        alert = Alert.query.get(alert_id)
         
         if not alert:
             return jsonify({
@@ -228,36 +248,25 @@ def get_alert(alert_id):
         
         return jsonify({
             "success": True,
-            "alert": alert
-        })
+            "alert": alert.to_dict()
+        }), 200
     
     except Exception as e:
+        logger.error(f"Erro ao buscar alerta {alert_id}: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
 
-@alerts_bp.route('/alerts/<alert_id>/resolve', methods=['PUT'])
+@alerts_bp.route('/<alert_id>/resolve', methods=['PUT'])
+@jwt_required()
 def resolve_alert(alert_id):
     """
     Marca um alerta como resolvido
     """
     try:
-        # Buscar dados do arquivo de alertas
-        alerts_file = os.path.join('instance', 'intrusion_alerts.json')
-        
-        if not os.path.exists(alerts_file):
-            return jsonify({
-                "success": False,
-                "error": "Nenhum alerta encontrado"
-            }), 404
-        
-        # Ler alertas do arquivo
-        with open(alerts_file, 'r') as f:
-            alerts = json.load(f)
-        
-        # Buscar e atualizar alerta pelo ID
-        alert = next((a for a in alerts if a.get('id') == alert_id), None)
+        # Buscar alerta pelo ID
+        alert = Alert.query.get(alert_id)
         
         if not alert:
             return jsonify({
@@ -265,21 +274,70 @@ def resolve_alert(alert_id):
                 "error": "Alerta não encontrado"
             }), 404
         
-        # Marcar como resolvido
-        alert['resolved'] = True
-        alert['resolved_at'] = datetime.now().isoformat()
+        # Obter ID do usuário que está resolvendo o alerta
+        current_user_id = get_jwt_identity()
         
-        # Salvar alertas atualizados
-        with open(alerts_file, 'w') as f:
-            json.dump(alerts, f, indent=2)
+        # Marcar como resolvido
+        alert.resolve(current_user_id)
+        
+        # Salvar alterações
+        db.session.commit()
         
         return jsonify({
             "success": True,
             "message": "Alerta marcado como resolvido",
-            "alert": alert
-        })
+            "alert": alert.to_dict()
+        }), 200
     
     except Exception as e:
+        logger.error(f"Erro ao resolver alerta {alert_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@alerts_bp.route('', methods=['POST'])
+@jwt_required()
+def create_alert():
+    """
+    Cria um novo alerta
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"success": False, "error": "Dados não fornecidos"}), 400
+        
+        required_fields = ['type', 'severity', 'user_id']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"success": False, "error": f"Campo obrigatório ausente: {field}"}), 400
+        
+        # Criar novo alerta
+        new_alert = Alert(
+            type=data['type'],
+            severity=data['severity'],
+            details=data.get('details', {}),
+            user_id=data['user_id'],
+            resolved=data.get('resolved', False)
+        )
+        
+        if data.get('resolved', False) and data.get('resolved_by'):
+            new_alert.resolved_by = data['resolved_by']
+            new_alert.resolved_time = datetime.utcnow()
+        
+        # Salvar no banco
+        db.session.add(new_alert)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Alerta criado com sucesso",
+            "alert": new_alert.to_dict()
+        }), 201
+    
+    except Exception as e:
+        logger.error(f"Erro ao criar alerta: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)

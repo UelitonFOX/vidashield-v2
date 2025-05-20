@@ -10,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 import os
 import string
 import secrets
+import base64
+import uuid
 
 users_bp = Blueprint('users', __name__)
 
@@ -277,4 +279,108 @@ def update_user(user_id):
     return jsonify({
         "message": "Usuário atualizado com sucesso.",
         "user": user
-    }) 
+    })
+
+# Rota para upload de foto de perfil
+@users_bp.route('/profile/photo', methods=['POST'])
+@jwt_required()
+def upload_profile_photo():
+    try:
+        # Obter o ID do usuário a partir do token JWT
+        user_id = get_jwt_identity()
+        
+        # Verificar se o usuário existe
+        user = None
+        try:
+            user = User.query.filter_by(id=user_id).first()
+        except Exception as e:
+            print(f"Erro ao buscar usuário: {str(e)}")
+            try:
+                # Consulta SQL direta (caso a coluna avatar_url esteja causando problemas)
+                result = db.session.execute(
+                    "SELECT id FROM \"user\" WHERE id = :user_id",
+                    {"user_id": user_id}
+                ).fetchone()
+                
+                if result:
+                    user_id = result[0]
+            except Exception as query_error:
+                print(f"Erro na consulta SQL direta: {str(query_error)}")
+                return jsonify({"msg": "Erro ao verificar usuário"}), 500
+        
+        if not user and not user_id:
+            return jsonify({"msg": "Usuário não encontrado"}), 404
+            
+        # Obter os dados da imagem do corpo da requisição
+        data = request.get_json()
+        photo_data = data.get('photo')
+        
+        if not photo_data:
+            return jsonify({"msg": "Dados da foto não fornecidos"}), 400
+            
+        # Verificar se os dados começam com data:image
+        if not photo_data.startswith('data:image'):
+            return jsonify({"msg": "Formato de imagem inválido"}), 400
+        
+        # Extrair tipo e dados da imagem base64
+        try:
+            # Formato esperado: data:image/jpeg;base64,/9j/4AAQSkZJRg...
+            image_format = photo_data.split(';')[0].split('/')[1]
+            encoded_image = photo_data.split(',')[1]
+            
+            # Verificar se o tamanho da imagem é razoável (máximo 5MB)
+            decoded_size = len(base64.b64decode(encoded_image))
+            if decoded_size > 5 * 1024 * 1024:  # 5MB
+                return jsonify({"msg": "Tamanho da imagem excede o limite de 5MB"}), 400
+                
+            # Gerar um nome de arquivo único
+            filename = f"{uuid.uuid4()}.{image_format}"
+            
+            # Criar diretório para imagens se não existir
+            upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'profile_photos')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Caminho completo do arquivo
+            file_path = os.path.join(upload_dir, filename)
+            
+            # Salvar a imagem no servidor
+            with open(file_path, "wb") as f:
+                f.write(base64.b64decode(encoded_image))
+            
+            # URL da imagem para acesso
+            photo_url = f"/static/uploads/profile_photos/{filename}"
+            
+            # Atualizar a URL da foto no banco de dados
+            try:
+                # Tentar a abordagem ORM normal
+                if user:
+                    user.avatar_url = photo_url
+                    db.session.commit()
+                else:
+                    # Usar SQL direto se o ORM falhar
+                    db.session.execute(
+                        "UPDATE \"user\" SET avatar_url = :photo_url WHERE id = :user_id",
+                        {"photo_url": photo_url, "user_id": user_id}
+                    )
+                    db.session.commit()
+                
+                return jsonify({
+                    "msg": "Foto de perfil atualizada com sucesso",
+                    "photo_url": photo_url
+                })
+            
+            except Exception as db_error:
+                print(f"Erro ao atualizar foto no banco de dados: {str(db_error)}")
+                db.session.rollback()
+                # Se falhar ao salvar no banco, remover o arquivo
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return jsonify({"msg": "Erro ao atualizar foto no banco de dados"}), 500
+                
+        except Exception as process_error:
+            print(f"Erro ao processar imagem: {str(process_error)}")
+            return jsonify({"msg": "Erro ao processar imagem"}), 500
+            
+    except Exception as e:
+        print(f"Erro no upload de foto: {str(e)}")
+        return jsonify({"msg": "Erro no servidor ao processar upload"}), 500 
