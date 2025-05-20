@@ -10,7 +10,14 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     # URL do frontend
-    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3001')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+    # Configurações do Auth0
+    AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', 'dev-xxxxxxxx.us.auth0.com')
+    AUTH0_AUDIENCE = os.getenv('AUTH0_AUDIENCE', 'https://api.vidashield.com')
+    AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID', '')
+    AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET', '')
+    AUTH0_CALLBACK_URL = os.getenv('AUTH0_CALLBACK_URL', 'http://localhost:3000/auth/callback')
 
     # Configurações do OAuth
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -25,7 +32,7 @@ class Config:
     # URLs alternativas para OAuth (backup)
     OAUTH_REDIRECT_URLS = [
         'http://localhost:3000/auth/callback',
-        'http://localhost:3001/auth/callback',
+        'http://localhost:3000/auth/callback',
         'http://localhost:5000/api/auth/google/callback'
     ]
 
@@ -58,3 +65,6 @@ class Config:
         
         if not self.JWT_SECRET_KEY or self.JWT_SECRET_KEY == 'jwt-dev-key-change-in-production':
             logging.warning("JWT_SECRET_KEY não definida ou usando valor padrão inseguro!") 
+        
+        if not os.getenv('AUTH0_DOMAIN') or not os.getenv('AUTH0_AUDIENCE'):
+            logging.warning("Configurações do Auth0 não encontradas. Usando valores padrão para testes.") 

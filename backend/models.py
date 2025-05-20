@@ -89,6 +89,7 @@ class User(db.Model):
     status = db.Column(db.String(20), default='pendente') # 'ativo', 'pendente', 'bloqueado'
     oauth_provider = db.Column(db.String(20))  # 'google' ou 'github'
     oauth_id = db.Column(db.String(100))
+    avatar_url = db.Column(db.String(255))  # URL da foto de perfil
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
     email_verified = db.Column(db.Boolean, default=False)  # Usado por OAuth
@@ -105,7 +106,10 @@ class User(db.Model):
             'email': self.email,
             'name': self.name,
             'role': self.role,
+            'status': getattr(self, 'status', 'ativo'),
             'oauth_provider': self.oauth_provider,
+            'oauth_id': self.oauth_id,
+            'avatar_url': self.avatar_url,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_active': self.is_active,
             'email_verified': self.email_verified
