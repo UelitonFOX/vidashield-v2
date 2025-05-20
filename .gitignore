@@ -65,3 +65,6 @@ backend/logs/
 
 # Outros diretórios
 .apresentacao_html_vida_shield/
+# Ignorar banco local e pastas temporárias
+backend/app.db
+temp/
