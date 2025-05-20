@@ -19,6 +19,8 @@ export interface User {
   email: string;
   status: 'pendente' | 'ativo' | 'recusado' | 'active' | 'inactive';
   role: 'admin' | 'gerente' | 'usuario';
+  photo?: string;
+  avatar?: string;
   lastLogin?: string;
   created_at?: string;
 }

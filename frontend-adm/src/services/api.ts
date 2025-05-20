@@ -1,33 +1,55 @@
 import axios from 'axios';
 
+// Supabase URL e API Key - configuráveis por variáveis de ambiente no Vite
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://seu-projeto.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sua-chave-anon';
+
 // Definindo a base URL da API
-const API_BASE_URL = 'http://localhost:5000/api';
+// Se estamos com o proxy do Vite em desenvolvimento, usamos /api
+// Em produção, usamos o URL do Supabase
+const API_BASE_URL = import.meta.env.DEV ? '/api' : SUPABASE_URL;
+
+// Imprime para debug
+console.log('API_BASE_URL configurada:', API_BASE_URL);
+console.log('Modo de ambiente:', import.meta.env.MODE);
 
 // Criando uma instância do axios com configurações padronizadas
 const api = axios.create({
-  baseURL: API_BASE_URL,  // URL absoluta do backend
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    // Chave do Supabase para requisições não autenticadas
+    ...(import.meta.env.PROD && SUPABASE_KEY ? { 'apikey': SUPABASE_KEY } : {})
   },
   withCredentials: true,  // Importante para enviar cookies entre origens
+  timeout: 30000, // 30 segundos de timeout
 });
 
 // Interceptor para adicionar token de autenticação em todas as requisições
+// O token será obtido através do nosso AuthContext
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    try {
+      // Debug da requisição
+      console.log(`Enviando requisição para: ${config.baseURL}${config.url}`);
+      
+      // O token será passado diretamente pelas funções que usam o API
+      // ou através do contexto de autenticação nos componentes
+      const token = await getAuthToken();
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('Token adicionado à requisição');
+      } else {
+        console.log('Sem token disponível para esta requisição');
+      }
+      
+      return config;
+    } catch (error) {
+      console.error('Erro ao obter token para requisição:', error);
+      return config;
     }
-    
-    // Log para debug (remover em produção)
-    console.log(`Requisição para: ${config.url}`, {
-      headers: config.headers,
-      withCredentials: config.withCredentials
-    });
-    
-    return config;
   },
   (error) => {
     console.error('Erro no interceptor de requisição:', error);
@@ -35,14 +57,22 @@ api.interceptors.request.use(
   }
 );
 
+// Função que será substituída para obter o token de auth (injetada pela AuthContext)
+let getAuthToken = async (): Promise<string | null> => {
+  // Implementação inicial - será substituída pelo AuthContext
+  return null;
+};
+
+// Função para configurar o provedor de token
+export const setTokenProvider = (tokenProvider: () => Promise<string | null>) => {
+  getAuthToken = tokenProvider;
+  console.log('Provedor de token configurado');
+};
+
 // Interceptor para tratar respostas
 api.interceptors.response.use(
   (response) => {
-    // Log para debug (remover em produção)
-    console.log(`Resposta de ${response.config.url}:`, {
-      status: response.status,
-      data: response.data
-    });
+    console.log(`Resposta recebida de ${response.config.url}:`, response.status);
     return response;
   },
   (error) => {
@@ -53,23 +83,22 @@ api.interceptors.response.use(
       console.error('Erro de resposta:', {
         url: error.config?.url,
         status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers
+        data: error.response.data
       });
       
-      // Se receber 401 (não autorizado), limpar o token
-      if (error.response.status === 401) {
-        localStorage.removeItem('token');
-        // Redirecionar para login após limpeza do token, se necessário
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/auth/callback') {
-          window.location.href = '/login';
-        }
+      // Se receber 401 (não autorizado), podemos disparar um evento ou chamar uma função
+      // para lidar com a renovação do token ou redirecionar para login
+      if (error.response.status === 401 || error.response.status === 403) {
+        // Será tratado pelo AuthContext
+        console.warn('Não autorizado - o token pode ter expirado');
       }
     } else if (error.request) {
       // A requisição foi feita mas nenhuma resposta foi recebida
       console.error('Erro de requisição sem resposta:', {
         url: error.config?.url,
-        request: error.request
+        baseURL: error.config?.baseURL,
+        request: error.request,
+        message: error.message
       });
     } else {
       // Algo aconteceu na configuração da requisição que disparou um erro
@@ -79,6 +108,33 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Função para verificar status do servidor
+export const checkServerStatus = async (): Promise<boolean> => {
+  try {
+    console.log('Verificando status do servidor...');
+    const response = await api.get('/ping');
+    console.log('Status do servidor:', response.status, response.data);
+    return response.status === 200;
+  } catch (error) {
+    console.error('Erro ao verificar status do servidor:', error);
+    return false;
+  }
+};
+
+// Função para testar a conexão com a API raiz
+export const testApiConnection = async (): Promise<boolean> => {
+  try {
+    // Teste simples para a raiz da API (sem path adicional)
+    console.log('Testando conexão com a API raiz...');
+    const response = await axios.get('/api');
+    console.log('Resposta da API raiz:', response.status, response.data);
+    return response.status === 200;
+  } catch (error) {
+    console.error('Erro ao conectar com a API raiz:', error);
+    return false;
+  }
+};
 
 // Função para obter token CSRF do servidor
 export const fetchCSRFToken = async (): Promise<string | null> => {
@@ -91,7 +147,6 @@ export const fetchCSRFToken = async (): Promise<string | null> => {
     if (token) {
       // Configurar o token CSRF como header padrão para todas as requisições
       api.defaults.headers.common['X-CSRF-TOKEN'] = token;
-      console.log('Token CSRF obtido e configurado nos headers');
       return token;
     }
     
@@ -103,15 +158,5 @@ export const fetchCSRFToken = async (): Promise<string | null> => {
   }
 };
 
-// Função para verificar status do servidor
-export const checkServerStatus = async (): Promise<boolean> => {
-  try {
-    const response = await api.get('/ping');
-    return response.status === 200;
-  } catch (error) {
-    console.error('Erro ao verificar status do servidor:', error);
-    return false;
-  }
-};
-
+// Exporta a instância de API
 export default api; 

@@ -1,5 +1,5 @@
 import api from '../api';
-import { User } from '../../contexts/AuthContext';
+import { User } from '../../contexts/AuthContext.jsx';
 
 export type Role = 'admin' | 'manager' | 'user';
 

@@ -6,6 +6,7 @@ import insightsService from './insightsService';
 import logsService from './logsService';
 import reportsService from './reportsService';
 import usersService from './usersService';
+import userProfileService from './userProfileService';
 
 // Exportação de tipos
 export * from './types';
@@ -18,5 +19,6 @@ export {
   insightsService,
   logsService,
   reportsService,
-  usersService
+  usersService,
+  userProfileService
 }; 
