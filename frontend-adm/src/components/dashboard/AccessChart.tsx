@@ -87,7 +87,7 @@ const AccessChart = ({ statsData, chartPeriod, onPeriodChange }: AccessChartProp
   };
 
   return (
-    <div className="card-dark p-3 sm:p-4 shadow-glow-soft overflow-hidden relative backdrop-blur-sm">
+    <div className="card-dark p-3 sm:p-4 shadow-glow-soft overflow-hidden relative backdrop-blur-sm h-full flex flex-col">
       <div className="flex justify-between items-center mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl font-semibold text-green-300">
           Acessos - Últimos {getDaysFromPeriod(chartPeriod)} dias
@@ -112,7 +112,7 @@ const AccessChart = ({ statsData, chartPeriod, onPeriodChange }: AccessChartProp
       <div className="absolute -top-10 -left-10 w-40 h-40 bg-green-400/5 rounded-full blur-3xl pointer-events-none opacity-30"></div>
       
       {/* Gráfico usando componentes modularizados */}
-      <div className="h-64 w-full bg-zinc-900/60 rounded-lg backdrop-blur-sm p-2 transition-all duration-300">
+      <div className="flex-1 w-full bg-zinc-900/60 rounded-lg backdrop-blur-sm p-2 transition-all duration-300">
         {getChartData(chartPeriod, statsData, visibleSeries).length > 0 && 
          getChartData(chartPeriod, statsData, visibleSeries).some(item => item.acessos > 0 || item.tentativas > 0) ? (
           <div className="w-full h-full animate-fadeIn">

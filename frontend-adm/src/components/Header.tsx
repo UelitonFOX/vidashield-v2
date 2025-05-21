@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Bell, 
@@ -18,7 +18,8 @@ import {
   Clock, 
   Eye, 
   User, 
-  X
+  X,
+  Menu
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Popover from './Popover';
@@ -246,15 +247,50 @@ const ConfiguracoesContent = () => {
   );
 };
 
-const Header = () => {
+interface HeaderProps {
+  toggleSidebar?: () => void;
+  sidebarCollapsed?: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarCollapsed }) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // Efeito para atualizar o estado isMobile quando a largura da tela mudar
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Adicionar evento de resize
+    window.addEventListener('resize', handleResize);
+    
+    // Limpar evento ao desmontar
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+  
   return (
-    <header className="bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 px-6 py-3 shadow-md sticky top-0 z-50 min-h-[60px]">
+    <header className="bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 px-6 py-3 shadow-md sticky top-0 z-50 min-h-[60px] relative">
       <div className="flex items-center justify-between">
-        {/* Espaço vazio à esquerda para manter o layout balanceado */}
-        <div className="w-32"></div>
+        {/* Área esquerda - botão de menu hamburger em telas menores */}
+        <div className="w-32 flex items-center">
+          {isMobile && toggleSidebar && (
+            <button 
+              onClick={toggleSidebar}
+              className="p-2 text-zinc-400 hover:text-green-400 hover:bg-green-500/10 rounded-full transition-all mr-2 z-50"
+              title={sidebarCollapsed ? "Expandir menu" : "Colapsar menu"}
+              aria-label={sidebarCollapsed ? "Expandir menu" : "Colapsar menu"}
+            >
+              <Menu 
+                className={`h-5 w-5 transition-transform duration-300 ${sidebarCollapsed ? '' : 'rotate-90'}`} 
+              />
+            </button>
+          )}
+        </div>
 
         {/* Centro com título estilizado */}
-        <div className="flex-1 text-center">
+        <div className="flex-1 text-center z-40">
           <h1 className="text-2xl font-extrabold bg-gradient-to-r from-green-300 to-green-500 text-transparent bg-clip-text">
             VidaShield
           </h1>
@@ -262,7 +298,7 @@ const Header = () => {
         </div>
 
         {/* Ícones à direita com popovers */}
-        <div className="flex items-center gap-4 w-32 justify-end">
+        <div className="flex items-center gap-4 w-32 justify-end z-40">
           {/* Botão de notificações com popover */}
           <Popover 
             content={<NotificacoesContent />} 

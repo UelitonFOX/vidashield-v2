@@ -1,5 +1,81 @@
 /* ==== Estilos Globais VidaShield ==== */
 
+/* CSS Global */
+:root {
+  --color-primary: #22c55e;
+  --color-primary-hover: #16a34a;
+  --color-secondary: #0ea5e9;
+  --color-secondary-hover: #0284c7;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-info: #3b82f6;
+  --color-info-hover: #2563eb;
+  --color-dark: #18181b;
+  --color-dark-hover: #27272a;
+  --color-light: #f3f4f6;
+  --color-light-hover: #e5e7eb;
+  
+  --sidebar-width: 16rem;
+  --sidebar-width-collapsed: 4rem;
+  --header-height: 60px;
+}
+
+/* Resets e regras básicas */
+html, body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: #f3f4f6;
+  background-color: #18181b;
+  line-height: 1.5;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* Especificamente para o container principal da aplicação */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Estilos para a sidebar */
+aside.sidebar {
+  height: calc(100vh - var(--header-height));
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  padding-top: 0; /* Removido padding extra pois já ajustamos o top */
+}
+
+/* Ajustes para o conteúdo principal ao lado da sidebar */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 100vh;
+  padding-top: 0; /* Removido padding extra pois o header já tem seu próprio espaçamento */
+}
+
+/* Estilos para o botão de alternância da sidebar */
+.sidebar-toggle {
+  transition: transform 0.3s ease;
+}
+
+.sidebar-toggle.open {
+  transform: rotate(90deg);
+}
+
 /* Padrão de Grade de Fundo */
 .bg-grid-pattern {
   background-size: 30px 30px;
@@ -207,5 +283,64 @@
 
 .zoom-in-95 {
   animation-name: zoomIn;
+}
+
+/* Media queries para responsividade */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0;
+  }
+  
+  .hide-on-mobile {
+    display: none;
+  }
+  
+  /* Ajuste para evitar scroll horizontal em telas menores */
+  .card-dark, .grid {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Ajustes de sidebar para mobile */
+  aside.sidebar {
+    height: 100% !important;
+    min-height: 100vh;
+    top: 0;
+    padding-top: var(--header-height); /* Espaço para o header */
+  }
+  
+  /* Melhor espaçamento no conteúdo principal */
+  .main-content {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
+/* Responsividade adicional para layout grid */
+@media (max-width: 640px) {
+  .grid-cols-2, .grid-cols-3, .grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Melhoria no visual da sidebar ativa */
+.sidebar-link-active {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.sidebar-link-active:hover {
+  background-color: rgba(34, 197, 94, 0.15);
+}
+
+/* Garantir que o header sempre fique por cima */
+header {
+  z-index: 50 !important;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
 }
   

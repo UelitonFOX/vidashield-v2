@@ -13,7 +13,7 @@ interface StatisticsCardsProps {
 
 const StatisticsCards = ({ statsData, blockedUsersCount }: StatisticsCardsProps) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 max-w-full overflow-hidden">
       <div className="card-dark text-center p-3 sm:p-4 shadow-glow-soft">
         {/* Usuários Ativos */}
         <div className="flex justify-center mb-2">

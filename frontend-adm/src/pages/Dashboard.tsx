@@ -1,13 +1,4 @@
-import { useState, useEffect } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useModal } from "../contexts/ModalContext";
-import "../styles/vidashield.css";
-import { 
-  RefreshCw as Refresh,
-  Download,
-  FileIcon,
-  HelpCircle as Help
-} from "lucide-react";
+import { useState, useEffect } from "react";import { useAuth0 } from "@auth0/auth0-react";import { useModal } from "../contexts/ModalContext";import "../styles/vidashield.css";import {   RefreshCw as Refresh,  Download,  FileIcon,  HelpCircle as Help} from "lucide-react";
 
 // Importando componentes modulares
 import SystemStatusCards from "../components/dashboard/SystemStatusCards";
@@ -16,6 +7,7 @@ import AccessChart from "../components/dashboard/AccessChart";
 import SecurityInsights from "../components/dashboard/SecurityInsights";
 import BlockedUsersList from "../components/dashboard/BlockedUsersList";
 import RecentAlerts from "../components/dashboard/RecentAlerts";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
 import AjudaModalContent from "../components/dashboard/modals/AjudaModal";
 import ExportReportModalContent from "../components/dashboard/modals/ExportReportModal";
 
@@ -292,44 +284,9 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-4 md:px-0">
+    <div className="space-y-2 sm:space-y-3 px-2 sm:px-4 md:px-0 pt-0 mt-0">
       {/* Cabeçalho do dashboard */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-green-300">Dashboard</h1>
-          <p className="text-sm sm:text-base text-zinc-400 mt-1">Visão geral do sistema de segurança</p>
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={handleOpenExportModal}
-            className="btn-secondary py-1.5 px-3 flex items-center gap-1.5 text-white bg-green-600 hover:bg-green-700 transition-colors shadow-lg shadow-green-900/30"
-            title="Exportar relatórios"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden xs:inline">Exportar Relatório</span>
-          </button>
-
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="btn-primary py-1.5 px-3 flex items-center gap-1.5"
-            title="Atualizar dados"
-          >
-            <Refresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden xs:inline">Atualizar</span>
-          </button>
-          
-          <button
-            onClick={handleOpenAjuda}
-            className="btn-secondary py-1.5 px-3 flex items-center gap-1.5"
-            title="Ajuda"
-          >
-            <Help className="w-4 h-4" />
-            <span className="hidden xs:inline">Ajuda</span>
-          </button>
-        </div>
-      </div>
+      <DashboardHeader loading={loading} />
 
       {/* Status do sistema */}
       <SystemStatusCards 
@@ -346,27 +303,33 @@ export const Dashboard = () => {
       />
 
       {/* Layout principal em 2 colunas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-          {/* Gráfico de acessos */}
-          <AccessChart 
-            statsData={statsData} 
-            chartPeriod={chartPeriod} 
-            onPeriodChange={handlePeriodChange}
-          />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 min-h-[650px] max-w-full">
+        <div className="lg:col-span-2 grid grid-rows-2 gap-2 sm:gap-3 h-full max-w-full">
+          {/* Gráfico de acessos - ocupa 50% do espaço vertical */}
+          <div className="w-full h-full transition-all duration-500 ease-in-out opacity-100 transform translate-y-0 animate-fadeIn overflow-hidden">
+            <AccessChart 
+              statsData={statsData} 
+              chartPeriod={chartPeriod} 
+              onPeriodChange={handlePeriodChange}
+            />
+          </div>
 
-          {/* Insights de segurança */}
-          <SecurityInsights insights={insights} />
+          {/* Insights de segurança - ocupa 50% do espaço vertical */}
+          <div className="w-full h-full transition-all duration-500 ease-in-out opacity-100 transform translate-y-0 animate-fadeIn overflow-hidden" style={{animationDelay: "200ms"}}>
+            <SecurityInsights insights={insights} />
+          </div>
         </div>
 
-        {/* Seção de Usuários Bloqueados */}
-        <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+        {/* Seção de Usuários Bloqueados - Mesma altura total dos dois cards */}
+        <div className="lg:col-span-1 h-full transition-all duration-500 ease-in-out opacity-100 transform translate-y-0 animate-fadeIn overflow-hidden" style={{animationDelay: "300ms"}}>
           <BlockedUsersList usuariosBloqueados={usuariosBloqueados} />
         </div>
       </div>
 
       {/* Lista de alertas recentes */}
-      <RecentAlerts alertas={alertas} />
+      <div className="w-full overflow-x-hidden">
+        <RecentAlerts alertas={alertas} />
+      </div>
     </div>
   );
 };
