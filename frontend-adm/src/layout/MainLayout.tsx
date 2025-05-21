@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/images/logo.png";
 import { useModal } from "../contexts/ModalContext";
-import Ajuda from '../pages/Help';
+import Ajuda from '../pages/Ajuda';
 import { useState, useEffect } from "react";
 import Header from "../components/Header";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -98,8 +98,12 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
 
   // Função para obter a URL da imagem do usuário
   const getUserAvatarUrl = () => {
-    // Verificar primeiro se o usuário tem photo ou avatar
+    console.log("Dados do usuário para avatar:", user);
+    // Verificar todas as possíveis fontes de avatar
     if (user?.picture) return user.picture;
+    if (user?.avatar) return user.avatar;
+    if (user?.photo) return user.photo;
+    if (user?.['https://vidashield.app/picture']) return user?.['https://vidashield.app/picture'];
     return undefined;
   };
 
@@ -224,11 +228,19 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
         {/* Área do Perfil do Usuário com dados do Auth0 */}
         <div className="bg-zinc-700 p-4 flex flex-col items-center">
           <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xl mb-3 border-2 border-zinc-600 shadow-[0_0_15px_rgba(0,0,0,0.3)]">
-            {user?.picture ? (
+            {(user?.picture || getUserAvatarUrl()) ? (
               <img 
-                src={user.picture} 
+                src={getUserAvatarUrl() || user?.picture} 
                 alt={user?.name || 'Usuário'} 
                 className="w-full h-full rounded-full object-cover" 
+                onError={(e) => {
+                  console.error("Erro ao carregar imagem de perfil:", e);
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null; // Evita loop de erro
+                  target.src = ""; // Remove a fonte para mostrar o fallback
+                  target.style.display = "none"; // Esconde a img
+                  // O parent div já tem a cor de fundo que será mostrada
+                }}
               />
             ) : (
               <UserCircle className="w-16 h-16 text-white" />

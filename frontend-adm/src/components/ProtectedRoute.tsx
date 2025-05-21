@@ -8,26 +8,15 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, getAccessTokenSilently, user, loginWithRedirect } = useAuth0();
+  const { isAuthenticated, isLoading, getAccessTokenSilently, user } = useAuth0();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isCheckingPermissions, setIsCheckingPermissions] = useState(requiredPermission ? true : false);
   const location = useLocation();
-  const [redirectTriggered, setRedirectTriggered] = useState(false);
 
   useEffect(() => {
     // Log para depuração
     console.log("ProtectedRoute - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
-    
-    // Se não estiver autenticado e não estiver carregando, redireciona para login
-    if (!isLoading && !isAuthenticated && !redirectTriggered) {
-      console.log("ProtectedRoute - Usuário não autenticado, redirecionando para login");
-      setRedirectTriggered(true);
-      const returnTo = location.pathname || '/dashboard';
-      loginWithRedirect({
-        appState: { returnTo }
-      });
-    }
-  }, [isAuthenticated, isLoading, redirectTriggered, location.pathname, loginWithRedirect]);
+  }, [isAuthenticated, isLoading]);
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -75,10 +64,10 @@ const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) =
     );
   }
 
-  // Este caso não deve ocorrer pois o redirecionamento já deve ter sido trigado no useEffect
-  if (!isAuthenticated && !redirectTriggered) {
-    console.log("ProtectedRoute - Estado de fallback: redirecionando para login via Navigate");
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  // Se não estiver autenticado, redireciona para a página de login
+  if (!isAuthenticated) {
+    console.log("ProtectedRoute - Usuário não autenticado, redirecionando para página de login local");
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Autenticado mas sem permissão
@@ -103,19 +92,7 @@ const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) =
   }
 
   // Se o usuário está autenticado e tem permissão, retorna o conteúdo protegido
-  if (isAuthenticated) {
-    return <>{children}</>;
-  }
-
-  // Estado intermediário enquanto aguarda o redirecionamento
-  return (
-    <div className="flex items-center justify-center h-screen bg-zinc-900">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <p className="mt-4 text-zinc-300">Redirecionando para login...</p>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 };
 
 export default ProtectedRoute; 

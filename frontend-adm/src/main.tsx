@@ -9,7 +9,7 @@ import App from './App.tsx';
 const domain = import.meta.env.VITE_AUTH0_DOMAIN || 'dev-uhfy4gh2szxayskh.us.auth0.com';
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || 'FrJXkUPH1eWy2wwhesfn61PgEj0WmERH';
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE || 'http://localhost:5000/api';
-const redirectUri = import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth/callback';
+const redirectUri = import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth-callback';
 
 // Handler melhorado para redirecionamento após login bem-sucedido
 const onRedirectCallback = (appState: any) => {
@@ -18,6 +18,14 @@ const onRedirectCallback = (appState: any) => {
   window.location.href = targetUrl;
 };
 
+console.log("Auth0 config:", {
+  domain,
+  clientId,
+  audience,
+  redirectUri,
+  currentOrigin: window.location.origin
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Auth0Provider
@@ -25,7 +33,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       clientId={clientId}
       authorizationParams={{
         redirect_uri: redirectUri,
-        audience: audience
+        audience: audience,
+        scope: "openid profile email"
       }}
       onRedirectCallback={onRedirectCallback}
       useRefreshTokens={true}

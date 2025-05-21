@@ -15,7 +15,7 @@ import {
 
 const Login = () => {
   const { loginWithRedirect, isAuthenticated, isLoading, error } = useAuth0();
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -46,7 +46,8 @@ const Login = () => {
     // Só redirecionar para o dashboard se estiver autenticado E não acabou de fazer logout
     if (isAuthenticated && !isLoading && !justLoggedOut) {
       console.log("[Login] Usuário já autenticado, redirecionando para dashboard");
-      navigate('/dashboard', { replace: true });
+      // Substituir redirecionamento automático com um botão para continuar para o dashboard
+      // navigate('/dashboard', { replace: true });
     } else if (isAuthenticated && justLoggedOut) {
       // Se acabou de fazer logout mas ainda está autenticado, forçar novo logout
       console.log("[Login] Usuário ainda autenticado após logout, forçando nova limpeza");
@@ -57,23 +58,46 @@ const Login = () => {
   const handleLogin = () => {
     setAttemptingLogin(true);
     setLocalLoginError(null);
-    login('/dashboard').catch(() => {
+    
+    try {
+      console.log("[Login] Iniciando login com Auth0");
+      
+      // Usando Auth0 loginWithRedirect com configuração explícita de redirect_uri
+      loginWithRedirect({
+        appState: { returnTo: '/dashboard' },
+        authorizationParams: {
+          redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth-callback',
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE
+        }
+      });
+    } catch (error) {
+      console.error("[Login] Erro ao iniciar login com Auth0:", error);
       setAttemptingLogin(false);
-      setLocalLoginError('Erro na autenticação. Tente novamente.');
-    });
+      setLocalLoginError('Erro ao iniciar autenticação. Tente novamente.');
+    }
   };
 
   const handleGoogleLogin = () => {
     setAttemptingLogin(true);
     setLocalLoginError(null);
     
-    console.log("[Login] Iniciando login com Google");
-    
-    loginWithGoogle().catch((error) => {
-      console.error("[Login] Erro no login com Google:", error);
+    try {
+      console.log("[Login] Iniciando login com Google");
+      
+      // Usando Auth0 loginWithRedirect com configuração para o Google
+      loginWithRedirect({
+        appState: { returnTo: '/dashboard' },
+        authorizationParams: {
+          connection: 'google-oauth2',
+          redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth-callback',
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE
+        }
+      });
+    } catch (error) {
+      console.error("[Login] Erro ao iniciar login com Google:", error);
       setAttemptingLogin(false);
-      setLocalLoginError('Erro na autenticação com Google. Tente novamente.');
-    });
+      setLocalLoginError('Erro ao iniciar autenticação com Google. Tente novamente.');
+    }
   };
 
   const handleEmailPasswordLogin = (e: React.FormEvent) => {
@@ -87,13 +111,23 @@ const Login = () => {
     setAttemptingLogin(true);
     setLocalLoginError(null);
     
-    loginWithRedirect({
-      appState: { returnTo: '/dashboard' },
-      authorizationParams: {
-        connection: 'Username-Password-Authentication',
-        login_hint: email
-      },
-    });
+    try {
+      console.log("[Login] Iniciando login com email e senha");
+      
+      loginWithRedirect({
+        appState: { returnTo: '/dashboard' },
+        authorizationParams: {
+          connection: 'Username-Password-Authentication',
+          login_hint: email,
+          redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth-callback',
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE
+        },
+      });
+    } catch (error) {
+      console.error("[Login] Erro ao iniciar login com email e senha:", error);
+      setAttemptingLogin(false);
+      setLocalLoginError('Erro ao iniciar autenticação. Tente novamente.');
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -118,6 +152,19 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-900 p-4">
       <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
+
+      {isAuthenticated && !justLoggedOut && (
+        <div className="mb-6 p-4 bg-green-900/40 border border-green-700 rounded-lg text-center max-w-md">
+          <p className="text-green-300 font-medium mb-2">Você já está autenticado!</p>
+          <p className="text-green-200/80 text-sm mb-3">Você já fez login e pode acessar o sistema.</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+          >
+            Continuar para Dashboard
+          </button>
+        </div>
+      )}
 
       <div className="mb-8 flex flex-col items-center">
         <div className="flex items-center justify-center mb-4">

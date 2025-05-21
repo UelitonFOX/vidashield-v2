@@ -11,7 +11,6 @@ import { AuthProvider } from './contexts/AuthContext.jsx'
 import { MainLayout } from './layout/MainLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Callback from './pages/Callback'
-import NavBar from './components/NavBar'
 
 // Componente simples para logout
 const LogoutHandler = () => {
@@ -56,7 +55,6 @@ const Alertas = lazy(() => import('./pages/Alertas'));
 const Usuarios = lazy(() => import('./pages/Usuarios'));
 const LogsAcesso = lazy(() => import('./pages/LogsAcesso'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes'));
-const Help = lazy(() => import('./pages/Help'));
 const Ajuda = lazy(() => import('./pages/Ajuda'));
 const Estatisticas = lazy(() => import('./pages/Estatisticas'));
 const Relatorios = lazy(() => import('./pages/Relatorios'));
@@ -76,27 +74,15 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Componente de Layout com navbar que será usado em todas as páginas protegidas
-const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <div className="flex flex-col min-h-screen bg-zinc-900">
-      <NavBar />
-      <div className="flex-grow p-4">
-        {children}
-      </div>
-    </div>
-  );
-};
-
 function App() {
   const { isLoading } = useAuth0();
   
   // Callback URL padrão configurado no Auth0
   const callbackUrl = import.meta.env.VITE_AUTH0_CALLBACK_URL || 
-                      window.location.origin + '/callback';
+                      window.location.origin + '/auth-callback';
   
   // Extrair o caminho do callback para configurar as rotas
-  const callbackPath = new URL(callbackUrl).pathname || '/callback';
+  const callbackPath = new URL(callbackUrl).pathname || '/auth-callback';
   
   // Log para debug
   console.log(`App inicializado, usando callback URL: ${callbackUrl}, path: ${callbackPath}`);
@@ -118,8 +104,8 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/logout" element={<LogoutHandler />} />
             
-            {/* Rota raiz - redireciona para dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Rota raiz - agora mostra a página de login em vez de redirecionar */}
+            <Route path="/" element={<Login />} />
             
             {/* Rotas protegidas - usando MainLayout para garantir a sidebar */}
             <Route path="/dashboard" element={
@@ -132,26 +118,6 @@ function App() {
               </ProtectedRoute>
             } />
             
-            <Route path="/users" element={
-              <ProtectedRoute requiredPermission="manage:users">
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <UserManagement />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/user-profile" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <UserProfile />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
             <Route path="/usuarios" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingFallback />}>
@@ -162,11 +128,11 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/alerts" element={
+            <Route path="/user-profile" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingFallback />}>
                   <MainLayout>
-                    <Alertas />
+                    <UserProfile />
                   </MainLayout>
                 </Suspense>
               </ProtectedRoute>
@@ -202,41 +168,11 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/insights" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <Estatisticas />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
             <Route path="/relatorios" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingFallback />}>
                   <MainLayout>
                     <Relatorios />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/reports" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <Relatorios />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/exports" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <Exportacoes />
                   </MainLayout>
                 </Suspense>
               </ProtectedRoute>
@@ -252,31 +188,11 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/settings" element={
-              <ProtectedRoute requiredPermission="manage:settings">
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <Configuracoes />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
             <Route path="/configuracoes" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingFallback />}>
                   <MainLayout>
                     <Configuracoes />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/help" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <Help />
                   </MainLayout>
                 </Suspense>
               </ProtectedRoute>
@@ -292,16 +208,6 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/documentation" element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingFallback />}>
-                  <MainLayout>
-                    <Documentacao />
-                  </MainLayout>
-                </Suspense>
-              </ProtectedRoute>
-            } />
-            
             <Route path="/documentacao" element={
               <ProtectedRoute>
                 <Suspense fallback={<LoadingFallback />}>

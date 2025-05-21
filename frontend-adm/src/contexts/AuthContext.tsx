@@ -101,6 +101,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     console.log('Permissões detectadas:', permissions);
     
+    // Verificar possíveis fontes de imagem do perfil
+    let profileImage = auth0User.picture;
+    // Tenta encontrar a imagem em várias propriedades possíveis
+    if (!profileImage) {
+      if (auth0User.avatar) profileImage = auth0User.avatar;
+      else if (auth0User.photo) profileImage = auth0User.photo;
+      else if (auth0User['https://vidashield.app/picture']) profileImage = auth0User['https://vidashield.app/picture'];
+    }
+    console.log('Imagem de perfil detectada:', profileImage);
+    
     // Determinar role com base nas permissões
     let role = 'usuario';
     
@@ -136,8 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: auth0User.sub || '',
       name: auth0User.name || '',
       email: auth0User.email || '',
-      photo: auth0User.picture,
-      avatar: auth0User.picture,
+      photo: profileImage,
+      avatar: profileImage,
       role,
       status: 'ativo',
       is_active: true,
@@ -171,7 +181,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await loginWithRedirect({
         appState: { returnTo: redirectPath || '/dashboard' },
         authorizationParams: {
-          redirect_uri: callbackUrl
+          redirect_uri: callbackUrl,
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE
         }
       });
     } catch (error) {
@@ -193,7 +204,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         appState: { returnTo: '/dashboard' },
         authorizationParams: {
           connection: 'google-oauth2',
-          redirect_uri: callbackUrl
+          redirect_uri: callbackUrl,
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE
         }
       });
     } catch (error) {

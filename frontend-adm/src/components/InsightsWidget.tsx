@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FiTrendingDown, FiTrendingUp, FiAlertTriangle, FiActivity, FiRefreshCw, FiMap } from 'react-icons/fi';
 import api from '../services/api';
-import './InsightsWidget.css';
 
 interface InsightData {
   icon: React.ReactNode;

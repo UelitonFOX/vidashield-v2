@@ -1,6 +1,5 @@
 import React from 'react';
 import { FiUsers, FiDollarSign, FiShield, FiCheckCircle } from 'react-icons/fi';
-import './StatisticsWidget.css';
 
 interface Variation {
   value: string;

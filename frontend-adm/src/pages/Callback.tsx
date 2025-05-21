@@ -5,7 +5,7 @@ import { Shield } from 'lucide-react';
 import { testApiConnection } from '../services/api';
 
 const Callback = () => {
-  const { isAuthenticated, isLoading, error, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, isLoading, error, getAccessTokenSilently, handleRedirectCallback, user } = useAuth0();
   const navigate = useNavigate();
   const location = useLocation();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -13,6 +13,7 @@ const Callback = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [debugMessage, setDebugMessage] = useState<string[]>([]);
   const [processingAuth, setProcessingAuth] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
 
@@ -63,6 +64,9 @@ const Callback = () => {
       if (processingAuth) return;
       
       addDebug(`Estado atual - isLoading: ${isLoading}, isAuthenticated: ${isAuthenticated}, error: ${error ? "sim" : "não"}`);
+      if (user) {
+        addDebug(`Usuário autenticado: ${user.name || user.email}`);
+      }
       
       if (apiError) {
         addDebug("Não foi possível completar autenticação devido a erro de API");
@@ -72,17 +76,53 @@ const Callback = () => {
       if (!isLoading) {
         if (isAuthenticated) {
           setProcessingAuth(true);
-          addDebug("Usuário autenticado, redirecionando para dashboard");
+          addDebug("Usuário autenticado, processando callback e redirecionando para dashboard");
           
           try {
-            // Obter token para confirmar autenticação
-            const token = await getAccessTokenSilently();
-            addDebug("Token obtido com sucesso");
+            // Processar o callback do Auth0 para lidar com o redirecionamento
+            if (location.search) {
+              addDebug("Detectado parâmetros na URL, processando callback");
+              try {
+                // Tenta processar o redirecionamento do Auth0
+                const result = await handleRedirectCallback();
+                addDebug(`Callback processado: ${JSON.stringify(result)}`);
+                
+                // Redirecionar para a página alvo ou dashboard
+                const targetUrl = result?.appState?.returnTo || '/dashboard';
+                addDebug(`Redirecionando para: ${targetUrl}`);
+                
+                // Usar navegação com replace para evitar problemas com o histórico
+                window.location.replace(targetUrl);
+                return;
+              } catch (err) {
+                addDebug(`Erro ao processar callback: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+                // Continuar com o fluxo normal caso falhe
+              }
+            }
             
-            // Redirecionar com força total (recarregar a página)
-            window.location.href = '/dashboard';
+            // Obter token para confirmar autenticação
+            try {
+              const token = await getAccessTokenSilently();
+              addDebug("Token obtido com sucesso");
+              setAuthToken(token.substring(0, 20) + "...");
+              
+              // Salvar token no localStorage para uso futuro
+              localStorage.setItem('auth_token', token);
+              
+              // Redirecionar com força total (recarregar a página)
+              window.location.href = '/dashboard';
+            } catch (tokenErr) {
+              addDebug(`Erro ao obter token: ${tokenErr instanceof Error ? tokenErr.message : 'Erro desconhecido'}`);
+              if (tokenErr instanceof Error && tokenErr.message.includes('403')) {
+                addDebug("ERRO 403 detectado! Verifique se a configuração do Auth0 está correta.");
+                addDebug("- Verifique se a URL de callback está adicionada no Auth0 Dashboard");
+                addDebug("- Verifique se o audience está correto");
+                addDebug("- Verifique as origens permitidas no CORS");
+              }
+              throw tokenErr;
+            }
           } catch (err) {
-            addDebug(`Erro ao obter token: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+            addDebug(`Erro no fluxo de autenticação: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
             setProcessingAuth(false);
           }
         } else if (!error) {
@@ -97,7 +137,7 @@ const Callback = () => {
     if (!isTestingApi) {
       handleCallback();
     }
-  }, [isLoading, isAuthenticated, navigate, error, apiError, isTestingApi, getAccessTokenSilently, processingAuth]);
+  }, [isLoading, isAuthenticated, navigate, error, apiError, isTestingApi, getAccessTokenSilently, processingAuth, location, handleRedirectCallback, user]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-900 p-4">
@@ -149,25 +189,32 @@ const Callback = () => {
           </div>
         )}
         
-        {import.meta.env.DEV && (
-          <div className="mt-8 p-4 bg-zinc-800 rounded-lg text-left max-w-xl mx-auto">
-            <h3 className="text-green-300 text-sm font-medium mb-2">Informações de Debug:</h3>
-            <div className="max-h-48 overflow-y-auto text-xs font-mono">
-              {debugMessage.map((msg, idx) => (
-                <div key={idx} className="text-zinc-400 mb-1">{msg}</div>
-              ))}
-              {debugMessage.length === 0 && <div className="text-zinc-500">Nenhuma informação disponível</div>}
-            </div>
-            <div className="mt-4 flex justify-center">
-              <button
-                onClick={() => window.location.href = '/dashboard'}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white transition-colors"
-              >
-                Forçar dashboard
-              </button>
-            </div>
+        <div className="mt-8 p-4 bg-zinc-800 rounded-lg text-left max-w-xl mx-auto">
+          <h3 className="text-green-300 text-sm font-medium mb-2">Informações de Debug:</h3>
+          <div className="max-h-48 overflow-y-auto text-xs font-mono">
+            {debugMessage.map((msg, idx) => (
+              <div key={idx} className="text-zinc-400 mb-1">{msg}</div>
+            ))}
+            {authToken && (
+              <div className="text-zinc-300 mb-1 mt-2">Token: {authToken}</div>
+            )}
+            {debugMessage.length === 0 && <div className="text-zinc-500">Nenhuma informação disponível</div>}
           </div>
-        )}
+          <div className="mt-4 flex justify-between">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-md text-white transition-colors"
+            >
+              Voltar ao login
+            </button>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white transition-colors"
+            >
+              Forçar dashboard
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
