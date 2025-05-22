@@ -9,13 +9,25 @@ export default defineConfig(({ mode }) => {
   const apiUrl = env.VITE_API_URL || 'https://vidashield.onrender.com';
 
   return {
-    base: './', // Garante paths relativos, bom para Vercel
+    base: '/', // Usar caminhos absolutos para evitar problemas de roteamento
 
     plugins: [react()],
 
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+      },
+    },
+
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+          },
+        },
       },
     },
 
