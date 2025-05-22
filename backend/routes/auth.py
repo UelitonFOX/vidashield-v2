@@ -60,7 +60,7 @@ def get_csrf_token():
     response.headers.set('X-CSRF-TOKEN', token)
     return response
 
-@auth_bp.route('/verify-captcha', methods=['POST'])
+# Função de verificação de captcha - disponibilizada separadamente para ser usada diretamente
 def verify_captcha():
     """
     Verifica a validade do token hCaptcha.
@@ -96,6 +96,14 @@ def verify_captcha():
     
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao validar captcha: {str(e)}'}), 500
+
+# Rota para o Blueprint
+@auth_bp.route('/verify-captcha', methods=['POST'])
+def verify_captcha_route():
+    """
+    Rota do blueprint para verificação de captcha.
+    """
+    return verify_captcha()
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

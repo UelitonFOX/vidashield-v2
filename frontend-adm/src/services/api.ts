@@ -8,9 +8,8 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sua-chave-anon';
 const API_URL = import.meta.env.VITE_API_URL || 'https://vidashield.onrender.com';
 
 // Definindo a base URL da API
-// Se estamos com o proxy do Vite em desenvolvimento, usamos /api
-// Em produção, usamos o URL da API configurado no .env
-const API_BASE_URL = import.meta.env.DEV ? '/api' : API_URL;
+// Sempre usar o prefixo /api para padronizar as chamadas
+const API_BASE_URL = import.meta.env.DEV ? '/api' : `${API_URL}/api`;
 
 // Imprime para debug
 console.log('API_BASE_URL configurada:', API_BASE_URL);

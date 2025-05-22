@@ -16,7 +16,7 @@ from werkzeug.exceptions import HTTPException
 
 from config import Config
 from models import db
-from routes.auth import auth_bp, setup_oauth
+from routes.auth import auth_bp, setup_oauth, verify_captcha
 from routes.dashboard import dashboard_bp
 from routes.users import users_bp
 from routes.logs import logs_bp
@@ -40,10 +40,16 @@ app.config['JWT_SECRET_KEY'] = app.config['JWT_SECRET_KEY']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=1)
 
 # CORS – produção e dev (corrigido para suportar preflight completo)
-CORS(app, resources={r"/api/*": {"origins": [
-    "http://localhost:3000",
-    "https://vidashield.vercel.app"
-]}}, supports_credentials=True)
+CORS(app, resources={
+    r"/api/*": {"origins": [
+        "http://localhost:3000",
+        "https://vidashield.vercel.app"
+    ]},
+    r"/auth/*": {"origins": [
+        "http://localhost:3000", 
+        "https://vidashield.vercel.app"
+    ]}
+}, supports_credentials=True)
 
 # CSRF Protection (exempt para auth routes)
 csrf = CSRFProtect(app)
@@ -62,6 +68,39 @@ app.register_blueprint(logs_bp, url_prefix='/api/logs')
 app.register_blueprint(alerts_bp, url_prefix='/api/alerts')
 app.register_blueprint(settings_bp, url_prefix='/api/settings')
 app.register_blueprint(reports_bp, url_prefix='/api/reports')
+
+# Rota específica para o problema de captcha
+@app.route('/auth/verify-captcha', methods=['POST', 'OPTIONS'])
+def auth_verify_captcha():
+    """
+    Rota específica para o problema com o endpoint de verificação de captcha.
+    Esta função simplesmente chama a mesma função do blueprint auth_bp.
+    """
+    app.logger.warning("Acessando /auth/verify-captcha diretamente - esta rota é apenas para compatibilidade")
+    
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+    
+    return verify_captcha()
+
+# Rota de fallback para redirecionamento de /auth para /api/auth
+@app.route('/auth/<path:subpath>', methods=['GET', 'POST', 'OPTIONS'])
+def auth_fallback(subpath):
+    # Pular a rota de verify-captcha que já tem handler específico
+    if subpath == 'verify-captcha':
+        return app.view_functions['auth_verify_captcha']()
+        
+    app.logger.warning(f"Tentativa de acesso direto a /auth/{subpath}. Redirecionando para /api/auth/{subpath}")
+    
+    if request.method == 'OPTIONS':
+        # Para solicitações OPTIONS, apenas responder diretamente com as headers CORS necessárias
+        response = app.make_default_options_response()
+        return response
+    
+    # Para outros métodos, redirecionar para a rota correta
+    target_url = f'/api/auth/{subpath}'
+    return redirect(target_url, code=307)  # 307 mantém o método HTTP original
 
 # Handlers
 @app.errorhandler(CSRFError)

@@ -11,52 +11,52 @@ const authService = {
    */
   verifyToken: async (): Promise<boolean> => {
     try {
-      const response = await api.get('/auth/verify_token');
+      const response = await api.get('/api/auth/verify_token');
       return response.data?.valid === true;
     } catch (error) {
       console.error('Erro ao verificar token:', error);
       return false;
     }
   },
-  
+
   /**
    * Obter dados do usuário atual
    * Usa o token Auth0 enviado no header
    */
   getCurrentUser: async (): Promise<User> => {
-    const response = await api.get<User>('/auth/me');
+    const response = await api.get<User>('/api/auth/me');
     return response.data;
   },
-  
+
   /**
    * Verificar permissões do usuário
    * Usa o token Auth0 enviado no header
    */
-  checkPermissions: async (role: string): Promise<{has_role: boolean, user_permissions: string[]}> => {
-    const response = await api.get(`/auth/check-role?role=${role}`);
+  checkPermissions: async (role: string): Promise<{ has_role: boolean; user_permissions: string[] }> => {
+    const response = await api.get(`/api/auth/check-role?role=${role}`);
     return response.data;
   },
-  
+
   /**
    * Verificar token do hCaptcha
    * @param token Token gerado pelo componente hCaptcha
    */
   verifyCaptcha: async (token: string): Promise<boolean> => {
     try {
-      const response = await api.post('/auth/verify-captcha', { token });
+      const response = await api.post('/api/auth/verify-captcha', { token });
       return response.data?.success === true;
     } catch (error) {
       console.error('Erro ao verificar captcha:', error);
       return false;
     }
   },
-  
+
   /**
    * Obter token CSRF para requisições que exigem proteção CSRF
    */
   getCsrfToken: async (): Promise<string | null> => {
     try {
-      const response = await api.get('/auth/csrf-token');
+      const response = await api.get('/api/auth/csrf-token');
       return response.data?.csrf_token || null;
     } catch (error) {
       console.error('Erro ao obter token CSRF:', error);
@@ -66,4 +66,4 @@ const authService = {
 };
 
 // Exportar o serviço completo como padrão
-export default authService; 
+export default authService;
