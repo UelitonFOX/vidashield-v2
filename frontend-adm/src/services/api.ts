@@ -115,7 +115,7 @@ api.interceptors.response.use(
 export const checkServerStatus = async (): Promise<boolean> => {
   try {
     console.log('Verificando status do servidor...');
-    const response = await api.get('/ping');
+    const response = await api.get('/api/ping');
     console.log('Status do servidor:', response.status, response.data);
     return response.status === 200;
   } catch (error) {
@@ -141,7 +141,7 @@ export const testApiConnection = async (): Promise<boolean> => {
 // Função para obter token CSRF do servidor
 export const fetchCSRFToken = async (): Promise<string | null> => {
   try {
-    const response = await api.get('/auth/csrf-token');
+    const response = await api.get('/api/auth/csrf-token');
     
     // O endpoint retorna o token no formato { csrf_token: 'token-value' }
     const token = response.data?.csrf_token;

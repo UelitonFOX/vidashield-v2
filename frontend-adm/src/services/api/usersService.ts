@@ -1,6 +1,6 @@
 import { User, UsersResponse, UserResponse, PendingUsersResponse, ApiBaseResponse } from './types';
 import { useAuthFetch } from '../../utils/useAuthFetch';
-import api from '../../services/api';
+import api from '../api';
 
 interface UserFilters {
   page?: number;
@@ -195,53 +195,53 @@ const usersService = {
     if (status) params.append('status', status);
     if (role) params.append('role', role);
     
-    const response = await api.get<UsersResponse>(`/users?${params.toString()}`);
+    const response = await api.get<UsersResponse>(`/api/users?${params.toString()}`);
     return response.data;
   },
   
   // Obter lista de usuários pendentes
   getPendingUsers: async (): Promise<PendingUsersResponse> => {
-    const response = await api.get<PendingUsersResponse>('/users/pending');
+    const response = await api.get<PendingUsersResponse>('/api/users/pending');
     return response.data;
   },
   
   // Criar um novo usuário
   createUser: async (userData: Partial<User>): Promise<User> => {
-    const response = await api.post<UserResponse>('/users', userData);
+    const response = await api.post<UserResponse>('/api/users', userData);
     return response.data.user;
   },
   
   // Atualizar um usuário existente
   updateUser: async (userId: string, userData: Partial<User>): Promise<User> => {
-    const response = await api.put<UserResponse>(`/users/${userId}`, userData);
+    const response = await api.put<UserResponse>(`/api/users/${userId}`, userData);
     return response.data.user;
   },
   
   // Aprovar um usuário pendente
   approveUser: async (userId: string): Promise<User> => {
-    const response = await api.patch<UserResponse>(`/users/${userId}/approve`);
+    const response = await api.patch<UserResponse>(`/api/users/${userId}/approve`);
     return response.data.user;
   },
   
   // Rejeitar um usuário pendente
   rejectUser: async (userId: string): Promise<void> => {
-    await api.delete(`/users/${userId}/reject`);
+    await api.delete(`/api/users/${userId}/reject`);
   },
   
   // Resetar a senha de um usuário
   resetPassword: async (userId: string): Promise<void> => {
-    await api.post(`/users/${userId}/reset-password`);
+    await api.post(`/api/users/${userId}/reset-password`);
   },
   
   // Promover um usuário para administrador
   promoteUser: async (userId: string): Promise<User> => {
-    const response = await api.put<UserResponse>(`/users/${userId}/promote`);
+    const response = await api.put<UserResponse>(`/api/users/${userId}/promote`);
     return response.data.user;
   },
   
   // Atualizar o status de um usuário (ativar/desativar)
   updateUserStatus: async (userId: string, status: 'active' | 'inactive' | 'ativo' | 'pendente' | 'recusado'): Promise<User> => {
-    const response = await api.put<UserResponse>(`/users/${userId}/status`, { status });
+    const response = await api.put<UserResponse>(`/api/users/${userId}/status`, { status });
     return response.data.user;
   }
 };

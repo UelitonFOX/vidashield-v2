@@ -6,7 +6,7 @@ const userProfileService = {
    * @param photoData Base64 da imagem a ser usada como foto de perfil
    */
   updateProfilePhoto: async (photoData: string) => {
-    const response = await api.post('/users/profile/photo', { photo: photoData });
+    const response = await api.post('/api/users/profile/photo', { photo: photoData });
     return response.data;
   }
 };
