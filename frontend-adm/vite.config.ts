@@ -1,61 +1,69 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-// Configuração principal do Vite para o VidaShield 🛡️
-// Inclui proxy para backend Flask, ajustes de DX e pronto pra build 💪
+// 🛡️ Configuração principal do Vite para o VidaShield
+export default defineConfig(({ mode }) => {
+  // Carregar variáveis de ambiente
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiUrl = env.VITE_API_URL || 'https://vidashield.onrender.com';
 
-export default defineConfig({
-  base: './', // Garante que builds funcionem em subpastas (produção/Vercel/etc)
+  return {
+    base: './',
 
-  plugins: [react()],
+    plugins: [react()],
 
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'), // Importações com '@' do src/
-    },
-  },
-
-  server: {
-    port: 3000, // Porta do frontend
-    strictPort: true,
-    host: true,
-
-    // ✅ Permitir conexões do domínio ngrok
-    allowedHosts: [
-      'a315-2804-15fc-300d-1301-ad9c-3bfd-9809-96d1.ngrok-free.app'
-    ],
-
-    hmr: {
-      overlay: true,
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
     },
 
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path,
-        ws: false,
-        timeout: 60000,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.error('[Proxy Error]', err)
-          })
+    server: {
+      port: 3000,
+      strictPort: true,
+      host: true,
 
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('[Proxy Request]', req.method, req.url)
-          })
+      // ✅ Permitir múltiplos domínios (ex: ngrok, loca.lt, etc.)
+      allowedHosts: [
+        'a315-2804-15fc-300d-1301-ad9c-3bfd-9809-96d1.ngrok-free.app',
+        'stirred-broadly-hedgehog.ngrok-free.app',
+        'vidashield.loca.lt',
+        'localhost',
+        'vidashield.vercel.app'
+      ],
 
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('[Proxy Response]', proxyRes.statusCode, req.url)
-          })
+      hmr: {
+        overlay: true,
+      },
+
+      proxy: {
+        '/api': {
+          target: apiUrl,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path,
+          ws: false,
+          timeout: 60000,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.error('[Proxy Error]', err);
+            });
+
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('[Proxy Request]', req.method, req.url);
+            });
+
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
+              console.log('[Proxy Response]', proxyRes.statusCode, req.url);
+            });
+          }
         }
       }
-    }
-  },
+    },
 
-  css: {
-    devSourcemap: true,
-  },
-})
+    css: {
+      devSourcemap: true,
+    },
+  };
+});

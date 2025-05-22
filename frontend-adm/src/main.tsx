@@ -8,7 +8,7 @@ import App from './App.tsx';
 // Configurações Auth0
 const domain = import.meta.env.VITE_AUTH0_DOMAIN || 'dev-uhfy4gh2szxayskh.us.auth0.com';
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || 'FrJXkUPH1eWy2wwhesfn61PgEj0WmERH';
-const audience = import.meta.env.VITE_AUTH0_AUDIENCE || 'http://localhost:5000/api';
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE || 'https://vidashield.onrender.com/api';
 const redirectUri = import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth-callback';
 
 // Handler melhorado para redirecionamento após login bem-sucedido

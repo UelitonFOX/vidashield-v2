@@ -1,5 +1,6 @@
 import { User, UsersResponse, UserResponse, PendingUsersResponse, ApiBaseResponse } from './types';
 import { useAuthFetch } from '../../utils/useAuthFetch';
+import api from '../../services/api';
 
 interface UserFilters {
   page?: number;
@@ -17,16 +18,16 @@ interface MessageResponse extends ApiBaseResponse {
 const mockData = {
   users: {
     users: [
-      { id: '1', name: 'João Silva', email: 'joao@vidashield.com', role: 'admin', status: 'ativo', created_at: '2025-01-15T08:30:00' },
-      { id: '2', name: 'Maria Souza', email: 'maria@vidashield.com', role: 'manager', status: 'ativo', created_at: '2025-01-20T14:15:00' },
-      { id: '3', name: 'Pedro Santos', email: 'pedro@vidashield.com', role: 'usuario', status: 'ativo', created_at: '2025-02-05T11:20:00' },
-      { id: '4', name: 'Ana Oliveira', email: 'ana@vidashield.com', role: 'usuario', status: 'ativo', created_at: '2025-02-10T09:45:00' },
-      { id: '5', name: 'Carlos Pereira', email: 'carlos@vidashield.com', role: 'usuario', status: 'inativo', created_at: '2025-03-01T16:30:00' },
-      { id: '6', name: 'Juliana Lima', email: 'juliana@vidashield.com', role: 'usuario', status: 'ativo', created_at: '2025-03-15T13:10:00' },
-      { id: '7', name: 'Roberto Alves', email: 'roberto@vidashield.com', role: 'usuario', status: 'ativo', created_at: '2025-04-02T10:25:00' },
-      { id: '8', name: 'Fernanda Costa', email: 'fernanda@vidashield.com', role: 'usuario', status: 'pendente', created_at: '2025-04-08T15:50:00' },
-      { id: '9', name: 'Marcelo Dias', email: 'marcelo@vidashield.com', role: 'usuario', status: 'pendente', created_at: '2025-04-12T09:15:00' },
-      { id: '10', name: 'Luciana Martins', email: 'luciana@vidashield.com', role: 'usuario', status: 'recusado', created_at: '2025-04-18T11:40:00' }
+      { id: '1', name: 'João Silva', email: 'joao@vidashield.com', role: 'admin' as 'admin', status: 'ativo' as 'ativo', created_at: '2025-01-15T08:30:00' },
+      { id: '2', name: 'Maria Souza', email: 'maria@vidashield.com', role: 'gerente' as 'gerente', status: 'ativo' as 'ativo', created_at: '2025-01-20T14:15:00' },
+      { id: '3', name: 'Pedro Santos', email: 'pedro@vidashield.com', role: 'usuario' as 'usuario', status: 'ativo' as 'ativo', created_at: '2025-02-05T11:20:00' },
+      { id: '4', name: 'Ana Oliveira', email: 'ana@vidashield.com', role: 'usuario' as 'usuario', status: 'ativo' as 'ativo', created_at: '2025-02-10T09:45:00' },
+      { id: '5', name: 'Carlos Pereira', email: 'carlos@vidashield.com', role: 'usuario' as 'usuario', status: 'inactive' as 'inactive', created_at: '2025-03-01T16:30:00' },
+      { id: '6', name: 'Juliana Lima', email: 'juliana@vidashield.com', role: 'usuario' as 'usuario', status: 'ativo' as 'ativo', created_at: '2025-03-15T13:10:00' },
+      { id: '7', name: 'Roberto Alves', email: 'roberto@vidashield.com', role: 'usuario' as 'usuario', status: 'ativo' as 'ativo', created_at: '2025-04-02T10:25:00' },
+      { id: '8', name: 'Fernanda Costa', email: 'fernanda@vidashield.com', role: 'usuario' as 'usuario', status: 'pendente' as 'pendente', created_at: '2025-04-08T15:50:00' },
+      { id: '9', name: 'Marcelo Dias', email: 'marcelo@vidashield.com', role: 'usuario' as 'usuario', status: 'pendente' as 'pendente', created_at: '2025-04-12T09:15:00' },
+      { id: '10', name: 'Luciana Martins', email: 'luciana@vidashield.com', role: 'usuario' as 'usuario', status: 'recusado' as 'recusado', created_at: '2025-04-18T11:40:00' }
     ],
     total: 10,
     page: 1,
@@ -35,8 +36,8 @@ const mockData = {
   },
   pending_users: {
     users: [
-      { id: '8', name: 'Fernanda Costa', email: 'fernanda@vidashield.com', role: 'usuario', status: 'pendente', created_at: '2025-04-08T15:50:00' },
-      { id: '9', name: 'Marcelo Dias', email: 'marcelo@vidashield.com', role: 'usuario', status: 'pendente', created_at: '2025-04-12T09:15:00' }
+      { id: '8', name: 'Fernanda Costa', email: 'fernanda@vidashield.com', role: 'usuario' as 'usuario', status: 'pendente' as 'pendente', created_at: '2025-04-08T15:50:00' },
+      { id: '9', name: 'Marcelo Dias', email: 'marcelo@vidashield.com', role: 'usuario' as 'usuario', status: 'pendente' as 'pendente', created_at: '2025-04-12T09:15:00' }
     ],
     total: 2
   },
@@ -45,8 +46,8 @@ const mockData = {
       id: '1', 
       name: 'João Silva', 
       email: 'joao@vidashield.com', 
-      role: 'admin', 
-      status: 'ativo', 
+      role: 'admin' as 'admin', 
+      status: 'ativo' as 'ativo', 
       created_at: '2025-01-15T08:30:00'
     },
     message: 'Operação realizada com sucesso'

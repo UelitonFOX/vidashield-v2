@@ -3,6 +3,7 @@
   "compilerOptions": {
     "verbatimModuleSyntax": false,
     "noImplicitAny": false,
-    "allowJs": true
+    "allowJs": true,
+    "noUnusedLocals": false
   }
 }

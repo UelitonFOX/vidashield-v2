@@ -39,6 +39,7 @@ export interface UsersResponse extends ApiBaseResponse {
   total: number;
   page: number;
   limit: number;
+  total_pages?: number;
 }
 
 export interface UserResponse extends ApiBaseResponse {
