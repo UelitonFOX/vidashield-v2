@@ -1,5 +1,6 @@
 import api from '../api';
 import { User } from './types';
+import axios from 'axios';
 
 /**
  * Serviço de autenticação para API
@@ -44,7 +45,17 @@ const authService = {
   verifyCaptcha: async (token: string): Promise<boolean> => {
     try {
       console.log('Enviando token hCaptcha para verificação:', token);
-      const response = await api.post('/api/auth/verify-captcha', { token });
+      
+      // Usar axios diretamente ao invés da instância api configurada com interceptor
+      // Isso evita que o token JWT seja adicionado automaticamente pelo interceptor
+      const API_BASE_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || 'https://vidashield.onrender.com';
+      const response = await axios.post(`${API_BASE_URL}/api/auth/verify-captcha`, { token }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
       console.log('Resposta da verificação do captcha:', response.data);
       return response.data?.success === true;
     } catch (error) {
