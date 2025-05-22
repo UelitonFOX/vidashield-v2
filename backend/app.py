@@ -92,6 +92,21 @@ def ping():
         "timestamp": datetime.datetime.now().isoformat()
     })
 
+# Rota de Ping (status)
+@app.route('/api/ping')
+def ping():
+    return jsonify({
+        "status": "success",
+        "message": "API está funcionando",
+        "timestamp": datetime.datetime.now().isoformat()
+    })
+
+# Rota para health check (usada pela Render)
+@app.route('/healthz')
+def health_check():
+    return 'OK', 200
+
+
 # Rota raiz da API
 @app.route('/api')
 def api_info():
