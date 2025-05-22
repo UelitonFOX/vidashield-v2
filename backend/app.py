@@ -5,7 +5,6 @@ Módulo principal da aplicação VidaShield.
 
 import os
 import logging
-import platform
 import datetime
 import traceback
 from flask import Flask, jsonify, request, redirect, send_from_directory
@@ -92,20 +91,10 @@ def ping():
         "timestamp": datetime.datetime.now().isoformat()
     })
 
-# Rota de Ping (status)
-@app.route('/api/ping')
-def ping():
-    return jsonify({
-        "status": "success",
-        "message": "API está funcionando",
-        "timestamp": datetime.datetime.now().isoformat()
-    })
-
-# Rota para health check (usada pela Render)
+# Health check para Render
 @app.route('/healthz')
 def health_check():
     return 'OK', 200
-
 
 # Rota raiz da API
 @app.route('/api')
@@ -117,12 +106,12 @@ def api_info():
         "timestamp": datetime.datetime.now().isoformat()
     })
 
-# Rota raiz redireciona pro /api/ping
+# Redirecionamento da raiz
 @app.route('/')
 def index():
     return redirect('/api/ping')
 
-# Favicon, Apple icons e static genéricos
+# Favicon e arquivos estáticos básicos
 @app.route('/favicon.ico')
 @app.route('/apple-touch-icon.png')
 @app.route('/apple-touch-icon-precomposed.png')
@@ -137,7 +126,7 @@ def robots():
 def serve_static(filename):
     return send_from_directory('static', filename)
 
-# Inicialização
+# Inicialização com criação do banco e OAuth
 with app.app_context():
     try:
         db.create_all()
@@ -148,7 +137,7 @@ with app.app_context():
         app.logger.error(f"Erro ao iniciar: {e}")
         traceback.print_exc()
 
-# Boas-vindas
+# Mensagem de boas-vindas
 def print_welcome():
     width = os.get_terminal_size().columns if os.isatty(0) else 80
     msg = f"""
