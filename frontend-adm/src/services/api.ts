@@ -9,12 +9,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://vidashield.onrender.com
 
 // Definindo a base URL da API
 // Em desenvolvimento, usamos o proxy do Vite com '/api'
-// Em produção, usamos o URL da API (verificando se já termina com /api)
+// Em produção, usamos o URL da API (não adicionamos /api pois ele já será adicionado pelos serviços)
 const API_BASE_URL = import.meta.env.DEV 
   ? '/api' 
-  : API_URL.endsWith('/api') 
-    ? API_URL 
-    : `${API_URL}/api`;
+  : API_URL;
 
 // Imprime para debug
 console.log('API_BASE_URL configurada:', API_BASE_URL);
