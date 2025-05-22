@@ -39,12 +39,11 @@ app.secret_key = app.config['SECRET_KEY']
 app.config['JWT_SECRET_KEY'] = app.config['JWT_SECRET_KEY']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=1)
 
-# CORS
+# CORS – produção e dev
 CORS(app, origins=[
-    "http://localhost:3000",  # ambiente de desenvolvimento
-    "https://vidashield.vercel.app"  # frontend em produção
+    "https://vidashield.vercel.app",
+    os.getenv("FRONTEND_URL", "https://vidashield.vercel.app")
 ], supports_credentials=True)
-
 
 # CSRF Protection (exempt para auth routes)
 csrf = CSRFProtect(app)
@@ -147,8 +146,8 @@ def print_welcome():
     msg = f"""
 {'='*width}
 🛡️  VidaShield API - v2.0 - Projeto Integrador TTPR 15
-🚀 Rodando em: http://localhost:{os.getenv('PORT', '5000')}
-📊 Dashboard: http://localhost:3000
+🚀 Online: {os.getenv("FRONTEND_URL", "https://vidashield.vercel.app")}
+🧠 Backend: {os.getenv("RENDER_EXTERNAL_URL", "https://vidashield.onrender.com")}
 {'='*width}
 """
     print(msg)

@@ -4,12 +4,12 @@ import path from 'path';
 
 // 🛡️ Configuração principal do Vite para o VidaShield
 export default defineConfig(({ mode }) => {
-  // Carregar variáveis de ambiente
+  // Carrega variáveis de ambiente
   const env = loadEnv(mode, process.cwd(), '');
   const apiUrl = env.VITE_API_URL || 'https://vidashield.onrender.com';
 
   return {
-    base: './',
+    base: './', // Garante paths relativos, bom para Vercel
 
     plugins: [react()],
 
@@ -24,13 +24,13 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: true,
 
-      // ✅ Permitir múltiplos domínios (ex: ngrok, loca.lt, etc.)
+      // ✅ Domínios permitidos no desenvolvimento
       allowedHosts: [
+        'localhost',
+        'vidashield.vercel.app',
         'a315-2804-15fc-300d-1301-ad9c-3bfd-9809-96d1.ngrok-free.app',
         'stirred-broadly-hedgehog.ngrok-free.app',
-        'vidashield.loca.lt',
-        'localhost',
-        'vidashield.vercel.app'
+        'vidashield.loca.lt'
       ],
 
       hmr: {
@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
           target: apiUrl,
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path,
+          rewrite: path => path,
           ws: false,
           timeout: 60000,
           configure: (proxy, _options) => {
