@@ -40,7 +40,11 @@ app.config['JWT_SECRET_KEY'] = app.config['JWT_SECRET_KEY']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=1)
 
 # CORS
-CORS(app, origins=["http://localhost:3000"], supports_credentials=True)
+CORS(app, origins=[
+    "http://localhost:3000",  # ambiente de desenvolvimento
+    "https://vidashield.vercel.app"  # frontend em produção
+], supports_credentials=True)
+
 
 # CSRF Protection (exempt para auth routes)
 csrf = CSRFProtect(app)
