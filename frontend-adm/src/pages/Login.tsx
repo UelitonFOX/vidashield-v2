@@ -150,10 +150,12 @@ const Login = () => {
   };
 
   const handleCaptchaVerify = (token: string) => {
+    console.log('Token hCaptcha recebido:', token);
     setCaptchaToken(token);
   };
 
   const handleCaptchaExpire = () => {
+    console.log('Token hCaptcha expirado');
     setCaptchaToken(null);
   };
 
@@ -293,6 +295,7 @@ const Login = () => {
                 onExpire={handleCaptchaExpire}
                 onError={handleCaptchaError}
                 theme="dark"
+                size="normal"
               />
             </div>
 

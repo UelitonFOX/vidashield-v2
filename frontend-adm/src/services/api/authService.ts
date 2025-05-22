@@ -43,7 +43,9 @@ const authService = {
    */
   verifyCaptcha: async (token: string): Promise<boolean> => {
     try {
+      console.log('Enviando token hCaptcha para verificação:', token);
       const response = await api.post('/api/auth/verify-captcha', { token });
+      console.log('Resposta da verificação do captcha:', response.data);
       return response.data?.success === true;
     } catch (error) {
       console.error('Erro ao verificar captcha:', error);
