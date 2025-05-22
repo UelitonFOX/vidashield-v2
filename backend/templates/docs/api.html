@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VidaShield API - Documentação</title>
+    <meta property="og:title" content="VidaShield API - Documentação">
+    <meta property="og:description" content="Documentação das APIs do VidaShield, sistema de segurança digital para clínicas.">
+    <meta property="og:url" content="https://vidashield.vercel.app/api">
+    <meta property="og:type" content="website">
     <link rel="icon" type="image/svg+xml" href="/static/logo.png">
     <style>
         :root {
@@ -487,7 +491,7 @@
             <h2>Documentação de APIs</h2>
             <p>Esta documentação descreve as APIs disponíveis no VidaShield, uma solução completa de segurança digital desenvolvida como parte do Projeto Integrador Talento Tech Paraná.</p>
             <p>Todas as APIs requerem autenticação via token JWT, exceto as rotas públicas de autenticação marcadas como "Pública".</p>
-            <p>Url Base: <code>http://localhost:5000/api</code></p>
+            <p>Url Base: <code>https://vidashield.onrender.com/api</code></p>
         </section>
         
         <!-- Status do Sistema -->
@@ -980,7 +984,7 @@
             });
             
             // Fazer requisição AJAX para obter dados atualizados
-            fetch('/api/status')
+            fetch('https://vidashield.onrender.com/api/status')
                 .then(response => response.json())
                 .then(data => {
                     console.log("Dados recebidos:", data);
