@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Auth0Provider } from '@auth0/auth0-react';
 import './index.css';
 import App from './App.tsx';
+import { SpeedInsights } from '@vercel/speed-insights/react'; // <-- Adicionado aqui
 
 // Configurações Auth0
 const domain = import.meta.env.VITE_AUTH0_DOMAIN || 'dev-uhfy4gh2szxayskh.us.auth0.com';
@@ -43,6 +44,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     >
       <BrowserRouter>
         <App />
+        <SpeedInsights /> {/* <-- Adicionado aqui dentro do layout principal */}
       </BrowserRouter>
     </Auth0Provider>
   </React.StrictMode>
