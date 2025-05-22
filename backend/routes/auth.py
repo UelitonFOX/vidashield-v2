@@ -60,6 +60,43 @@ def get_csrf_token():
     response.headers.set('X-CSRF-TOKEN', token)
     return response
 
+@auth_bp.route('/verify-captcha', methods=['POST'])
+def verify_captcha():
+    """
+    Verifica a validade do token hCaptcha.
+    """
+    data = request.get_json()
+    if not data or 'token' not in data:
+        return jsonify({'success': False, 'message': 'Token não fornecido'}), 400
+    
+    captcha_token = data['token']
+    hcaptcha_secret = current_app.config.get('HCAPTCHA_SECRET_KEY')
+    
+    if not hcaptcha_secret:
+        # Em ambiente de desenvolvimento, aceita qualquer token
+        if current_app.config.get('ENV') == 'development':
+            return jsonify({'success': True, 'message': 'Captcha validado (modo desenvolvimento)'})
+        return jsonify({'success': False, 'message': 'Configuração de hCaptcha não encontrada'}), 500
+    
+    try:
+        # Verificar o token com a API do hCaptcha
+        response = requests.post(
+            'https://hcaptcha.com/siteverify',
+            data={
+                'secret': hcaptcha_secret,
+                'response': captcha_token
+            }
+        )
+        result = response.json()
+        
+        if result.get('success'):
+            return jsonify({'success': True, 'message': 'Captcha validado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Captcha inválido', 'errors': result.get('error-codes', [])}), 400
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao validar captcha: {str(e)}'}), 500
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     return jsonify({

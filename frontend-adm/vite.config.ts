@@ -18,25 +18,27 @@ export default defineConfig({
 
   server: {
     port: 3000, // Porta do frontend
-    
-    // Evitar CORS e erros de conexão
-    strictPort: true, 
+    strictPort: true,
     host: true,
 
+    // ✅ Permitir conexões do domínio ngrok
+    allowedHosts: [
+      'a315-2804-15fc-300d-1301-ad9c-3bfd-9809-96d1.ngrok-free.app'
+    ],
+
     hmr: {
-      overlay: true, // Overlay de erro no navegador (dev)
+      overlay: true,
     },
 
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // Proxy para backend Flask
+        target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path, // Não reescrever caminhos
-        ws: false, // Desativar websockets
-        timeout: 60000, // Aumentar timeout para 60s
+        rewrite: (path) => path,
+        ws: false,
+        timeout: 60000,
         configure: (proxy, _options) => {
-          // Logs de proxy só em desenvolvimento
           proxy.on('error', (err, _req, _res) => {
             console.error('[Proxy Error]', err)
           })
@@ -54,6 +56,6 @@ export default defineConfig({
   },
 
   css: {
-    devSourcemap: true, // Mapas de source CSS (dev friendly)
+    devSourcemap: true,
   },
 })

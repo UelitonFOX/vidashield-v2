@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import '../styles/vidashield.css';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
+import authService from '../services/api/authService';
 import { 
   Shield, 
   LogIn, 
@@ -23,6 +25,9 @@ const Login = () => {
   const [localLoginError, setLocalLoginError] = useState<string | null>(null);
   const [attemptingLogin, setAttemptingLogin] = useState(false);
   const [justLoggedOut, setJustLoggedOut] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [verifyingCaptcha, setVerifyingCaptcha] = useState(false);
+  const captchaRef = useRef<HCaptcha>(null);
 
   useEffect(() => {
     // Verificar se o usuário acabou de fazer logout
@@ -55,33 +60,28 @@ const Login = () => {
     }
   }, [isAuthenticated, isLoading, navigate, justLoggedOut]);
 
-  const handleLogin = () => {
-    setAttemptingLogin(true);
-    setLocalLoginError(null);
-    
-    try {
-      console.log("[Login] Iniciando login com Auth0");
-      
-      // Usando Auth0 loginWithRedirect com configuração explícita de redirect_uri
-      loginWithRedirect({
-        appState: { returnTo: '/dashboard' },
-        authorizationParams: {
-          redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL || window.location.origin + '/auth-callback',
-          audience: import.meta.env.VITE_AUTH0_AUDIENCE
-        }
-      });
-    } catch (error) {
-      console.error("[Login] Erro ao iniciar login com Auth0:", error);
-      setAttemptingLogin(false);
-      setLocalLoginError('Erro ao iniciar autenticação. Tente novamente.');
+  const handleGoogleLogin = async () => {
+    if (!captchaToken) {
+      setLocalLoginError('Por favor, resolva o captcha antes de continuar');
+      return;
     }
-  };
-
-  const handleGoogleLogin = () => {
-    setAttemptingLogin(true);
-    setLocalLoginError(null);
+    
+    setVerifyingCaptcha(true);
     
     try {
+      // Verificar o captcha no backend
+      const isCaptchaValid = await authService.verifyCaptcha(captchaToken);
+      
+      if (!isCaptchaValid) {
+        setLocalLoginError('Verificação de captcha falhou. Tente novamente.');
+        captchaRef.current?.resetCaptcha();
+        setVerifyingCaptcha(false);
+        return;
+      }
+      
+      setAttemptingLogin(true);
+      setLocalLoginError(null);
+      
       console.log("[Login] Iniciando login com Google");
       
       // Usando Auth0 loginWithRedirect com configuração para o Google
@@ -96,22 +96,40 @@ const Login = () => {
     } catch (error) {
       console.error("[Login] Erro ao iniciar login com Google:", error);
       setAttemptingLogin(false);
+      setVerifyingCaptcha(false);
       setLocalLoginError('Erro ao iniciar autenticação com Google. Tente novamente.');
     }
   };
 
-  const handleEmailPasswordLogin = (e: React.FormEvent) => {
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
       setLocalLoginError('Preencha todos os campos');
       return;
     }
+
+    if (!captchaToken) {
+      setLocalLoginError('Por favor, resolva o captcha antes de continuar');
+      return;
+    }
     
-    setAttemptingLogin(true);
-    setLocalLoginError(null);
+    setVerifyingCaptcha(true);
     
     try {
+      // Verificar o captcha no backend
+      const isCaptchaValid = await authService.verifyCaptcha(captchaToken);
+      
+      if (!isCaptchaValid) {
+        setLocalLoginError('Verificação de captcha falhou. Tente novamente.');
+        captchaRef.current?.resetCaptcha();
+        setVerifyingCaptcha(false);
+        return;
+      }
+      
+      setAttemptingLogin(true);
+      setLocalLoginError(null);
+      
       console.log("[Login] Iniciando login com email e senha");
       
       loginWithRedirect({
@@ -126,23 +144,42 @@ const Login = () => {
     } catch (error) {
       console.error("[Login] Erro ao iniciar login com email e senha:", error);
       setAttemptingLogin(false);
+      setVerifyingCaptcha(false);
       setLocalLoginError('Erro ao iniciar autenticação. Tente novamente.');
     }
+  };
+
+  const handleCaptchaVerify = (token: string) => {
+    setCaptchaToken(token);
+  };
+
+  const handleCaptchaExpire = () => {
+    setCaptchaToken(null);
+  };
+
+  const handleCaptchaError = (event: string) => {
+    console.error("[Login] Erro no captcha:", event);
+    setLocalLoginError('Erro ao validar captcha. Tente novamente.');
+    setCaptchaToken(null);
   };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  if (isLoading || attemptingLogin) {
+  if (isLoading || attemptingLogin || verifyingCaptcha) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-900 p-4">
         <div className="text-center">
           <Shield className="mx-auto h-16 w-16 text-green-400 mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-4">Autenticando...</h1>
+          <h1 className="text-2xl font-bold text-white mb-4">
+            {verifyingCaptcha ? 'Verificando captcha...' : 'Autenticando...'}
+          </h1>
           <div className="mt-8">
             <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-zinc-400">Verificando suas credenciais</p>
+            <p className="mt-4 text-zinc-400">
+              {verifyingCaptcha ? 'Validando sua verificação' : 'Verificando suas credenciais'}
+            </p>
           </div>
         </div>
       </div>
@@ -248,6 +285,17 @@ const Login = () => {
               </a>
             </div>
 
+            <div className="flex justify-center my-4">
+              <HCaptcha
+                ref={captchaRef}
+                sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001"}
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
+                onError={handleCaptchaError}
+                theme="dark"
+              />
+            </div>
+
             <button
               type="submit"
               className="w-full flex justify-center items-center py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-zinc-800"
@@ -266,20 +314,11 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={handleLogin}
-              className="flex justify-center items-center py-2.5 px-4 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
-            >
-              <LogIn className="w-5 h-5 mr-2" />
-              Auth0
-            </button>
-
+          <div className="flex justify-center">
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="flex justify-center items-center py-2.5 px-4 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
+              className="flex justify-center items-center py-2.5 px-6 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -287,19 +326,8 @@ const Login = () => {
                   d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
                 />
               </svg>
-              Google
+              Entrar com Google
             </button>
-          </div>
-          
-          <div className="mt-4 text-center">
-            <a 
-              href="https://dev-uhfy4gh2szxayskh.us.auth0.com/u/login"
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-green-400 hover:text-green-300 text-sm underline"
-            >
-              Ir para página de login Auth0 (Debug)
-            </a>
           </div>
         </div>
 

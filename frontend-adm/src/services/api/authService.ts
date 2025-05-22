@@ -38,6 +38,20 @@ const authService = {
   },
   
   /**
+   * Verificar token do hCaptcha
+   * @param token Token gerado pelo componente hCaptcha
+   */
+  verifyCaptcha: async (token: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/auth/verify-captcha', { token });
+      return response.data?.success === true;
+    } catch (error) {
+      console.error('Erro ao verificar captcha:', error);
+      return false;
+    }
+  },
+  
+  /**
    * Obter token CSRF para requisições que exigem proteção CSRF
    */
   getCsrfToken: async (): Promise<string | null> => {
