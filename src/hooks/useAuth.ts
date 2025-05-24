@@ -37,6 +37,18 @@ export const useAuth = () => {
     return data
   }
 
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    })
+    
+    if (error) throw error
+    return data
+  }
+
   const signUp = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -57,6 +69,7 @@ export const useAuth = () => {
     session,
     loading,
     signIn,
+    signInWithGoogle,
     signUp,
     signOut,
   }

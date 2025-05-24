@@ -1,1 +1,29 @@
- 
+@import './vidashield.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-zinc-900 text-white;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium;
+  }
+}
+
+@layer components {
+  .card-dark {
+    @apply bg-zinc-800 rounded-xl p-6 shadow-glow-soft;
+  }
+  
+  .btn-primario {
+    @apply bg-green-400 text-black px-4 py-2 rounded-md hover:bg-green-500 transition-colors;
+  }
+  
+  .btn-secundario {
+    @apply bg-zinc-800 text-zinc-200 px-4 py-2 rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700;
+  }
+} 

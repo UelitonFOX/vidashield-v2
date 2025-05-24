@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.app.json",
-  "compilerOptions": {
-    "verbatimModuleSyntax": false,
-    "noImplicitAny": false,
-    "allowJs": true,
-    "noUnusedLocals": false
-  }
-}
