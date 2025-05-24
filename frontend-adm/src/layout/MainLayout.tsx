@@ -31,7 +31,7 @@ import { useModal } from "../contexts/ModalContext";
 import Ajuda from '../pages/Ajuda';
 import { useState, useEffect } from "react";
 import Header from "../components/Header";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useSupabaseAuth } from "../contexts/SupabaseAuthContext";
 
 // Componente para conteúdo da ajuda em modal
 const AjudaModalContent = () => {
@@ -72,15 +72,11 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const currentPath = location.pathname;
   const { openModal } = useModal();
-  const { user, logout, isAuthenticated } = useAuth0();
+  const { user, userProfile, signOut, isAuthenticated } = useSupabaseAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    // Log para depuração
-    console.log("MainLayout - Estado do usuário Auth0:", user);
-    console.log("MainLayout - Autenticado Auth0:", isAuthenticated);
-    
     // Verificar tamanho da tela e colapsar automaticamente em telas pequenas
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -100,7 +96,7 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [user, isAuthenticated, sidebarCollapsed]);
+  }, [user, userProfile, isAuthenticated, sidebarCollapsed]);
 
   // Função para obter iniciais do nome
   const getInitials = (name: string = '') => {
@@ -123,29 +119,24 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
 
   // Função para obter a URL da imagem do usuário
   const getUserAvatarUrl = () => {
-    console.log("Dados do usuário para avatar:", user);
-    // Verificar todas as possíveis fontes de avatar
-    if (user?.picture) return user.picture;
-    if (user?.avatar) return user.avatar;
-    if (user?.photo) return user.photo;
-    if (user?.['https://vidashield.app/picture']) return user?.['https://vidashield.app/picture'];
+    // Verificar todas as possíveis fontes de avatar do Supabase
+    if (userProfile?.avatar_url) return userProfile.avatar_url;
+    if (user?.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
+    if (user?.user_metadata?.picture) return user.user_metadata.picture;
     return undefined;
   };
 
   // Função para obter o nome do usuário ou um valor padrão
   const getUserName = () => {
-    return user?.name || "Usuário";
+    return userProfile?.name || user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Usuário";
   };
 
   // Função para obter o cargo/função do usuário
   const getUserRole = (): {name: string; colorClass: string; icon: React.ReactNode} => {
-    if (!user) return {name: 'Usuário', colorClass: 'text-zinc-300', icon: <UserCheck size={14} />};
+    if (!user && !userProfile) return {name: 'Usuário', colorClass: 'text-zinc-300', icon: <UserCheck size={14} />};
     
-    // Verificar todas as possíveis fontes de cargo/função
-    const role = user['https://vidashield.app/role'] || 
-                user.role || 
-                (user.roles && user.roles[0]) ||
-                (user['http://vidashield/roles'] && user['http://vidashield/roles'][0]);
+    // Verificar role do perfil ou dos metadados do usuário
+    const role = userProfile?.role || user?.user_metadata?.role || 'user';
     
     // Se encontrou algum role, formatar para exibição
     if (role) {
@@ -251,6 +242,16 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
+  // Função para logout
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // O redirecionamento será feito automaticamente pelo contexto
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen h-screen bg-zinc-900 text-white overflow-x-hidden">
       {/* Sidebar - ajustada para não sobrepor o header */}
@@ -269,13 +270,13 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
           />
         </button>
         
-        {/* Área do Perfil do Usuário com dados do Auth0 */}
+        {/* Área do Perfil do Usuário com dados do Supabase */}
         <div className={`bg-zinc-700 p-4 flex flex-col items-center ${sidebarCollapsed ? 'py-2' : 'py-4'}`}>
           <div className={`${sidebarCollapsed ? 'w-10 h-10' : 'w-20 h-20'} rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xl mb-3 border-2 border-zinc-600 shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300`}>
-            {(user?.picture || getUserAvatarUrl()) ? (
+            {getUserAvatarUrl() ? (
               <img 
-                src={getUserAvatarUrl() || user?.picture} 
-                alt={user?.name || 'Usuário'} 
+                src={getUserAvatarUrl()} 
+                alt={getUserName()} 
                 className="w-full h-full rounded-full object-cover" 
                 onError={(e) => {
                   console.error("Erro ao carregar imagem de perfil:", e);
@@ -295,7 +296,7 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
             <div className="text-center space-y-2 w-full">
               {/* Nome em destaque */}
               <div className="text-lg font-bold text-white truncate">
-                {user?.name || "Usuário"}
+                {getUserName()}
               </div>
               
               {/* Cargo/função com destaque colorido */}
@@ -308,7 +309,7 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
               
               {/* Email como rodapé de referência */}
               <div className="text-xs text-zinc-400 mt-1 truncate opacity-70">
-                {user?.email || "email@exemplo.com"}
+                {userProfile?.email || user?.email || "email@exemplo.com"}
               </div>
               
               <div className="text-xs text-zinc-400 flex items-center justify-center gap-1.5 mt-3 border-t border-zinc-600 pt-3 w-full">
@@ -318,11 +319,7 @@ export const MainLayout = ({ children }: { children: ReactNode }) => {
               
               {/* Botão de Logout */}
               <button 
-                onClick={() => logout({
-                  logoutParams: {
-                    returnTo: window.location.origin + '/login'
-                  }
-                })}
+                onClick={handleLogout}
                 className="mt-3 w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg text-sm bg-zinc-800 hover:bg-red-700 text-zinc-300 hover:text-white transition-all duration-200 border border-zinc-600 hover:border-red-600"
               >
                 <LogOut className="w-4 h-4" /> 

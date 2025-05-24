@@ -12,21 +12,21 @@ interface AlertFilters {
   endDate?: string;
 }
 
-// Dados mockados para o ambiente de desenvolvimento
+// Dados mockados para o ambiente de desenvolvimento com tipagem correta
 const mockData = {
   alerts: {
     alerts: [
-      { id: '1', title: 'Tentativa de acesso bloqueada', message: 'Múltiplas falhas de login', severity: 'critical', status: 'open', created_at: '2025-05-08T10:25:00', updated_at: '2025-05-08T10:30:00' },
-      { id: '2', title: 'Novo dispositivo detectado', message: 'Login de dispositivo não reconhecido', severity: 'warning', status: 'resolved', created_at: '2025-05-08T09:15:00', updated_at: '2025-05-08T11:20:00' },
-      { id: '3', title: 'Acesso suspeito', message: 'Acesso de IP não autorizado', severity: 'critical', status: 'open', created_at: '2025-05-07T18:42:00', updated_at: '2025-05-07T18:50:00' },
-      { id: '4', title: 'Senha fraca detectada', message: 'Usuário com senha vulnerável', severity: 'warning', status: 'open', created_at: '2025-05-07T15:30:00', updated_at: '2025-05-07T15:35:00' },
-      { id: '5', title: 'Backup concluído', message: 'Backup automático concluído com sucesso', severity: 'info', status: 'resolved', created_at: '2025-05-07T12:15:00', updated_at: '2025-05-07T12:20:00' },
-      { id: '6', title: 'Usuário bloqueado', message: 'Conta temporariamente bloqueada', severity: 'warning', status: 'resolved', created_at: '2025-05-06T14:10:00', updated_at: '2025-05-06T16:30:00' },
-      { id: '7', title: 'Atualização disponível', message: 'Nova versão de segurança disponível', severity: 'info', status: 'open', created_at: '2025-05-06T09:05:00', updated_at: '2025-05-06T09:10:00' },
-      { id: '8', title: 'Vazamento de dados potencial', message: 'Atividade de download anormal', severity: 'critical', status: 'open', created_at: '2025-05-05T17:20:00', updated_at: '2025-05-05T17:40:00' },
-      { id: '9', title: 'Erro de sincronização', message: 'Falha na sincronização com servidor de dados', severity: 'warning', status: 'open', created_at: '2025-05-05T11:30:00', updated_at: '2025-05-05T11:45:00' },
-      { id: '10', title: 'Sessão expirada', message: 'Múltiplas sessões expiradas detectadas', severity: 'info', status: 'resolved', created_at: '2025-05-04T15:00:00', updated_at: '2025-05-04T15:10:00' }
-    ],
+      { id: '1', title: 'Tentativa de acesso bloqueada', message: 'Múltiplas falhas de login', severity: 'critical' as const, status: 'new' as const, created_at: '2025-05-08T10:25:00', updated_at: '2025-05-08T10:30:00' },
+      { id: '2', title: 'Novo dispositivo detectado', message: 'Login de dispositivo não reconhecido', severity: 'medium' as const, status: 'resolved' as const, created_at: '2025-05-08T09:15:00', updated_at: '2025-05-08T11:20:00' },
+      { id: '3', title: 'Acesso suspeito', message: 'Acesso de IP não autorizado', severity: 'critical' as const, status: 'new' as const, created_at: '2025-05-07T18:42:00', updated_at: '2025-05-07T18:50:00' },
+      { id: '4', title: 'Senha fraca detectada', message: 'Usuário com senha vulnerável', severity: 'medium' as const, status: 'acknowledged' as const, created_at: '2025-05-07T15:30:00', updated_at: '2025-05-07T15:35:00' },
+      { id: '5', title: 'Backup concluído', message: 'Backup automático concluído com sucesso', severity: 'low' as const, status: 'resolved' as const, created_at: '2025-05-07T12:15:00', updated_at: '2025-05-07T12:20:00' },
+      { id: '6', title: 'Usuário bloqueado', message: 'Conta temporariamente bloqueada', severity: 'high' as const, status: 'resolved' as const, created_at: '2025-05-06T14:10:00', updated_at: '2025-05-06T16:30:00' },
+      { id: '7', title: 'Atualização disponível', message: 'Nova versão de segurança disponível', severity: 'low' as const, status: 'new' as const, created_at: '2025-05-06T09:05:00', updated_at: '2025-05-06T09:10:00' },
+      { id: '8', title: 'Vazamento de dados potencial', message: 'Atividade de download anormal', severity: 'critical' as const, status: 'acknowledged' as const, created_at: '2025-05-05T17:20:00', updated_at: '2025-05-05T17:40:00' },
+      { id: '9', title: 'Erro de sincronização', message: 'Falha na sincronização com servidor de dados', severity: 'medium' as const, status: 'new' as const, created_at: '2025-05-05T11:30:00', updated_at: '2025-05-05T11:45:00' },
+      { id: '10', title: 'Sessão expirada', message: 'Múltiplas sessões expiradas detectadas', severity: 'low' as const, status: 'resolved' as const, created_at: '2025-05-04T15:00:00', updated_at: '2025-05-04T15:10:00' }
+    ] as Alert[],
     total: 10,
     page: 1,
     limit: 10,
@@ -37,24 +37,17 @@ const mockData = {
       id: '1',
       title: 'Tentativa de acesso bloqueada',
       message: 'Múltiplas falhas de login',
-      severity: 'critical',
-      status: 'open',
+      severity: 'critical' as const,
+      status: 'new' as const,
       created_at: '2025-05-08T10:25:00',
-      updated_at: '2025-05-08T10:30:00',
-      details: {
-        user_id: '5',
-        ip_address: '192.168.1.105',
-        location: 'Rio de Janeiro, Brasil',
-        device: 'Windows 10, Chrome',
-        attempts: 5
-      }
-    }
+      updated_at: '2025-05-08T10:30:00'
+    } as Alert
   }
 };
 
 // Hook para serviço de alertas com Auth0
 export const useAlertsService = () => {
-  const { authFetch, hasFetched, isLoading, error } = useAuthFetch();
+  const { authFetch } = useAuthFetch<AlertsResponse>('/api/alerts');
 
   // Filtragem dos dados mockados
   const filterMockAlerts = (filters: AlertFilters): AlertsResponse => {
@@ -76,7 +69,8 @@ export const useAlertsService = () => {
     if (status) {
       filteredAlerts = filteredAlerts.filter(alert => {
         if (status === 'resolved') return alert.status === 'resolved';
-        if (status === 'open' || status === 'pending') return alert.status === 'open';
+        if (status === 'new' || status === 'pending') return alert.status === 'new';
+        if (status === 'acknowledged') return alert.status === 'acknowledged';
         return true;
       });
     }
@@ -88,10 +82,7 @@ export const useAlertsService = () => {
     
     return {
       alerts: paginatedAlerts,
-      total: filteredAlerts.length,
-      page,
-      limit,
-      total_pages: Math.ceil(filteredAlerts.length / limit)
+      total: filteredAlerts.length
     };
   };
 
@@ -150,10 +141,6 @@ export const useAlertsService = () => {
     getAlerts,
     getAlertById,
     resolveAlert,
-    archiveAlert,
-    // Exportando estados do useAuthFetch
-    hasFetched,
-    isLoading,
-    error
+    archiveAlert
   };
 }; 

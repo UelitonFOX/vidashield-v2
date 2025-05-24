@@ -16,19 +16,21 @@ from werkzeug.exceptions import HTTPException
 
 from config import Config
 from models import db
-from routes.auth import auth_bp, setup_oauth, verify_captcha
+from routes.auth import auth_bp, setup_oauth
 from routes.dashboard import dashboard_bp
 from routes.users import users_bp
 from routes.logs import logs_bp
 from routes.alerts import alerts_bp
 from routes.settings import settings_bp
 from routes.reports import reports_bp
+from routes.supabase_auth import supabase_auth_bp
 
 # Setup básico
 os.makedirs('instance', exist_ok=True)
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
 app.logger = logging.getLogger(__name__)
@@ -43,10 +45,12 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=1)
 CORS(app, resources={
     r"/api/*": {"origins": [
         "http://localhost:3000",
+        "http://localhost:3001",
         "https://vidashield.vercel.app"
     ]},
     r"/auth/*": {"origins": [
-        "http://localhost:3000", 
+        "http://localhost:3000",
+        "http://localhost:3001",
         "https://vidashield.vercel.app"
     ]}
 }, supports_credentials=True)
@@ -62,6 +66,7 @@ migrate = Migrate(app, db)
 
 # Blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(supabase_auth_bp, url_prefix='/api/supabase')
 app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
 app.register_blueprint(users_bp, url_prefix='/api/users')
 app.register_blueprint(logs_bp, url_prefix='/api/logs')
@@ -69,38 +74,18 @@ app.register_blueprint(alerts_bp, url_prefix='/api/alerts')
 app.register_blueprint(settings_bp, url_prefix='/api/settings')
 app.register_blueprint(reports_bp, url_prefix='/api/reports')
 
-# Rota específica para o problema de captcha
-@app.route('/auth/verify-captcha', methods=['POST', 'OPTIONS'])
-def auth_verify_captcha():
-    """
-    Rota específica para o problema com o endpoint de verificação de captcha.
-    Esta função simplesmente chama a mesma função do blueprint auth_bp.
-    """
-    app.logger.warning("Acessando /auth/verify-captcha diretamente - esta rota é apenas para compatibilidade")
-    
-    if request.method == 'OPTIONS':
-        response = app.make_default_options_response()
-        return response
-    
-    return verify_captcha()
-
 # Rota de fallback para redirecionamento de /auth para /api/auth
 @app.route('/auth/<path:subpath>', methods=['GET', 'POST', 'OPTIONS'])
 def auth_fallback(subpath):
-    # Pular a rota de verify-captcha que já tem handler específico
-    if subpath == 'verify-captcha':
-        return app.view_functions['auth_verify_captcha']()
-        
-    app.logger.warning(f"Tentativa de acesso direto a /auth/{subpath}. Redirecionando para /api/auth/{subpath}")
-    
+    app.logger.warning(
+        f"Tentativa de acesso direto a /auth/{subpath}. Redirecionando para /api/auth/{subpath}")
+
     if request.method == 'OPTIONS':
-        # Para solicitações OPTIONS, apenas responder diretamente com as headers CORS necessárias
         response = app.make_default_options_response()
         return response
-    
-    # Para outros métodos, redirecionar para a rota correta
+
     target_url = f'/api/auth/{subpath}'
-    return redirect(target_url, code=307)  # 307 mantém o método HTTP original
+    return redirect(target_url, code=307)
 
 # Handlers
 @app.errorhandler(CSRFError)
@@ -181,13 +166,16 @@ with app.app_context():
 
 # Mensagem de boas-vindas
 def print_welcome():
-    width = os.get_terminal_size().columns if os.isatty(0) else 80
+    try:
+        width = os.get_terminal_size().columns if os.isatty(0) else 80
+    except BaseException:
+        width = 80
     msg = f"""
-{'='*width}
+{'=' * width}
 🛡️  VidaShield API - v2.0 - Projeto Integrador TTPR 15
 🚀 Online: {os.getenv("FRONTEND_URL", "https://vidashield.vercel.app")}
 🧠 Backend: {os.getenv("RENDER_EXTERNAL_URL", "https://vidashield.onrender.com")}
-{'='*width}
+{'=' * width}
 """
     print(msg)
 

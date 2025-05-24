@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useSupabaseAuth } from "../contexts/SupabaseAuthContext";
 import { Loader2 } from "lucide-react";
 import { useAlertsService } from "../services/api/alertsService";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +19,7 @@ import {
 } from "../components/alertas";
 
 export default function Alertas() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth0();
+  const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const [filtroSeveridade, setFiltroSeveridade] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("pendentes");
   const [alertas, setAlertas] = useState<Alert[]>([]);

@@ -95,7 +95,7 @@ const permissionService = {
         password: 'vidashield@admin'
       });
       return response.data.user;
-    } catch (error) {
+    } catch {
       // Se o administrador já existir, apenas retornamos um objeto genérico
       console.warn("Não foi possível criar o admin padrão, provavelmente já existe.");
       return {

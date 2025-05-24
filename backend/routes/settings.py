@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, User
-import random
+from models import User
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -56,33 +55,35 @@ system_settings = {
     }
 }
 
+
 @settings_bp.route('', methods=['GET'])
 @jwt_required()
 def get_settings():
     # Obter o ID do usuário atual
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
-    
+
     # Em uma implementação real, verificaríamos as permissões do usuário
     # e retornaríamos apenas as configurações que ele tem permissão para ver
-    
+
     # Filtrar configurações com base no papel do usuário
     role = user.role if user else 'user'
     settings_to_return = {}
-    
+
     # Usuários comuns podem ver apenas suas preferências
     settings_to_return["user_preferences"] = system_settings["user_preferences"]
-    
+
     # Gerentes podem ver configurações adicionais
     if role in ['manager', 'admin']:
         settings_to_return["audit"] = system_settings["audit"]
         settings_to_return["management"] = system_settings["management"]
-    
+
     # Admins podem ver todas as configurações
     if role == 'admin':
         settings_to_return = system_settings
-    
+
     return jsonify(settings_to_return)
+
 
 @settings_bp.route('', methods=['PUT'])
 @jwt_required()
@@ -90,45 +91,49 @@ def update_settings():
     # Obter o ID do usuário atual
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
-    
+
     # Em uma implementação real, verificaríamos as permissões do usuário
     if not user or user.role not in ['manager', 'admin']:
-        return jsonify({"error": "Permissão negada. Apenas gerentes e administradores podem alterar configurações."}), 403
-    
+        return jsonify(
+            {"error": "Permissão negada. Apenas gerentes e administradores podem alterar configurações."}), 403
+
     data = request.get_json()
-    
+
     # Verificar quais seções o usuário pode atualizar com base no papel
-    allowed_sections = ["user_preferences"]  # Todos os usuários podem atualizar suas preferências
-    
+    # Todos os usuários podem atualizar suas preferências
+    allowed_sections = ["user_preferences"]
+
     if user.role == 'manager':
-        allowed_sections.extend(["audit", "management"])  # Gerentes podem atualizar auditoria e gerenciamento
-    
+        # Gerentes podem atualizar auditoria e gerenciamento
+        allowed_sections.extend(["audit", "management"])
+
     if user.role == 'admin':
-        allowed_sections = list(system_settings.keys())  # Admins podem atualizar tudo
-    
+        # Admins podem atualizar tudo
+        allowed_sections = list(system_settings.keys())
+
     # Atualizar apenas as configurações permitidas
     for section, settings in data.items():
         if section in allowed_sections and section in system_settings:
             for key, value in settings.items():
                 if key in system_settings[section]:
                     system_settings[section][key] = value
-    
+
     # Retornar apenas as seções que o usuário tem permissão para ver
     settings_to_return = {}
-    
+
     # Usuários comuns podem ver apenas suas preferências
     settings_to_return["user_preferences"] = system_settings["user_preferences"]
-    
+
     # Gerentes podem ver configurações adicionais
     if user.role in ['manager', 'admin']:
         settings_to_return["audit"] = system_settings["audit"]
         settings_to_return["management"] = system_settings["management"]
-    
+
     # Admins podem ver todas as configurações
     if user.role == 'admin':
         settings_to_return = system_settings
-    
+
     return jsonify({
         "message": "Configurações atualizadas com sucesso",
         "settings": settings_to_return
-    }) 
+    })

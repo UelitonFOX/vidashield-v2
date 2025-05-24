@@ -56,7 +56,16 @@ Nossa missão é proteger dados sensíveis de pacientes e funcionários, detecta
 - Verificação no backend para garantir autenticidade das solicitações
 - Integração completa com hCaptcha e Google OAuth
 
-### Migração para Supabase (22/04/2025)
+### Migração Completa para Supabase Auth (23/05/2025)
+✅ Concluímos a migração completa de Auth0 para **Supabase Auth**!
+- Sistema de autenticação unificado com login via email/senha e Google OAuth
+- Eliminação de dependências externas do Auth0
+- Integração nativa com Supabase para melhor performance
+- Tokens JWT nativos do Supabase para maior segurança
+- Configuração simplificada com menos variáveis de ambiente
+- Documentação completa de configuração em `SUPABASE_SETUP.md`
+
+### Migração para Supabase Database (22/04/2025)
 ✅ Concluímos a migração do banco de dados local SQLite para o **Supabase PostgreSQL**!
 - Melhor performance e escalabilidade para suportar mais usuários
 - Infraestrutura em nuvem para disponibilidade 24/7

@@ -1,5 +1,4 @@
 import json
-import os
 from functools import wraps
 from urllib.request import urlopen
 
@@ -8,7 +7,12 @@ from flask import request, jsonify, current_app, _request_ctx_stack
 from werkzeug.local import LocalProxy
 
 # Proxy para acessar o usuário atual do contexto Flask
-current_user = LocalProxy(lambda: getattr(_request_ctx_stack.top, 'current_user', None))
+current_user = LocalProxy(
+    lambda: getattr(
+        _request_ctx_stack.top,
+        'current_user',
+        None))
+
 
 def get_token_auth_header():
     """
@@ -28,6 +32,7 @@ def get_token_auth_header():
         raise Exception("Authorization header deve ser Bearer token")
 
     return parts[1]
+
 
 def requires_auth(f):
     """
@@ -60,7 +65,8 @@ def requires_auth(f):
                     break
 
             if not rsa_key:
-                return jsonify({"message": "Token inválido (chave não encontrada)"}), 401
+                return jsonify(
+                    {"message": "Token inválido (chave não encontrada)"}), 401
 
             # Decodifica e valida o token
             payload = jwt.decode(
@@ -85,6 +91,7 @@ def requires_auth(f):
 
     return decorated
 
+
 def requires_role(role):
     """
     Decorador que valida se o usuário tem uma role específica.
@@ -95,10 +102,12 @@ def requires_role(role):
         def wrapper(*args, **kwargs):
             user_roles = current_user.get('permissions', [])
             if role not in user_roles:
-                return jsonify({"message": f"Permissão '{role}' necessária"}), 403
+                return jsonify(
+                    {"message": f"Permissão '{role}' necessária"}), 403
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
 
 def get_auth0_user_info():
     """

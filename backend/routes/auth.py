@@ -1,30 +1,29 @@
-from flask import Blueprint, request, jsonify, url_for, redirect, current_app, render_template_string, session
+from flask import Blueprint, request, jsonify, current_app, session, redirect
 from authlib.integrations.flask_client import OAuth
-from models import db, User
-from utils.uuid_helpers import validate_uuid, is_valid_uuid, str_to_uuid
-from utils.auth import requires_auth, get_auth0_user_info, requires_role
-import json
-import secrets
-import os
-import uuid
+from models import db, User, AuthLog
+from utils.auth import requires_auth, get_auth0_user_info
 import requests
 from log_oauth import log_oauth_success, log_oauth_failure
 from flask_wtf.csrf import generate_csrf
-from urllib.parse import urlparse
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, create_access_token
+from werkzeug.security import check_password_hash
 
 auth_bp = Blueprint('auth', __name__)
 oauth = OAuth()
 
 # Configuração do OAuth
+
+
 def setup_oauth(app):
     oauth.init_app(app)
 
     google_client_id = app.config.get('GOOGLE_CLIENT_ID')
     google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
 
-    print(f"OAuth Setup - Google Client ID: {google_client_id[:10] if google_client_id else 'Não configurado'}")
-    print(f"OAuth Setup - Google Client Secret: {'Configurado' if google_client_secret else 'Não configurado'}")
+    print(f"OAuth Setup - Google Client ID: {
+          google_client_id[:10] if google_client_id else 'Não configurado'}")
+    print(f"OAuth Setup - Google Client Secret: {
+          'Configurado' if google_client_secret else 'Não configurado'}")
 
     oauth.register(
         name='google',
@@ -33,15 +32,14 @@ def setup_oauth(app):
         server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
         client_kwargs={
             'scope': 'openid email profile',
-            'prompt': 'select_account'
-        },
+            'prompt': 'select_account'},
         authorize_params={
-            'access_type': 'offline'
-        }
-    )
+            'access_type': 'offline'})
 
-    github_client_id = app.config.get('GITHUB_CLIENT_ID') or 'test_github_client_id'
-    github_client_secret = app.config.get('GITHUB_CLIENT_SECRET') or 'test_github_client_secret'
+    github_client_id = app.config.get(
+        'GITHUB_CLIENT_ID') or 'test_github_client_id'
+    github_client_secret = app.config.get(
+        'GITHUB_CLIENT_SECRET') or 'test_github_client_secret'
 
     oauth.register(
         name='github',
@@ -53,6 +51,7 @@ def setup_oauth(app):
         client_kwargs={'scope': 'user:email'},
     )
 
+
 @auth_bp.route('/csrf-token', methods=['GET'])
 def get_csrf_token():
     token = generate_csrf()
@@ -60,24 +59,30 @@ def get_csrf_token():
     response.headers.set('X-CSRF-TOKEN', token)
     return response
 
-# Função de verificação de captcha - disponibilizada separadamente para ser usada diretamente
+# Função de verificação de captcha - disponibilizada separadamente para
+# ser usada diretamente
+
+
 def verify_captcha():
     """
     Verifica a validade do token hCaptcha.
     """
     data = request.get_json()
     if not data or 'token' not in data:
-        return jsonify({'success': False, 'message': 'Token não fornecido'}), 400
-    
+        return jsonify(
+            {'success': False, 'message': 'Token não fornecido'}), 400
+
     captcha_token = data['token']
     hcaptcha_secret = current_app.config.get('HCAPTCHA_SECRET_KEY')
-    
+
     if not hcaptcha_secret:
         # Em ambiente de desenvolvimento, aceita qualquer token
         if current_app.config.get('ENV') == 'development':
-            return jsonify({'success': True, 'message': 'Captcha validado (modo desenvolvimento)'})
-        return jsonify({'success': False, 'message': 'Configuração de hCaptcha não encontrada'}), 500
-    
+            return jsonify(
+                {'success': True, 'message': 'Captcha validado (modo desenvolvimento)'})
+        return jsonify(
+            {'success': False, 'message': 'Configuração de hCaptcha não encontrada'}), 500
+
     try:
         # Verificar o token com a API do hCaptcha
         response = requests.post(
@@ -88,16 +93,21 @@ def verify_captcha():
             }
         )
         result = response.json()
-        
+
         if result.get('success'):
-            return jsonify({'success': True, 'message': 'Captcha validado com sucesso'})
+            return jsonify({'success': True,
+                            'message': 'Captcha validado com sucesso'})
         else:
-            return jsonify({'success': False, 'message': 'Captcha inválido', 'errors': result.get('error-codes', [])}), 400
-    
+            return jsonify({'success': False, 'message': 'Captcha inválido',
+                           'errors': result.get('error-codes', [])}), 400
+
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Erro ao validar captcha: {str(e)}'}), 500
+        return jsonify(
+            {'success': False, 'message': f'Erro ao validar captcha: {str(e)}'}), 500
 
 # Rota para o Blueprint
+
+
 @auth_bp.route('/verify-captcha', methods=['POST'])
 def verify_captcha_route():
     """
@@ -105,12 +115,62 @@ def verify_captcha_route():
     """
     return verify_captcha()
 
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    # Para desenvolvimento local - login com email/senha
+    if current_app.config.get('ENV') == 'development' or current_app.debug:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return jsonify({"error": "Email e senha são obrigatórios"}), 400
+
+        # Buscar usuário no banco
+        user = User.query.filter_by(email=email).first()
+
+        if user and check_password_hash(user.password_hash, password):
+            # Criar token JWT
+            access_token = create_access_token(identity=str(user.id))
+
+            # Log de sucesso
+            log = AuthLog(
+                user_id=user.id,
+                action='login',
+                success=True,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            db.session.add(log)
+            db.session.commit()
+
+            return jsonify({
+                "access_token": access_token,
+                "user": user.to_dict()
+            }), 200
+        else:
+            # Log de falha
+            if user:
+                log = AuthLog(
+                    user_id=user.id,
+                    action='login',
+                    success=False,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    details='Senha incorreta'
+                )
+                db.session.add(log)
+                db.session.commit()
+
+            return jsonify({"error": "Credenciais inválidas"}), 401
+
+    # Em produção, redireciona para Auth0
     return jsonify({
         "error": "Use Auth0 para login social. Este endpoint foi desativado.",
         "auth0_url": f"https://{current_app.config.get('AUTH0_DOMAIN')}/authorize"
     }), 400
+
 
 @auth_bp.route('/verify_token', methods=['GET'])
 @requires_auth
@@ -120,6 +180,7 @@ def verify_token():
         "valid": True,
         "user": user_info
     })
+
 
 @auth_bp.route('/me', methods=['GET', 'OPTIONS'])
 @requires_auth
@@ -139,6 +200,7 @@ def get_user():
         "permissions": user_info.get("permissions", []),
         "email_verified": user_info.get("email_verified", False)
     })
+
 
 @auth_bp.route('/check-role', methods=['GET', 'OPTIONS'])
 @requires_auth
@@ -161,6 +223,7 @@ def check_role():
         "has_role": has_role,
         "user_permissions": permissions
     })
+
 
 @auth_bp.route('/callback', methods=['GET', 'POST'])
 def callback():
@@ -197,7 +260,9 @@ def callback():
             'error': str(e)
         })
 
-        return jsonify({'error': 'Falha ao obter token do Auth0', 'details': str(e)}), 500
+        return jsonify(
+            {'error': 'Falha ao obter token do Auth0', 'details': str(e)}), 500
+
 
 @auth_bp.route('/userinfo', methods=['GET'])
 def userinfo():
@@ -233,7 +298,9 @@ def userinfo():
         return jsonify(userinfo_response.json())
 
     except requests.exceptions.RequestException as e:
-        return jsonify({'error': 'Falha ao obter informações do usuário', 'details': str(e)}), 500
+        return jsonify(
+            {'error': 'Falha ao obter informações do usuário', 'details': str(e)}), 500
+
 
 @auth_bp.route('/favicon.ico')
 def favicon():

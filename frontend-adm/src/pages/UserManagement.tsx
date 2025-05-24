@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { User, UserPlus, Search, Filter, MoreVertical, Shield } from 'lucide-react';
 
 interface UserData {
@@ -16,7 +16,7 @@ const UserManagement = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { getAccessTokenSilently } = useAuth0();
+  const { session } = useSupabaseAuth();
 
   // Simular carregamento de usuários
   useEffect(() => {
@@ -92,7 +92,7 @@ const UserManagement = () => {
     };
 
     fetchUsers();
-  }, [getAccessTokenSilently]);
+  }, []);
 
   // Filtrar usuários com base no termo de pesquisa
   const filteredUsers = users.filter(user => 

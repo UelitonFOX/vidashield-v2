@@ -1,7 +1,7 @@
 import { DashboardData, DashboardResponse } from './types';
 import { useAuthFetch } from '../../utils/useAuthFetch';
 
-// Interface para extenção dos dados do dashboard
+// Interface para extensão dos dados do dashboard
 interface ExtendedDashboardData {
   total_usuarios: number;
   logins_hoje: number;
@@ -15,7 +15,7 @@ interface ExtendedDashboardData {
     tempo: string;
   }>;
   labels_dias?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Interface para resultados de insights
@@ -26,21 +26,45 @@ interface InsightsResponse {
     id?: string;
     created_at?: string;
   }>;
-  [key: string]: any;
 }
 
-// Interface para resultados de alertas
+// Interface para alertas do dashboard
 interface AlertsResponse {
   alerts: Array<{
     id: number | string;
     type: string;
     severity: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     timestamp: string;
     resolved: boolean;
-    [key: string]: any;
   }>;
-  [key: string]: any;
+}
+
+// Interface para métricas de segurança
+interface SecurityMetrics {
+  blocked_attempts: number;
+  successful_logins: number;
+  new_devices: number;
+  suspicious_ips: string[];
+}
+
+// Interface para atividade recente
+interface RecentActivity {
+  id: string;
+  user: string;
+  action: string;
+  timestamp: string;
+  details: string;
+}
+
+// Interface para resposta de exportação
+interface ExportResponse {
+  data: {
+    url: string;
+    filename: string;
+  };
+  msg: string;
+  success: boolean;
 }
 
 // Dados mockados
@@ -72,21 +96,45 @@ const mockData = {
       { id: 2, type: "warning", severity: "warning", details: { message: "Novo dispositivo detectado" }, timestamp: "2025-05-08T09:15:00", resolved: true },
       { id: 3, type: "critical", severity: "critical", details: { message: "Acesso de IP não autorizado" }, timestamp: "2025-05-07T18:42:00", resolved: false }
     ]
+  },
+  securityMetrics: {
+    metrics: {
+      blocked_attempts: 12,
+      successful_logins: 234,
+      new_devices: 3,
+      suspicious_ips: ['192.168.1.105', '10.0.0.150']
+    }
+  },
+  recentActivity: {
+    activity: [
+      { id: '1', user: 'João Silva', action: 'Login', timestamp: '2025-05-08T10:30:00', details: 'Acesso via navegador' },
+      { id: '2', user: 'Maria Santos', action: 'Logout', timestamp: '2025-05-08T09:45:00', details: 'Sessão finalizada' }
+    ]
   }
 };
 
-// Hook para serviço de dashboard com Auth0
+// Hook para serviço de dashboard com Supabase (DESABILITADO para evitar loop)
 export const useDashboardService = () => {
-  const { authFetch, hasFetched, isLoading, error } = useAuthFetch();
+  // const { authFetch } = useAuthFetch<ExtendedDashboardData>('/api/dashboard/data');
+  
+  // Função simulada sem chamadas de API
+  const authFetch = async <T = any>(url: string = '', options: any = {}, mockData: any = {}): Promise<T> => {
+    console.log(`[SIMULADO] authFetch chamado para: ${url}`);
+    return mockData as T;
+  };
 
   // Função para obter mock baseado no endpoint
-  const getMockForEndpoint = (endpoint: string): any => {
+  const getMockForEndpoint = (endpoint: string): unknown => {
     if (endpoint === '/api/dashboard/data' || endpoint === '/api/dashboard') {
       return mockData.dashboard;
     } else if (endpoint.includes('/api/dashboard/insights')) {
       return mockData.insights;
     } else if (endpoint.includes('/api/alerts')) {
       return mockData.alerts;
+    } else if (endpoint.includes('/api/dashboard/security-metrics')) {
+      return mockData.securityMetrics;
+    } else if (endpoint.includes('/api/dashboard/activity')) {
+      return mockData.recentActivity;
     }
     return {};
   };
@@ -104,31 +152,29 @@ export const useDashboardService = () => {
   };
 
   // Obter métricas de segurança
-  const getSecurityMetrics = async (days: number = 7): Promise<any> => {
+  const getSecurityMetrics = async (days: number = 7): Promise<SecurityMetrics> => {
     const endpoint = `/api/dashboard/security-metrics?days=${days}`;
-    const mockResponse = { metrics: { /*... dados mock aqui */ } };
-    const response = await authFetch<{ metrics: any }>(endpoint, {}, mockResponse);
+    const response = await authFetch<{ metrics: SecurityMetrics }>(endpoint, {}, mockData.securityMetrics);
     return response.metrics;
   };
 
   // Obter atividades recentes
-  const getRecentActivity = async (limit: number = 10): Promise<any[]> => {
+  const getRecentActivity = async (limit: number = 10): Promise<RecentActivity[]> => {
     const endpoint = `/api/dashboard/activity?limit=${limit}`;
-    const mockResponse = { activity: [] };
-    const response = await authFetch<{ activity: any[] }>(endpoint, {}, mockResponse);
+    const response = await authFetch<{ activity: RecentActivity[] }>(endpoint, {}, mockData.recentActivity);
     return response.activity;
   };
   
   // Exportar relatórios
-  const exportReport = async (reportId: string, format: 'csv' | 'pdf' | 'json' = 'csv'): Promise<any> => {
+  const exportReport = async (reportId: string, format: 'csv' | 'pdf' | 'json' = 'csv'): Promise<ExportResponse> => {
     const endpoint = `/api/reports/export/${reportId}?format=${format}`;
-    const mockResponse = {
+    const mockResponse: ExportResponse = {
       data: { url: "#", filename: `relatorio_${reportId}.${format}` },
       msg: "Relatório exportado com sucesso!",
       success: true
     };
     
-    return await authFetch(endpoint, {}, mockResponse);
+    return await authFetch<ExportResponse>(endpoint, {}, mockResponse);
   };
 
   return {
@@ -136,12 +182,9 @@ export const useDashboardService = () => {
     getDashboardData,
     getSecurityMetrics,
     getRecentActivity,
-    exportReport,
-    hasFetched,
-    isLoading,
-    error
+    exportReport
   };
 };
 
 // Exportando tipos
-export type { ExtendedDashboardData, InsightsResponse, AlertsResponse };
+export type { ExtendedDashboardData, InsightsResponse, AlertsResponse, SecurityMetrics, RecentActivity, ExportResponse };

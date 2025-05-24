@@ -115,7 +115,13 @@ export interface DashboardData {
   alerts_count: number;
   users_count: number;
   active_sessions: number;
-  recent_activity: any[];
+  recent_activity: Array<{
+    id: string;
+    user: string;
+    action: string;
+    timestamp: string;
+    details: string;
+  }>;
   security_score?: number;
 }
 

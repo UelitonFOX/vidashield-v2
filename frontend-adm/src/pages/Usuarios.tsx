@@ -1,12 +1,12 @@
 import React, { useState, useEffect, ReactElement } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useSupabaseAuth } from "../contexts/SupabaseAuthContext";
 import { Search, Plus, RefreshCw, UserCheck, UserX, Edit, Trash2, Loader2, Clock } from "lucide-react";
 import { useUsersService } from "../services/api/usersService";
 import { User } from "../services/api/types";
 import { useNavigate } from "react-router-dom";
 
 export default function Usuarios() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth0();
+  const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);

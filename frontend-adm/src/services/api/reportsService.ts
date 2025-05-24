@@ -1,5 +1,4 @@
-import api from '../api';
-import { Report, ReportsResponse, ApiBaseResponse } from './types';
+import api from '../api';import { Report, ApiBaseResponse } from './types';
 
 const reportsService = {
   // Obter lista de relatórios
