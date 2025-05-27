@@ -20,7 +20,7 @@ import Reports from './pages/Reports'
 import Help from './pages/Help'
 import MyDataPage from './pages/MyDataPage'
 import Layout from './components/Layout'
-import AuthDebug from './components/AuthDebug'
+
 import ProtectedRoute from './components/ProtectedRoute'
 import { NotificationProvider } from './context/NotificationContext'
 import { Shield } from 'lucide-react'
@@ -51,7 +51,6 @@ function App() {
           </div>
           <p className="text-zinc-400">Carregando VidaShield...</p>
         </div>
-        <AuthDebug />
       </div>
     )
   }
@@ -221,7 +220,6 @@ function App() {
           element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
         />
       </Routes>
-      <AuthDebug />
     </Router>
     </NotificationProvider>
   )

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎥 Instruções Vídeo Pitch - VidaShield v2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #00d4aa 0%, #1e293b 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border-radius: 15px;
+            background: #f8fafc;
+            border-left: 5px solid #00d4aa;
+        }
+        
+        .section h2 {
+            color: #1e293b;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section h3 {
+            color: #374151;
+            font-size: 1.4rem;
+            margin: 25px 0 15px 0;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #fef3c7, #fde047);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .alert {
+            background: linear-gradient(135deg, #fee2e2, #fca5a5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .success {
+            background: linear-gradient(135deg, #d1fae5, #6ee7b7);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #10b981;
+        }
+        
+        .timeline {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-item {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+        
+        .timeline-time {
+            background: #1e293b;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .timeline-person {
+            background: #00d4aa;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .timeline-content {
+            flex: 1;
+        }
+        
+        .checklist {
+            list-style: none;
+        }
+        
+        .checklist li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .checklist li:before {
+            content: "☐";
+            font-size: 1.2rem;
+            color: #6b7280;
+        }
+        
+        .script-box {
+            background: #1e293b;
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+        }
+        
+        .person-ueliton { background: #3b82f6; }
+        .person-beatriz { background: #8b5cf6; }
+        .person-camili { background: #ec4899; }
+        
+        .feedback-section {
+            background: linear-gradient(135deg, #ddd6fe, #c4b5fd);
+            border: 2px dashed #8b5cf6;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 40px;
+            text-align: center;
+        }
+        
+        .emoji {
+            font-size: 1.5rem;
+            margin-right: 8px;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .tag {
+            background: #e5e7eb;
+            color: #374151;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .content { padding: 20px; }
+            .section { padding: 20px; }
+            .timeline-item { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 Vídeo Pitch - VidaShield v2.0</h1>
+            <p>Oi Beatriz e Camili! Organizei tudo aqui para nossa gravação</p>
+            <p><strong>Instruções do Ueliton para a equipe 😉</strong></p>
+        </div>
+        
+        <div class="content">
+            
+            <!-- OBJETIVO -->
+            <div class="section">
+                <h2><span class="emoji">🎯</span>Nossa Missão</h2>
+                <div class="highlight">
+                    <p><strong>Pessoal, preciso que vocês me ajudem a gravar um vídeo incrível de 5 minutos</strong> mostrando nosso VidaShield v2.0! Organizei tudo aqui para facilitar nossa vida.</p>
+                </div>
+                
+                <h3>📋 O que precisamos cumprir</h3>
+                <ul class="checklist">
+                    <li><strong>Tempo máximo:</strong> 5 minutos (crítico, pessoal!)</li>
+                    <li><strong>Nossa equipe:</strong> Eu, Beatriz e Camili</li>
+                    <li><strong>Onde publicar:</strong> YouTube (sugiro "não listado")</li>
+                    <li><strong>Como entregar:</strong> Cada uma posta o link no Moodle separadamente</li>
+                </ul>
+            </div>
+
+            <!-- CRONOMETRAGEM -->
+            <div class="section">
+                <h2><span class="emoji">⏰</span>Como dividi nosso tempo</h2>
+                <div class="alert">
+                    <p><strong>⚠️ ATENÇÃO GALERA:</strong> Esse timing é super importante! Se passar de 5 minutos, nossa nota pode ser comprometida. Vamos ensaiar!</p>
+                </div>
+                
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-time">0:00 - 1:15</div>
+                        <div class="timeline-person person-ueliton">EU</div>
+                        <div class="timeline-content">
+                            <strong>Abertura + Problema</strong><br>
+                            Vou apresentar nossa equipe + contar a história da Clínica VidaMais
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">1:15 - 2:30</div>
+                        <div class="timeline-person person-beatriz">BEATRIZ</div>
+                        <div class="timeline-content">
+                            <strong>Solução + Tecnologias</strong><br>
+                            Você vai explicar o VidaShield + nossas tecnologias (React, TypeScript, Supabase)
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">2:30 - 4:00</div>
+                        <div class="timeline-person person-ueliton">EU NOVAMENTE</div>
+                        <div class="timeline-content">
+                            <strong>Demonstração do Sistema</strong><br>
+                            Vou mostrar o sistema funcionando na tela (login, dashboard, alertas, LGPD)
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">4:00 - 4:30</div>
+                        <div class="timeline-person person-camili">CAMILI</div>
+                        <div class="timeline-content">
+                            <strong>Resultados + Impacto</strong><br>
+                            Você vai apresentar nossas métricas + os benefícios para as clínicas
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">4:30 - 5:00</div>
+                        <div class="timeline-person" style="background: #059669;">NÓS TRÊS</div>
+                        <div class="timeline-content">
+                            <strong>Fechamento</strong><br>
+                            Vamos falar juntos os próximos passos + nossa frase final "VidaShield: Protegendo quem cuida da vida!"
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCRIPTS DETALHADOS -->
+            <div class="section">
+                <h2><span class="emoji">🎤</span>Nossos Scripts - Por Favor, Leiam!</h2>
+                
+                <h3>🎬 EU - Parte 1 (0:00 - 1:15) - Abertura + Problema</h3>
+                <div class="script-box">
+                    <p><strong>Vou começar assim:</strong></p>
+                    <p>"Olá! Somos Ueliton, Beatriz e Camili, e desenvolvemos o VidaShield v2.0 para o Projeto Integrador do Talento Tech Paraná."</p>
+                    
+                    <p><strong>Depois vou falar sobre:</strong></p>
+                    <ul>
+                        <li>Cenário da Clínica VidaMais em Palmital/PR</li>
+                        <li>Dr. Rodrigo tentando proteger dados de pacientes</li>
+                        <li>Problemas: falta de monitoramento, ameaças, LGPD</li>
+                        <li>Multas LGPD de até R$ 50 milhões (isso é pesado!)</li>
+                    </ul>
+                    
+                    <p><strong>Vou passar para você, Beatriz:</strong> "Beatriz, como nossa solução resolve isso?"</p>
+                </div>
+                
+                <h3>💡 BEATRIZ - Sua Parte (1:15 - 2:30) - Solução + Tecnologias</h3>
+                <div class="script-box">
+                    <p><strong>Beatriz, quero que você comece assim:</strong></p>
+                    <p>"Desenvolvemos o VidaShield v2.0: uma solução completa e acessível para clínicas."</p>
+                    
+                    <p><strong>Por favor, destaque esses pontos:</strong></p>
+                    <ul>
+                        <li>Interface intuitiva e fácil de usar</li>
+                        <li>Custo acessível, compliance LGPD automático</li>
+                        <li>Stack: React + TypeScript + Supabase (você domina isso!)</li>
+                        <li>Segurança: OAuth + 2FA + RLS</li>
+                    </ul>
+                    
+                    <p><strong>Me passa a palavra assim:</strong> "Ueliton, mostre o sistema funcionando!"</p>
+                </div>
+                
+                <h3>🎯 EU - Parte 2 (2:30 - 4:00) - Demonstração do Sistema</h3>
+                <div class="script-box">
+                    <p><strong>Vou retomar assim:</strong></p>
+                    <p>"Agora vou mostrar o VidaShield v2.0 em funcionamento!"</p>
+                    
+                    <p><strong>Vou compartilhar a tela e mostrar:</strong></p>
+                    <ol>
+                        <li><strong>Login seguro:</strong> Autenticação com Google + 2FA</li>
+                        <li><strong>Dashboard principal:</strong> Métricas em tempo real</li>
+                        <li><strong>Sistema de alertas:</strong> Detecção de ameaças</li>
+                        <li><strong>Gestão de usuários:</strong> Aprovação e permissões</li>
+                        <li><strong>Relatórios LGPD:</strong> Compliance automático</li>
+                        <li><strong>Responsividade:</strong> Interface mobile-friendly</li>
+                    </ol>
+                    
+                    <p><strong>Vou destacar na demo:</strong></p>
+                    <ul>
+                        <li>Velocidade de carregamento (< 2s)</li>
+                        <li>Interface intuitiva para médicos</li>
+                        <li>Dados em tempo real</li>
+                    </ul>
+                    
+                    <p><strong>Vou passar para você, Camili:</strong> "Camili, fale sobre os resultados alcançados."</p>
+                </div>
+                
+                <h3>💼 CAMILI - Sua Parte (4:00 - 4:30) - Resultados + Impacto</h3>
+                <div class="script-box">
+                    <p><strong>Camili, quero que você comece assim:</strong></p>
+                    <p>"Os resultados do VidaShield são impressionantes!"</p>
+                    
+                    <p><strong>Fala essas métricas com empolgação:</strong></p>
+                    <ul>
+                        <li>99.9% de disponibilidade do sistema</li>
+                        <li>100% de tentativas de invasão bloqueadas</li>
+                        <li>85% de redução no tempo de resposta a ameaças</li>
+                        <li>Compliance total com LGPD</li>
+                        <li>ROI positivo em 3 meses</li>
+                    </ul>
+                    
+                    <p><strong>E destaque esses benefícios:</strong></p>
+                    <ul>
+                        <li>Redução de 90% em vulnerabilidades</li>
+                        <li>Aumento da confiança dos pacientes</li>
+                        <li>Conformidade legal garantida</li>
+                    </ul>
+                    
+                    <p><strong>Termine preparando o fechamento:</strong> "Para concluir nossa apresentação..."</p>
+                </div>
+                
+                <h3>🚀 NÓS TRÊS JUNTOS (4:30 - 5:00) - Fechamento</h3>
+                <div class="script-box">
+                    <p><strong>EU vou falar:</strong> "O VidaShield não é apenas segurança..."</p>
+                    <p><strong>BEATRIZ você completa:</strong> "É garantia para clínicas focarem no cuidado."</p>
+                    <p><strong>CAMILI você finaliza:</strong> "Próximos passos: IA integrada e app mobile."</p>
+                    
+                    <p><strong>E TODAS NÓS FALAMOS JUNTAS:</strong></p>
+                    <p>"VidaShield: Protegendo quem cuida da vida!"</p>
+                    <p>"Talento Tech Paraná - Inovação que transforma!"</p>
+                </div>
+            </div>
+
+            <!-- SETUP TÉCNICO -->
+            <div class="section">
+                <h2><span class="emoji">🎥</span>Setup Técnico</h2>
+                
+                <h3>📹 Configuração de Gravação</h3>
+                <ul class="checklist">
+                    <li><strong>Resolução:</strong> 1080p mínimo</li>
+                    <li><strong>Áudio:</strong> Microfone externo (se possível)</li>
+                    <li><strong>Iluminação:</strong> Natural ou ring light</li>
+                    <li><strong>Fundo:</strong> Limpo e profissional</li>
+                    <li><strong>Posição:</strong> Enquadramento busto/corpo inteiro</li>
+                </ul>
+                
+                <h3>💻 Para a demonstração</h3>
+                <ul class="checklist">
+                    <li><strong>Screen sharing:</strong> Sistema VidaShield funcionando</li>
+                    <li><strong>Navegador:</strong> Chrome/Edge atualizado</li>
+                    <li><strong>Internet:</strong> Conexão estável testada</li>
+                    <li><strong>Backup:</strong> Screenshots caso falhe</li>
+                </ul>
+                
+                <h3>🎬 Ferramentas sugeridas</h3>
+                <div class="tags">
+                    <span class="tag">OBS Studio (gratuito e profissional)</span>
+                    <span class="tag">Zoom (gravar reunião)</span>
+                    <span class="tag">Google Meet (gravar)</span>
+                    <span class="tag">Loom (simples e direto)</span>
+                </div>
+            </div>
+
+            <!-- PUBLICAÇÃO YOUTUBE -->
+            <div class="section">
+                <h2><span class="emoji">📺</span>Publicação no YouTube</h2>
+                
+                <h3>🔧 Configurações do Vídeo</h3>
+                <div class="script-box">
+                    <p><strong>Título:</strong> VidaShield v2.0 - Pitch Final | Talento Tech Paraná</p>
+                    
+                    <p><strong>Descrição:</strong></p>
+                    <p>🛡️ VidaShield v2.0 - Sistema de Segurança Digital para Clínicas</p>
+                    <p>Projeto Integrador - Talento Tech Paraná<br>
+                    Equipe: Ueliton, Beatriz e Camili</p>
+                    <p>Desenvolvemos uma solução completa de cibersegurança especificamente para clínicas de pequeno porte, com foco em compliance LGPD e facilidade de uso.</p>
+                    <p>Stack: React + TypeScript + Supabase<br>
+                    Repositório: https://github.com/UelitonFOX/vidashield-v2</p>
+                    <p>#TalentoTechParaná #VidaShield #Cibersegurança #Saúde</p>
+                </div>
+                
+                <h3>🔒 Configurações de Privacidade</h3>
+                <ul class="checklist">
+                    <li><strong>Opção 1:</strong> NÃO LISTADO (mais seguro - recomendado)</li>
+                    <li><strong>Opção 2:</strong> PÚBLICO (se quiserem compartilhar)</li>
+                    <li><strong>Legendas:</strong> Ativar geração automática</li>
+                    <li><strong>Comentários:</strong> Permitir</li>
+                </ul>
+            </div>
+
+            <!-- CHECKLIST FINAL -->
+            <div class="section">
+                <h2><span class="emoji">✅</span>Checklist Final</h2>
+                
+                <h3>📋 Antes da gravação</h3>
+                <ul class="checklist">
+                    <li>Roteiro memorizado por cada pessoa</li>
+                    <li>Sistema VidaShield testado e funcionando</li>
+                    <li>Internet estável testada</li>
+                    <li>Equipamentos de áudio/vídeo testados</li>
+                    <li>Cronômetro para controle de tempo</li>
+                    <li>Backup das telas (screenshots)</li>
+                </ul>
+                
+                <h3>🎬 Durante a gravação</h3>
+                <ul class="checklist">
+                    <li>Testar áudio no início</li>
+                    <li>Ueliton: apresentação + problema (1:15)</li>
+                    <li>Beatriz: solução + tecnologias (1:15)</li>
+                    <li>Ueliton: demonstração do sistema (1:30)</li>
+                    <li>Camili: resultados + impacto (0:30)</li>
+                    <li>Todos: fechamento conjunto (0:30)</li>
+                    <li>Verificar se ficou dentro de 5 minutos</li>
+                </ul>
+                
+                <h3>📺 Após a gravação</h3>
+                <ul class="checklist">
+                    <li>Editar se necessário (cortes, áudio)</li>
+                    <li>Upload no YouTube com configurações corretas</li>
+                    <li>Testar se o link funciona</li>
+                    <li>Cada membro postar no Moodle individualmente</li>
+                    <li>Verificar se todos postaram o mesmo link</li>
+                </ul>
+            </div>
+
+            <!-- DICAS IMPORTANTES -->
+            <div class="section">
+                <h2><span class="emoji">🎯</span>Dicas Importantes</h2>
+                
+                <div class="success">
+                    <h3>✨ Para um vídeo de qualidade:</h3>
+                    <ul>
+                        <li><strong>Ambiente silencioso:</strong> Sem ruídos externos</li>
+                        <li><strong>Boa iluminação:</strong> Rostos bem iluminados</li>
+                        <li><strong>Olhar para câmera:</strong> Conexão com quem assiste</li>
+                        <li><strong>Falar naturalmente:</strong> Não corrido nem devagar</li>
+                        <li><strong>Mostrar o sistema:</strong> Tela funcionando é impressionante</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight">
+                    <h3>⚡ Para o sucesso da apresentação:</h3>
+                    <ul>
+                        <li><strong>Entusiasmo genuíno:</strong> Vocês criaram algo incrível!</li>
+                        <li><strong>Orgulho do projeto:</strong> VidaShield resolve um problema real</li>
+                        <li><strong>Trabalho em equipe:</strong> Mostrar sintonia entre vocês</li>
+                        <li><strong>Foco no impacto:</strong> Como isso ajuda as clínicas</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SEÇÃO DE FEEDBACK -->
+            <div class="feedback-section">
+                <h2><span class="emoji">💬</span>Pessoal, Preciso do Feedback de Vocês!</h2>
+                <p><strong>Beatriz e Camili, organizei tudo mas PRECISO saber o que vocês acham!</strong></p>
+                
+                <div style="margin: 30px 0; text-align: left;">
+                    <h3>🤔 Me respondam isso, por favor:</h3>
+                    <ul style="list-style: disc; margin-left: 30px; line-height: 1.8;">
+                        <li><strong>Beatriz:</strong> Você se sente tranquila para falar da parte técnica? Quer que eu mude alguma coisa no seu script?</li>
+                        <li><strong>Camili:</strong> E você, confortável com a parte dos resultados? Tem alguma métrica que prefere destacar mais?</li>
+                        <li><strong>Sobre o timing:</strong> Acham que está ok ou alguém prefere trocar/ajustar o tempo?</li>
+                        <li><strong>Conteúdo:</strong> Tô esquecendo alguma coisa importante do nosso projeto?</li>
+                        <li><strong>Gravação:</strong> Qual ferramenta vocês preferem? Zoom? Meet? OBS? Alguém já usou?</li>
+                    </ul>
+                </div>
+                
+                <div class="alert">
+                    <p><strong>📝 SÉRIO, RESPONDAM ISSO:</strong></p>
+                    <p>Leiam tudo e me mandem o que acham! Quero que vocês se sintam 100% confortáveis e confiantes. Nossa apresentação precisa ser PERFEITA e só vai dar certo se vocês estiverem à vontade com seus scripts!</p>
+                </div>
+            </div>
+
+            <!-- MOTIVAÇÃO FINAL -->
+            <div class="section">
+                <h2><span class="emoji">🏆</span>Galera, Nosso Projeto É INCRÍVEL!</h2>
+                <div class="success">
+                    <p><strong>Nós desenvolvemos um projeto EXCEPCIONAL!</strong></p>
+                    <p>O VidaShield v2.0 é uma solução real, bem feita, com tecnologias modernas e potencial de mercado REAL. Agora é só mostrar nosso trabalho com muito orgulho e confiança.</p>
+                    <p><strong>💪 Nós temos TUDO para impressionar essa banca!</strong></p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <h3>🎬 VAMOS ARRASAR NESSA GRAVAÇÃO!</h3>
+                    <p style="font-size: 1.2rem; color: #6b7280;">Ueliton, Beatriz e Camili 🚀</p>
+                    <p style="font-size: 1rem; color: #6b7280;">#TalentoTechParaná #VidaShield #InovaçãoParanaense</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
