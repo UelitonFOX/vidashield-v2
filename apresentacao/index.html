@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidaShield v2.0 - Apresentação Interativa</title>
+    
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS customizado -->
+    <link rel="stylesheet" href="ui/variables.css">
+    <link rel="stylesheet" href="ui/components.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="ui/overrides.css">
+    <link rel="stylesheet" href="ui/slides-specific.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navegação lateral -->
+        <nav class="sidebar" :class="{ 'sidebar-hidden': !sidebarOpen }">
+            <div class="logo-section">
+                <img v-if="images.logo" :src="images.logo" alt="VidaShield Logo" class="sidebar-logo">
+                <i v-else class="fas fa-shield-alt"></i>
+                <h2 v-if="!images.logo">VidaShield</h2>
+            </div>
+            
+            <ul class="nav-menu">
+                <li v-for="(slide, index) in slides" :key="index" 
+                    @click="goToSlide(index)" 
+                    :class="{ active: currentSlide === index }">
+                    <i :class="slide.icon"></i>
+                    <span>{{ slide.title }}</span>
+                </li>
+            </ul>
+            
+            <div class="slide-counter">
+                {{ currentSlide + 1 }} / {{ slides.length }}
+            </div>
+        </nav>
+
+        <!-- Botão toggle sidebar mobile -->
+        <button class="sidebar-toggle" @click="toggleSidebar" title="Toggle Sidebar">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Conteúdo principal -->
+        <main class="main-content" :class="{ 'sidebar-hidden': !sidebarOpen }">
+            
+            <!-- Slide 1: Apresentação -->
+            <section v-if="currentSlide === 0" class="slide slide-intro">
+                <!-- Topo: Logos -->
+                <div class="hero-header">
+                    <div class="logos-container">
+                        <div class="hero-logo">
+                            <img v-if="images.logo" :src="images.logo" alt="VidaShield Logo" class="hero-logo-image">
+                            <div v-else class="fallback-logo">
+                                <i class="fas fa-shield-alt"></i>
+                                <h1>VidaShield v2.0</h1>
+                            </div>
+                        </div>
+                        <div class="talento-tech-logo">
+                            <img src="images/talento-tech.png" alt="Talento Tech Paraná" class="talento-tech-image">
+                        </div>
+                    </div>
+                    <p class="hero-subtitle">Sistema de Segurança Digital para Clínicas</p>
+                </div>
+                
+                <!-- Centro: Layout de duas colunas -->
+                <div class="main-content-grid">
+                    <!-- Esquerda: Cards da equipe -->
+                    <div class="team-section">
+                        <div class="team-cards-vertical">
+                            <div class="team-card" v-for="member in team" :key="member.name">
+                                <div class="team-avatar">
+                                    <img v-if="member.photo" :src="member.photo" :alt="member.name" :title="member.name + ' - ' + member.role" class="team-photo">
+                                    <span v-else>{{ member.initials }}</span>
+                                </div>
+                                <div class="team-info">
+                                    <h3>{{ member.name }}</h3>
+                                    <p>{{ member.role }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Direita: Foto da equipe -->
+                    <div class="team-photo-section">
+                        <div v-if="images.teamPhoto" class="team-photo-container">
+                            <img :src="images.teamPhoto" alt="Equipe VidaShield" class="team-group-photo">
+                        </div>
+                        <div class="hero-footer">
+                            <p>"Protegendo quem cuida da vida"</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 2: Problema -->
+            <section v-if="currentSlide === 1" class="slide slide-problem">
+                <div class="slide-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h1>O Problema Real</h1>
+                </div>
+                
+                <div class="content-section">
+                    <div class="clinic-showcase">
+                        <div class="clinic-card standard-card">
+                            <div class="clinic-header">
+                                <div class="clinic-image">
+                                    <img v-if="images.clinicaVidaMais" :src="images.clinicaVidaMais" alt="Clínica VidaMais" class="clinic-photo">
+                                    <i v-else class="fas fa-hospital icon-large" style="color: #ef4444;"></i>
+                                </div>
+                                <div class="clinic-info">
+                                    <h2>Clínica VidaMais</h2>
+                                    <p>Palmital/PR • Dr. Rodrigo • 40 anos</p>
+                                    <img v-if="images.drRodrigo" :src="images.drRodrigo" alt="Dr. Rodrigo" class="doctor-photo avatar avatar-md" title="Dr. Rodrigo - Diretor da Clínica">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="problems-grid grid-4-cols">
+                        <div class="problem-card standard-card" v-for="problem in problems" :key="problem.id">
+                            <i :class="problem.icon" class="icon-medium" style="color: #ef4444;"></i>
+                            <h3>{{ problem.title }}</h3>
+                            <p>{{ problem.description }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="danger-alert alert alert-danger">
+                        <i class="fas fa-gavel"></i>
+                        <div>
+                            <h3>Multas LGPD</h3>
+                            <p>Até <strong>R$ 50 milhões</strong> por infração</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3: Nossa Solução -->
+            <section v-if="currentSlide === 2" class="slide slide-solution">
+                <div class="slide-header">
+                    <i class="fas fa-lightbulb"></i>
+                    <h1>Nossa Solução</h1>
+                </div>
+                
+                <div class="content-section">
+                    <div class="solution-hero hero-section">
+                        <div class="solution-logo">
+                            <img v-if="images.logo" :src="images.logo" alt="VidaShield Logo" class="solution-logo-image">
+                            <i v-else class="fas fa-shield-alt icon-large"></i>
+                        </div>
+                        <h2 v-if="!images.logo" class="gradient-text">VidaShield v2.0</h2>
+                        <p class="text-secondary text-shadow" style="font-size: var(--font-xl); font-weight: var(--font-medium);">Solução completa e acessível para clínicas</p>
+                    </div>
+                    
+                    <div class="features-grid grid-auto-fit">
+                        <div class="feature-card standard-card" v-for="feature in features" :key="feature.id">
+                            <i :class="feature.icon" class="icon-large"></i>
+                            <h3>{{ feature.title }}</h3>
+                            <p>{{ feature.description }}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 4: Stack Tecnológico -->
+            <section v-if="currentSlide === 3" class="slide slide-tech">
+                <div class="slide-header">
+                    <i class="fas fa-cogs"></i>
+                    <h1>Stack Tecnológico</h1>
+                </div>
+                
+                <div class="content-section">
+                    <div class="tech-categories">
+                        <div class="tech-category">
+                            <h2 class="text-primary text-shadow">
+                                <i class="fas fa-code icon-medium"></i> Frontend
+                            </h2>
+                            <div class="tech-items grid-auto-fit">
+                                <div class="tech-item standard-card" v-for="tech in frontendTech" :key="tech.name">
+                                    <img v-if="tech.logo" :src="tech.logo" :alt="tech.name + ' Logo'" :title="tech.name + ' - Tecnologia Frontend'" class="tech-logo">
+                                    <i v-else :class="tech.icon" class="icon-medium"></i>
+                                    <div>
+                                        <h3>{{ tech.name }}</h3>
+                                        <p>{{ tech.version }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-category">
+                            <h2 class="text-primary text-shadow">
+                                <i class="fas fa-server icon-medium"></i> Backend
+                            </h2>
+                            <div class="tech-items grid-auto-fit">
+                                <div class="tech-item standard-card" v-for="tech in backendTech" :key="tech.name">
+                                    <img v-if="tech.logo" :src="tech.logo" :alt="tech.name + ' Logo'" :title="tech.name + ' - Tecnologia Backend'" class="tech-logo">
+                                    <i v-else :class="tech.icon" class="icon-medium"></i>
+                                    <div>
+                                        <h3>{{ tech.name }}</h3>
+                                        <p>{{ tech.version }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-category">
+                            <h2 class="text-primary text-shadow">
+                                <i class="fas fa-shield-alt icon-medium"></i> Segurança
+                            </h2>
+                            <div class="tech-items grid-auto-fit">
+                                <div class="tech-item standard-card" v-for="tech in securityTech" :key="tech.name">
+                                    <i :class="tech.icon" class="icon-medium"></i>
+                                    <div>
+                                        <h3>{{ tech.name }}</h3>
+                                        <p>{{ tech.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 5: Demonstração -->
+            <section v-if="currentSlide === 4" class="slide slide-demo">
+                <div class="slide-header">
+                    <i class="fas fa-desktop"></i>
+                    <h1>Demonstração do Sistema</h1>
+                </div>
+                
+                <div class="content-section">
+                    <div class="demo-container two-column-layout">
+                        <div class="demo-sidebar standard-card">
+                            <div class="demo-nav">
+                                <div class="demo-nav-item" 
+                                     v-for="(demo, index) in demoSteps" 
+                                     :key="index"
+                                     @click="currentDemo = index"
+                                     :class="{ active: currentDemo === index }">
+                                    <i :class="demo.icon" class="icon-small"></i>
+                                    <span>{{ demo.title }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="demo-content standard-card">
+                            <div class="demo-step" v-if="currentDemo === 0">
+                                <h2 class="text-primary text-shadow">
+                                    <i class="fas fa-sign-in-alt icon-medium"></i> Login Seguro
+                                </h2>
+                                <div class="login-demo">
+                                    <img v-if="images.loginScreen" :src="images.loginScreen" alt="Tela de Login VidaShield" class="demo-screenshot">
+                                    <div v-else class="login-card standard-card">
+                                        <div class="google-btn"><i class="fab fa-google"></i> Entrar com Google</div>
+                                        <div class="two-fa badge badge-success">🔐 Verificação 2FA</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="demo-step" v-if="currentDemo === 1">
+                                <h2 class="text-primary text-shadow">
+                                    <i class="fas fa-chart-pie icon-medium"></i> Dashboard
+                                </h2>
+                                <div class="dashboard-demo">
+                                    <img v-if="images.dashboardFull" :src="images.dashboardFull" alt="Dashboard Completo VidaShield" class="demo-screenshot">
+                                    <div v-else class="widget-grid grid-auto-fit">
+                                        <div class="widget standard-card" v-for="widget in dashboardWidgets" :key="widget.id">
+                                            <i :class="widget.icon" class="icon-medium"></i>
+                                            <div>
+                                                <h3>{{ widget.value }}</h3>
+                                                <p>{{ widget.label }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="demo-step" v-if="currentDemo === 2">
+                                <h2 class="text-primary text-shadow">
+                                    <i class="fas fa-bell icon-medium"></i> Sistema de Alertas
+                                </h2>
+                                <div class="alerts-demo">
+                                    <div class="alert-item standard-card" v-for="alert in alerts" :key="alert.id" :class="alert.type">
+                                        <i :class="alert.icon" class="icon-small"></i>
+                                        <div>
+                                            <h4>{{ alert.title }}</h4>
+                                            <p>{{ alert.message }}</p>
+                                            <small>{{ alert.time }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 6: Resultados -->
+            <section v-if="currentSlide === 5" class="slide slide-results">
+                <div class="slide-header">
+                    <i class="fas fa-chart-bar"></i>
+                    <h1>Resultados Impressionantes</h1>
+                </div>
+                
+                <div class="content-section">
+                    <div class="metrics-grid grid-auto-fit">
+                        <div class="metric-card standard-card" v-for="metric in metrics" :key="metric.id">
+                            <div class="metric-icon">
+                                <i :class="metric.icon" class="icon-large"></i>
+                            </div>
+                            <div class="metric-value gradient-text">{{ metric.value }}</div>
+                            <div class="metric-label text-secondary">{{ metric.label }}</div>
+                            <div class="metric-chart">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" :style="{ width: metric.percentage }"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="benefits-section content-section">
+                        <h2 class="text-primary text-shadow" style="text-align: center; font-size: var(--font-4xl); margin-bottom: var(--spacing-xl);">
+                            <i class="fas fa-trophy icon-large"></i>
+                            Benefícios para Clínicas
+                        </h2>
+                        <div class="benefits-grid grid-auto-fit">
+                            <div class="benefit-card standard-card" v-for="benefit in benefits" :key="benefit.id">
+                                <i :class="benefit.icon" class="icon-large"></i>
+                                <h3>{{ benefit.title }}</h3>
+                                <p>{{ benefit.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 7: Próximos Passos -->
+            <section v-if="currentSlide === 6" class="slide slide-future">
+                <div class="slide-header">
+                    <i class="fas fa-rocket"></i>
+                    <h1>Próximos Passos</h1>
+                </div>
+                
+                <div class="content-section">
+                    <div class="roadmap">
+                        <div class="roadmap-item standard-card" v-for="(step, index) in roadmap" :key="index">
+                            <div class="roadmap-icon">
+                                <i :class="step.icon" class="icon-large"></i>
+                            </div>
+                            <div class="roadmap-content">
+                                <h3 class="text-primary text-shadow">{{ step.title }}</h3>
+                                <p class="text-secondary">{{ step.description }}</p>
+                                <span class="roadmap-timeline badge badge-success">{{ step.timeline }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="innovation-badge alert" style="background: var(--gradient-card); color: #1e293b; margin-top: var(--spacing-xl);">
+                        <i class="fas fa-graduation-cap icon-large"></i>
+                        <div>
+                            <h3 style="color: #1e293b; font-weight: var(--font-bold);">Talento Tech Paraná em Ação</h3>
+                            <p style="color: rgba(30, 41, 59, 0.8); font-size: var(--font-lg);">Inovação paranaense que transforma vidas</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 8: Fechamento -->
+            <section v-if="currentSlide === 7" class="slide slide-closing">
+                <div class="content-section">
+                    <div class="closing-hero hero-section">
+                        <div class="closing-logo">
+                            <img v-if="images.logo" :src="images.logo" alt="VidaShield Logo" class="closing-logo-image">
+                            <i v-else class="fas fa-shield-alt icon-large"></i>
+                        </div>
+                        <h1 v-if="!images.logo" class="gradient-text">VidaShield v2.0</h1>
+                        <h2 class="text-brand text-shadow" style="font-style: italic; font-size: var(--font-3xl);">"Protegendo quem cuida da vida!"</h2>
+                    </div>
+                    
+                    <div class="team-final grid-auto-fit">
+                        <div class="team-member standard-card" v-for="member in team" :key="member.name">
+                            <div class="member-avatar">
+                                <img v-if="member.photo" :src="member.photo" :alt="member.name" :title="member.name + ' - ' + member.role" class="team-photo-final avatar avatar-xl">
+                                <span v-else>{{ member.initials }}</span>
+                            </div>
+                            <h3 class="text-primary text-shadow">{{ member.name }}</h3>
+                            <p class="text-secondary">{{ member.role }}</p>
+                            <div class="contact-links">
+                                <a :href="member.contacts.linkedin" target="_blank" class="contact-link linkedin" title="LinkedIn">
+                                    <i class="fab fa-linkedin"></i>
+                                </a>
+                                <a :href="member.contacts.github" target="_blank" class="contact-link github" title="GitHub">
+                                    <i class="fab fa-github"></i>
+                                </a>
+                                <a :href="member.contacts.instagram" target="_blank" class="contact-link instagram" title="Instagram">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                                <a :href="member.contacts.whatsapp" target="_blank" class="contact-link whatsapp" title="WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a>
+                            </div>
+                            
+                            <div class="contact-text">
+                                <div class="contact-item">
+                                    <i class="fab fa-linkedin"></i>
+                                    <span>{{ member.contacts.linkedin.replace('https://linkedin.com/in/', '@') }}</span>
+                                </div>
+                                <div class="contact-item">
+                                    <i class="fab fa-github"></i>
+                                    <span>{{ member.contacts.github.replace('https://github.com/', '@') }}</span>
+                                </div>
+                                <div class="contact-item">
+                                    <i class="fab fa-instagram"></i>
+                                    <span>{{ member.contacts.instagram.replace('https://instagram.com/', '@') }}</span>
+                                </div>
+                                <div class="contact-item">
+                                    <i class="fab fa-whatsapp"></i>
+                                    <span>{{ member.contacts.whatsapp.replace('https://wa.me/', '+') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="closing-footer">
+                        <p class="subtitle text-secondary text-shadow" style="font-size: var(--font-xl); text-align: center; margin-bottom: var(--spacing-lg);">Talento Tech Paraná - Inovação que transforma!</p>
+                        <div class="thank-you" style="justify-content: center; font-size: var(--font-2xl); color: var(--text-brand);">
+                            <i class="fas fa-heart" style="color: #ef4444; animation: heartbeat 1.5s infinite;"></i>
+                            <span class="text-shadow">Obrigado pela atenção!</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Controles de navegação -->
+        <div class="navigation-controls">
+            <button @click="previousSlide" :disabled="currentSlide === 0" class="nav-btn prev" title="Slide Anterior">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button @click="nextSlide" :disabled="currentSlide === slides.length - 1" class="nav-btn next" title="Próximo Slide">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 
