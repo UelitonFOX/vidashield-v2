@@ -41,10 +41,10 @@ createApp({
                     initials: 'UF',
                     photo: 'images/ueliton.jpg',
                     contacts: {
-                        linkedin: 'https://linkedin.com/in/ueliton-fermino',
-                        github: 'https://github.com/ueliton-fermino',
-                        instagram: 'https://instagram.com/ueliton.fermino',
-                        whatsapp: 'https://wa.me/5544999999999'
+                        linkedin: 'https://www.linkedin.com/in/uelitonfox/',
+                        github: 'https://github.com/UelitonFOX',
+                        instagram: 'https://www.instagram.com/ueliton_fox/',
+                        whatsapp: 'https://wa.me/5543998209462'
                     }
                 },
                 { 
