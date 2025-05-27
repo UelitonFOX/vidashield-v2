@@ -567,14 +567,14 @@ const AmeacasDetectadas: React.FC = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="text-green-400">
-                          {getThreatIcon(threat.tipo)}
+                          {getThreatIcon(threat.threat_type)}
                         </div>
-                        <span className="text-sm text-white font-medium">{threat.tipo || 'Desconhecido'}</span>
+                        <span className="text-sm text-white font-medium">{threat.threat_type || 'Desconhecido'}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityColor(threat.severidade)}`}>
-                        {threat.severidade ? threat.severidade.charAt(0).toUpperCase() + threat.severidade.slice(1) : 'N/A'}
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityColor(threat.severity)}`}>
+                        {threat.severity ? threat.severity.charAt(0).toUpperCase() + threat.severity.slice(1) : 'N/A'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -583,17 +583,17 @@ const AmeacasDetectadas: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-300">
-                      {formatSafeDate(threat.data_detectada, 'dd/MM/yyyy')}
+                      {formatSafeDate(threat.created_at, 'dd/MM/yyyy')}
                       <br />
                       <span className="text-xs text-zinc-500">
-                        {formatSafeDate(threat.data_detectada, 'HH:mm:ss')}
+                        {formatSafeDate(threat.created_at, 'HH:mm:ss')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <span className="text-zinc-300 font-mono">{threat.ip_origem || 'N/A'}</span>
+                      <span className="text-zinc-300 font-mono">{threat.source_ip || 'N/A'}</span>
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-300 max-w-xs truncate">
-                      {threat.descricao || 'Sem descrição'}
+                      {threat.description || 'Sem descrição'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -622,7 +622,7 @@ const AmeacasDetectadas: React.FC = () => {
                           </button>
                         )}
                         
-                        {threat.status === 'ativo' && (
+                        {threat.status === 'detectado' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -678,9 +678,9 @@ const AmeacasDetectadas: React.FC = () => {
                     </label>
                     <div className="flex items-center gap-2 text-white">
                       <div className="text-green-400">
-                        {getThreatIcon(selectedThreat.tipo)}
+                        {getThreatIcon(selectedThreat.threat_type)}
                       </div>
-                      {selectedThreat.tipo || 'Desconhecido'}
+                      {selectedThreat.threat_type || 'Desconhecido'}
                     </div>
                   </div>
 
@@ -688,8 +688,8 @@ const AmeacasDetectadas: React.FC = () => {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">
                       Severidade
                     </label>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityColor(selectedThreat.severidade)}`}>
-                      {selectedThreat.severidade ? selectedThreat.severidade.charAt(0).toUpperCase() + selectedThreat.severidade.slice(1) : 'N/A'}
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityColor(selectedThreat.severity)}`}>
+                      {selectedThreat.severity ? selectedThreat.severity.charAt(0).toUpperCase() + selectedThreat.severity.slice(1) : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -708,8 +708,8 @@ const AmeacasDetectadas: React.FC = () => {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">
                       Resolvido
                     </label>
-                    <span className={selectedThreat.resolvido ? 'text-green-400' : 'text-red-400'}>
-                      {selectedThreat.resolvido ? 'Sim' : 'Não'}
+                    <span className={selectedThreat.status === 'resolvido' ? 'text-green-400' : 'text-red-400'}>
+                      {selectedThreat.status === 'resolvido' ? 'Sim' : 'Não'}
                     </span>
                   </div>
                 </div>
@@ -719,7 +719,7 @@ const AmeacasDetectadas: React.FC = () => {
                     Data de Detecção
                   </label>
                   <p className="text-white">
-                    {formatSafeDate(selectedThreat.data_detectada, 'dd/MM/yyyy \'às\' HH:mm:ss')}
+                    {formatSafeDate(selectedThreat.created_at, 'dd/MM/yyyy \'às\' HH:mm:ss')}
                   </p>
                 </div>
 
@@ -727,14 +727,14 @@ const AmeacasDetectadas: React.FC = () => {
                   <label className="block text-sm font-medium text-zinc-400 mb-1">
                     IP de Origem
                   </label>
-                  <p className="text-white font-mono">{selectedThreat.ip_origem || 'N/A'}</p>
+                  <p className="text-white font-mono">{selectedThreat.source_ip || 'N/A'}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">
                     Descrição
                   </label>
-                  <p className="text-white">{selectedThreat.descricao || 'Sem descrição'}</p>
+                  <p className="text-white">{selectedThreat.description || 'Sem descrição'}</p>
                 </div>
 
                 {selectedThreat.user_agent && (
@@ -761,7 +761,7 @@ const AmeacasDetectadas: React.FC = () => {
                     </button>
                   )}
                   
-                  {selectedThreat.status === 'ativo' && (
+                  {selectedThreat.status === 'detectado' && (
                     <button
                       onClick={() => handleThreatAction(selectedThreat.id, 'investigate')}
                       disabled={actionLoading === selectedThreat.id}
