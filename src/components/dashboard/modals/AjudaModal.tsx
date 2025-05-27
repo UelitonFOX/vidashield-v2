@@ -1,4 +1,4 @@
-import { HelpCircle as Help, Zap, LineChart, Shield, AlertTriangle, Download, RefreshCw, Users2 } from "lucide-react";
+import { Zap, LineChart, Shield, AlertTriangle, Download, RefreshCw, Users2 } from "lucide-react";
 
 // Componente para conteúdo da ajuda em modal
 const AjudaModalContent = () => {

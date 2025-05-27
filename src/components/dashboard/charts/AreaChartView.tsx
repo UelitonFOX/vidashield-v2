@@ -1,3 +1,4 @@
+import * as React from 'react'
 import {
   ResponsiveContainer,
   AreaChart,
@@ -7,14 +8,24 @@ import {
   CartesianGrid,
   Tooltip,
   Legend
-} from "recharts";
-import ChartTooltip from "./ChartTooltip";
-import { ChartData, ChartVisibleSeries } from "../types";
+} from "recharts"
+
+// Tipos locais para o componente
+interface ChartData {
+  name: string
+  acessos: number
+  tentativas: number
+}
+
+interface ChartVisibleSeries {
+  acessos: boolean
+  tentativas: boolean
+}
 
 interface AreaChartViewProps {
-  data: ChartData[];
-  visibleSeries: ChartVisibleSeries;
-  toggleSeries: (dataKey: string) => void;
+  data: ChartData[]
+  visibleSeries: ChartVisibleSeries
+  toggleSeries: (dataKey: string) => void
 }
 
 /**
@@ -60,7 +71,15 @@ const AreaChartView = ({ data, visibleSeries, toggleSeries }: AreaChartViewProps
           allowDecimals={false}
           tickCount={5}
         />
-        <Tooltip content={<ChartTooltip />} wrapperStyle={{ outline: 'none' }} />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: '#1f2937', 
+            border: '1px solid #374151',
+            borderRadius: '8px',
+            color: '#fff'
+          }}
+          wrapperStyle={{ outline: 'none' }} 
+        />
         <Legend 
           wrapperStyle={{ 
             paddingTop: 15, 
@@ -69,8 +88,8 @@ const AreaChartView = ({ data, visibleSeries, toggleSeries }: AreaChartViewProps
           }}
           onClick={(data) => toggleSeries(data.dataKey as string)}
           formatter={(value, entry, index) => {
-            const isVisible = visibleSeries[entry.dataKey as keyof typeof visibleSeries];
-            return <span style={{ color: isVisible ? undefined : '#666', opacity: isVisible ? 1 : 0.5 }}>{value}</span>;
+            const isVisible = visibleSeries[entry.dataKey as keyof typeof visibleSeries]
+            return <span style={{ color: isVisible ? undefined : '#666', opacity: isVisible ? 1 : 0.5 }}>{value}</span>
           }}
         />
         <Area 
@@ -99,7 +118,7 @@ const AreaChartView = ({ data, visibleSeries, toggleSeries }: AreaChartViewProps
         />
       </AreaChart>
     </ResponsiveContainer>
-  );
-};
+  )
+}
 
-export default AreaChartView; 
+export default AreaChartView 

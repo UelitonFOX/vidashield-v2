@@ -107,7 +107,7 @@ export function StatisticsWidget({ statistics, title = "Estatísticas de Seguran
       <h3 className="text-lg font-semibold text-white mb-6">{title}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {statsToShow.map((stat, index) => (
-          <div key={index} className="p-4 bg-zinc-700/30 rounded-lg border border-zinc-700 hover:border-zinc-600 transition-colors">
+          <div key={index} className="p-4 bg-zinc-700/30 rounded-lg hover:bg-zinc-700/40 transition-colors">
             <div className="flex items-center justify-between mb-3">
               <div className={`p-2 rounded-lg ${getIconBgColor(stat.iconType)}`}>
                 <div className={getIconColor(stat.iconType)}>

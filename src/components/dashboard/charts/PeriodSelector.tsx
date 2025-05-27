@@ -1,4 +1,5 @@
-import { ChartPeriodType } from "../types";
+import React from 'react';
+import { ChartPeriodType } from '../../../types/dashboard';
 
 interface PeriodSelectorProps {
   chartPeriod: ChartPeriodType;
@@ -6,32 +7,30 @@ interface PeriodSelectorProps {
 }
 
 /**
- * Componente para seleção de período nos gráficos
+ * Componente seletor de período para os gráficos
  */
-const PeriodSelector = ({ chartPeriod, onPeriodChange }: PeriodSelectorProps) => {
+const PeriodSelector: React.FC<PeriodSelectorProps> = ({ chartPeriod, onPeriodChange }) => {
+  const periods: { value: ChartPeriodType; label: string }[] = [
+    { value: '7d', label: '7D' },
+    { value: '15d', label: '15D' },
+    { value: '30d', label: '30D' }
+  ];
+
   return (
-    <div className="flex items-center space-x-1 border border-zinc-700 rounded-md p-0.5 bg-zinc-900/60">
-      <button
-        className={`px-2 py-1 text-[10px] xs:text-xs transition-all rounded ${chartPeriod === '7d' ? 'bg-zinc-800 text-green-400 shadow-[0_0_8px_rgba(0,255,153,0.15)]' : 'text-zinc-400 hover:text-zinc-300'}`}
-        onClick={() => onPeriodChange('7d')}
-        title="Últimos 7 dias"
-      >
-        7D
-      </button>
-      <button
-        className={`px-2 py-1 text-[10px] xs:text-xs transition-all rounded ${chartPeriod === '15d' ? 'bg-zinc-800 text-green-400 shadow-[0_0_8px_rgba(0,255,153,0.15)]' : 'text-zinc-400 hover:text-zinc-300'}`}
-        onClick={() => onPeriodChange('15d')}
-        title="Últimos 15 dias"
-      >
-        15D
-      </button>
-      <button
-        className={`px-2 py-1 text-[10px] xs:text-xs transition-all rounded ${chartPeriod === '30d' ? 'bg-zinc-800 text-green-400 shadow-[0_0_8px_rgba(0,255,153,0.15)]' : 'text-zinc-400 hover:text-zinc-300'}`}
-        onClick={() => onPeriodChange('30d')}
-        title="Últimos 30 dias"
-      >
-        30D
-      </button>
+    <div className="flex items-center space-x-1">
+      {periods.map(period => (
+        <button
+          key={period.value}
+          onClick={() => onPeriodChange(period.value)}
+          className={`px-3 py-1 text-xs rounded-lg border transition-all duration-200 ${
+            chartPeriod === period.value
+              ? 'bg-green-500/20 text-green-400 border-green-500/30 shadow-[0_0_10px_rgba(0,255,153,0.3)]'
+              : 'bg-zinc-700 text-zinc-400 border-zinc-600 hover:bg-zinc-600 hover:text-zinc-300'
+          }`}
+        >
+          {period.label}
+        </button>
+      ))}
     </div>
   );
 };

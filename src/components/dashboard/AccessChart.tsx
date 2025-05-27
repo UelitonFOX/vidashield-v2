@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChartPeriodType, ChartViewType, ChartVisibleSeries, StatsData } from "./types";
+import { ChartPeriodType, ChartViewType, ChartVisibleSeries, StatsData } from "../../types/dashboard";
 
 // Componentes modularizados
 import PeriodSelector from "./charts/PeriodSelector";

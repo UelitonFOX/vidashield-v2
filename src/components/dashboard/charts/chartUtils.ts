@@ -1,4 +1,4 @@
-import { ChartData, ChartPeriodType, ChartVisibleSeries, StatsData } from "../types";
+import { ChartData, ChartPeriodType, ChartVisibleSeries, StatsData } from "../../../types/dashboard";
 
 /**
  * Gera rótulos para o gráfico de acessos baseado no período selecionado

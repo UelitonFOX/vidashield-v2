@@ -1,10 +1,25 @@
 import React from 'react'
-import { Shield, Users, AlertTriangle, Activity, TrendingUp, TrendingDown, BarChart3, Calendar } from 'lucide-react'
-import StatisticsWidget from '../components/StatisticsWidget'
-import SystemStatusCards from '../components/SystemStatusCards'
+import { Shield, Loader2, Target } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+
+import UserProfileCard from '../components/UserProfileCard'
 import StatsCards from '../components/StatsCards'
+import AccessChart from '../components/dashboard/AccessChart'
+import AlertsWidget from '../components/AlertsWidget'
+import AdvancedInsightsWidget from '../components/AdvancedInsightsWidget'
+import SystemStatusCards from '../components/SystemStatusCards'
+import NetworkMonitorWidget from '../components/NetworkMonitorWidget'
+import ServerPerformance from '../components/ServerPerformance'
+import SystemLogs from '../components/SystemLogs'
+import { VidaWidget, VidaInnerCard, VidaScrollContainer, VidaEmptyState, VidaStatus } from '../components/ui/VidaShieldComponents'
+import { useBlockedUsers } from '../hooks/useBlockedUsers'
+import { useChartData } from '../hooks/useChartData'
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
+  const { blockedIPs, totalBlocked, loading: loadingBlocked, error: errorBlocked } = useBlockedUsers()
+  const { statsData, chartPeriod, onPeriodChange, loading: loadingChart } = useChartData()
+
   return (
     <div className="space-y-6">
       {/* Título da página */}
@@ -13,99 +28,134 @@ const Dashboard: React.FC = () => {
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
       </div>
 
-      {/* Status do Sistema */}
-      <div>
-        <h2 className="text-lg font-semibold text-green-300 mb-4">Status do Sistema</h2>
-        <SystemStatusCards />
+      {/* Seção Principal - Informações do Usuário */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Perfil do Usuário */}
+        <UserProfileCard />
+        
+        {/* Cards de Estatísticas Principais - 2 colunas */}
+        <div className="lg:col-span-2">
+          <StatsCards />
+        </div>
       </div>
 
-      {/* Cards de Estatísticas */}
-      <div>
-        <StatsCards />
-      </div>
-
-      {/* Grid inferior com gráficos e widgets */}
+      {/* Grid principal - Alertas e Atividade */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico de Acessos */}
-        <div className="lg:col-span-2 bg-zinc-800/50 rounded-lg border border-zinc-700 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-green-300 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Acessos - Últimos 7 dias
-            </h3>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-lg border border-green-500/30">
-                7D
-              </button>
-              <button className="px-3 py-1 bg-zinc-700 text-zinc-400 text-xs rounded-lg border border-zinc-600 hover:bg-zinc-600">
-                15D
-              </button>
-              <button className="px-3 py-1 bg-zinc-700 text-zinc-400 text-xs rounded-lg border border-zinc-600 hover:bg-zinc-600">
-                30D
-              </button>
-              <div className="flex items-center gap-1 ml-4">
-                <BarChart3 className="w-4 h-4 text-zinc-400" />
-                <TrendingUp className="w-4 h-4 text-zinc-400" />
-                <Calendar className="w-4 h-4 text-zinc-400" />
+        <div className="lg:col-span-2 h-80">
+          {loadingChart ? (
+            <div className="bg-zinc-800/50 rounded-lg border border-zinc-700 p-6 h-full flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-green-400 mx-auto mb-2" />
+                <p className="text-zinc-400 text-sm">Carregando atividade...</p>
               </div>
             </div>
-          </div>
-          
-          {/* Placeholder para gráfico */}
-          <div className="h-64 flex items-center justify-center bg-zinc-900/50 rounded-lg border border-zinc-700">
-            <div className="text-center">
-              <BarChart3 className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
-              <p className="text-zinc-400 text-sm">Sem dados registrados neste período</p>
-            </div>
-          </div>
+          ) : (
+            <AccessChart 
+              statsData={statsData}
+              chartPeriod={chartPeriod}
+              onPeriodChange={onPeriodChange}
+            />
+          )}
         </div>
 
-        {/* Usuários Bloqueados */}
-        <div className="bg-zinc-800/50 rounded-lg border border-zinc-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-green-300 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Usuários Bloqueados
-            </h3>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-              <span className="text-red-400 text-sm font-medium">0</span>
+        {/* Alertas Recentes */}
+        <AlertsWidget limit={5} />
+      </div>
+
+      {/* Segurança - IPs Bloqueados */}
+      <VidaWidget
+        title="Segurança - IPs Bloqueados"
+        loading={loadingBlocked}
+        error={errorBlocked ? 'Erro ao carregar dados de segurança' : null}
+        actions={
+          <VidaStatus 
+            status={totalBlocked > 0 ? 'warning' : 'online'}
+            text={`${totalBlocked} ${totalBlocked === 1 ? 'IP' : 'IPs'}`}
+          />
+        }
+      >
+        {totalBlocked === 0 ? (
+          <VidaEmptyState
+            icon={<Shield />}
+            title="Sistema Protegido"
+            description="Nenhuma ameaça detectada. Seu sistema está seguro."
+          />
+        ) : (
+          <VidaScrollContainer maxHeight="max-h-64">
+            {blockedIPs.map((blocked) => (
+              <VidaInnerCard key={blocked.id}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-mono text-zinc-200">{blocked.ip_address}</span>
+                  <span className={`text-xs ${blocked.expires_at ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {blocked.expires_at ? 'Bloqueio Temporário' : 'Bloqueio Permanente'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 truncate">{blocked.reason}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-zinc-500">
+                    Bloqueado em: {new Date(blocked.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                  <span className="text-xs text-zinc-500">
+                    {blocked.attempts} tentativas
+                  </span>
+                </div>
+              </VidaInnerCard>
+            ))}
+          </VidaScrollContainer>
+        )}
+      </VidaWidget>
+
+      {/* Insights Avançados */}
+      <AdvancedInsightsWidget />
+
+      {/* Card de Acesso Rápido - Segurança Avançada */}
+      <div 
+        onClick={() => navigate('/security')}
+        className="p-6 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-green-400/10"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-green-500/20 rounded-lg">
+              <Target className="w-8 h-8 text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-green-300 mb-1">Segurança Avançada</h3>
+              <p className="text-zinc-400 text-sm">
+                Acesse logs de autenticação, detecção de ameaças e firewall dinâmico
+              </p>
             </div>
           </div>
-          
-          <div className="text-center py-16">
-            <p className="text-zinc-400 text-sm">Nenhum usuário bloqueado</p>
+          <div className="text-green-400 opacity-60">
+            <Target className="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      {/* Insights de Segurança */}
-      <div className="bg-zinc-800/50 rounded-lg border border-zinc-700 p-6">
-        <h3 className="text-lg font-semibold text-green-300 mb-4">Insights de Segurança</h3>
+      {/* Seção Técnica - Informações do Sistema */}
+      <div className="pt-6 border-t border-zinc-600/50">
+        <h3 className="text-sm font-medium text-zinc-500 mb-4 flex items-center gap-2">
+          <div className="w-2 h-2 bg-zinc-500 rounded-full"></div>
+          Informações Técnicas do Sistema
+        </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 bg-zinc-900/50 rounded-lg border border-zinc-700">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <span className="text-sm font-medium text-zinc-200">Sistema Seguro</span>
-            </div>
-            <p className="text-xs text-zinc-400">Nenhuma ameaça detectada nas últimas 24h</p>
+        <div className="space-y-4">
+          {/* Status dos Serviços */}
+          <div>
+            <h4 className="text-xs font-medium text-zinc-600 mb-3">Status dos Serviços</h4>
+            <SystemStatusCards />
           </div>
-
-          <div className="p-4 bg-zinc-900/50 rounded-lg border border-zinc-700">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <span className="text-sm font-medium text-zinc-200">Backup Atualizado</span>
-            </div>
-            <p className="text-xs text-zinc-400">Último backup realizado hoje às 06:00</p>
+          
+          {/* Monitoramento de Rede */}
+          <div>
+            <h4 className="text-xs font-medium text-zinc-600 mb-3">Rede</h4>
+            <NetworkMonitorWidget />
           </div>
-
-          <div className="p-4 bg-zinc-900/50 rounded-lg border border-zinc-700">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-              <span className="text-sm font-medium text-zinc-200">Monitoramento Ativo</span>
-            </div>
-            <p className="text-xs text-zinc-400">Todos os endpoints estão sendo monitorados</p>
+          
+          {/* Métricas Técnicas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <ServerPerformance />
+            <SystemLogs />
           </div>
         </div>
       </div>

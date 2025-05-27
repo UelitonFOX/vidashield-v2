@@ -9,7 +9,7 @@ import {
   Legend
 } from "recharts";
 import ChartTooltip from "./ChartTooltip";
-import { ChartData, ChartVisibleSeries } from "../types";
+import { ChartData, ChartVisibleSeries } from "../../../types/dashboard";
 
 interface LineChartViewProps {
   data: ChartData[];
@@ -18,9 +18,14 @@ interface LineChartViewProps {
 }
 
 /**
- * Componente de gráfico de linhas com brilho neon
+ * Componente de gráfico de linhas com efeito neon
  */
 const LineChartView = ({ data, visibleSeries, toggleSeries }: LineChartViewProps) => {
+  // Encontrar o valor máximo para definir o domínio do eixo Y
+  const maxValue = Math.max(
+    ...data.map(item => Math.max(item.acessos || 0, item.tentativas || 0))
+  );
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart
@@ -28,15 +33,7 @@ const LineChartView = ({ data, visibleSeries, toggleSeries }: LineChartViewProps
         margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
       >
         <defs>
-          <linearGradient id="lineGradientAccess" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#00FFAA" stopOpacity={1} />
-            <stop offset="100%" stopColor="#00FF99" stopOpacity={0.3} />
-          </linearGradient>
-          <linearGradient id="lineGradientAttempts" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FF6666" stopOpacity={1} />
-            <stop offset="100%" stopColor="#FF4444" stopOpacity={0.3} />
-          </linearGradient>
-          <filter id="glowLine" height="300%" width="300%" x="-75%" y="-75%">
+          <filter id="lineGlow" height="300%" width="300%" x="-75%" y="-75%">
             <feGaussianBlur stdDeviation="3" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />
@@ -57,6 +54,7 @@ const LineChartView = ({ data, visibleSeries, toggleSeries }: LineChartViewProps
           tick={{ fill: '#DDD' }}
           allowDecimals={false}
           tickCount={5}
+          domain={[0, maxValue * 1.2]}
         />
         <Tooltip content={<ChartTooltip />} wrapperStyle={{ outline: 'none' }} />
         <Legend 
@@ -66,7 +64,7 @@ const LineChartView = ({ data, visibleSeries, toggleSeries }: LineChartViewProps
             color: '#888'
           }}
           onClick={(data) => toggleSeries(data.dataKey as string)}
-          formatter={(value, entry, index) => {
+          formatter={(value, entry) => {
             const isVisible = visibleSeries[entry.dataKey as keyof typeof visibleSeries];
             return <span style={{ color: isVisible ? undefined : '#666', opacity: isVisible ? 1 : 0.5 }}>{value}</span>;
           }}
@@ -75,12 +73,13 @@ const LineChartView = ({ data, visibleSeries, toggleSeries }: LineChartViewProps
           type="monotone" 
           dataKey="acessos" 
           name="Acessos Validados" 
-          stroke="#00FF99" 
+          stroke="#00FFAA" 
           strokeWidth={3}
-          filter="url(#glowLine)"
-          dot={{ r: 5, fill: "#00FF99", strokeWidth: 0 }}
-          activeDot={{ r: 7, strokeWidth: 2, stroke: "#00FFAA" }}
-          animationDuration={1000}
+          dot={{ r: 6, fill: "#00FFAA", stroke: "#00FF99", strokeWidth: 2 }}
+          activeDot={{ r: 8, strokeWidth: 2, stroke: "#00FF99", fill: "#00FFAA" }}
+          filter="url(#lineGlow)"
+          animationDuration={1200}
+          animationBegin={100}
         />
         <Line 
           type="monotone" 
@@ -88,15 +87,11 @@ const LineChartView = ({ data, visibleSeries, toggleSeries }: LineChartViewProps
           name="Tentativas Bloqueadas" 
           stroke="#FF4444" 
           strokeWidth={3}
-          filter="url(#glowLine)"
-          dot={{ 
-            r: 6, 
-            fill: "#FF4444",
-            strokeWidth: 2,
-            stroke: "#FF2222"
-          }}
+          dot={{ r: 6, fill: "#FF4444", stroke: "#FF0000", strokeWidth: 2 }}
           activeDot={{ r: 8, strokeWidth: 2, stroke: "#FF0000", fill: "#FF6666" }}
+          filter="url(#lineGlow)"
           animationDuration={1200}
+          animationBegin={200}
         />
       </LineChart>
     </ResponsiveContainer>

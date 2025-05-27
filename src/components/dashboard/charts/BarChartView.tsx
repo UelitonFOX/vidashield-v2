@@ -10,7 +10,7 @@ import {
   Legend
 } from "recharts";
 import ChartTooltip from "./ChartTooltip";
-import { ChartData, ChartVisibleSeries } from "../types";
+import { ChartData, ChartVisibleSeries } from "../../../types/dashboard";
 
 interface BarChartViewProps {
   data: ChartData[];
@@ -67,7 +67,7 @@ const BarChartView = ({ data, visibleSeries, toggleSeries }: BarChartViewProps) 
             color: '#888'
           }}
           onClick={(data) => toggleSeries(data.dataKey as string)}
-          formatter={(value, entry, index) => {
+          formatter={(value, entry) => {
             // Aplicar estilo de opacidade reduzida à legenda se a série estiver oculta
             const isVisible = visibleSeries[entry.dataKey as keyof typeof visibleSeries];
             return <span style={{ color: isVisible ? undefined : '#666', opacity: isVisible ? 1 : 0.5 }}>{value}</span>;

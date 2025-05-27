@@ -11,7 +11,7 @@ interface PopoverProps {
 }
 
 /**
- * Componente Popover para exibir conteúdo flutuante
+ * Componente Popover para exibir conteúdo flutuante com posicionamento inteligente
  */
 const Popover: React.FC<PopoverProps> = ({
   children,
@@ -24,62 +24,27 @@ const Popover: React.FC<PopoverProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  // Posiciona o popover baseado na posição do trigger
-  const calculatePosition = () => {
-    if (!triggerRef.current || !contentRef.current) return {};
-    
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const contentRect = contentRef.current.getBoundingClientRect();
-    
-    // Espaço entre o trigger e o popover
-    const gap = 8;
-    
-    let top = 0;
-    let left = 0;
-    
-    switch (position) {
-      case 'top':
-        top = -contentRect.height - gap;
-        left = (triggerRect.width - contentRect.width) / 2;
-        break;
-      case 'bottom':
-        top = triggerRect.height + gap;
-        left = (triggerRect.width - contentRect.width) / 2;
-        break;
-      case 'left':
-        top = (triggerRect.height - contentRect.height) / 2;
-        left = -contentRect.width - gap;
-        break;
-      case 'right':
-        top = (triggerRect.height - contentRect.height) / 2;
-        left = triggerRect.width + gap;
-        break;
-    }
-    
-    return { top, left };
-  };
   
   // Fecha o popover ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         isOpen &&
-        contentRef.current &&
         triggerRef.current &&
-        !contentRef.current.contains(event.target as Node) &&
         !triggerRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        // Verifica se não clicou no popover
+        const popoverElement = document.querySelector('[data-popover-content]');
+        if (!popoverElement || !popoverElement.contains(event.target as Node)) {
+          setIsOpen(false);
+        }
       }
     };
     
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
   }, [isOpen]);
   
   // Lida com o clique no trigger
@@ -102,7 +67,23 @@ const Popover: React.FC<PopoverProps> = ({
     }
   };
   
-  const pos = calculatePosition();
+  // Calcula as classes do conteúdo baseado na posição
+  const getContentClasses = () => {
+    const baseClasses = 'absolute z-50';
+    
+    switch (position) {
+      case 'top':
+        return `${baseClasses} bottom-full mb-2 left-1/2 transform -translate-x-1/2`;
+      case 'bottom':
+        return `${baseClasses} top-full mt-2 right-0 ${contentClassName}`;
+      case 'left':
+        return `${baseClasses} right-full mr-2 top-1/2 transform -translate-y-1/2`;
+      case 'right':
+        return `${baseClasses} left-full ml-2 top-1/2 transform -translate-y-1/2`;
+      default:
+        return `${baseClasses} top-full mt-2 right-0 ${contentClassName}`;
+    }
+  };
   
   return (
     <div 
@@ -116,18 +97,12 @@ const Popover: React.FC<PopoverProps> = ({
       
       {isOpen && (
         <div 
-          ref={contentRef}
-          className={`absolute z-50 ${contentClassName}`}
-          style={{
-            top: pos.top,
-            left: pos.left,
-            width: width,
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}
+          data-popover-content
+          className={getContentClasses()}
+          style={{ width: width, maxWidth: 'calc(100vw - 16px)' }}
         >
-          <div className="bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="max-h-[80vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
               {content}
             </div>
           </div>
