@@ -41,7 +41,7 @@ createApp({
                     initials: 'UF',
                     photo: 'images/ueliton.jpg',
                     contacts: {
-                        linkedin: 'https://www.linkedin.com/in/uelitonfox/',
+                        linkedin: 'https://www.linkedin.com/in/ueliton-fermino/',
                         github: 'https://github.com/UelitonFOX',
                         instagram: 'https://www.instagram.com/ueliton_fox/',
                         whatsapp: 'https://wa.me/5543998209462'
