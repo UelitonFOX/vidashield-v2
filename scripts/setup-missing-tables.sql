@@ -203,7 +203,70 @@ CREATE POLICY "Admins can manage security config" ON security_config
     )
   );
 
--- 9. ÍNDICES PARA PERFORMANCE
+-- 9. TABELA DE IPS BLOQUEADOS (COMPATIBILIDADE)
+CREATE TABLE IF NOT EXISTS blocked_ips (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ip INET NOT NULL,
+  ip_address TEXT NOT NULL,
+  motivo TEXT NOT NULL,
+  pais TEXT,
+  cidade TEXT,
+  tentativas_bloqueadas INTEGER DEFAULT 0,
+  ultima_tentativa TIMESTAMP WITH TIME ZONE,
+  data_bloqueio TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  ativo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS para blocked_ips (apenas admins)
+ALTER TABLE blocked_ips ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admins can manage blocked ips" ON blocked_ips;
+CREATE POLICY "Admins can manage blocked ips" ON blocked_ips
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles 
+      WHERE user_profiles.id = auth.uid() 
+      AND user_profiles.role IN ('admin', 'moderator')
+    )
+  );
+
+-- Criar tabela ip_blocks moderna (padrão principal)
+CREATE TABLE IF NOT EXISTS ip_blocks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ip_address INET NOT NULL,
+  reason TEXT NOT NULL,
+  severity TEXT DEFAULT 'media' CHECK (severity IN ('baixa', 'media', 'alta', 'critica')),
+  block_type TEXT DEFAULT 'automatico' CHECK (block_type IN ('automatico', 'manual')),
+  ativo BOOLEAN DEFAULT TRUE,
+  attempts INTEGER DEFAULT 1,
+  country TEXT,
+  city TEXT,
+  organization TEXT,
+  blocked_by UUID REFERENCES auth.users(id),
+  expires_at TIMESTAMP WITH TIME ZONE,
+  last_attempt_at TIMESTAMP WITH TIME ZONE,
+  unblocked_at TIMESTAMP WITH TIME ZONE,
+  unblocked_by UUID REFERENCES auth.users(id),
+  unblock_reason TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS para ip_blocks (apenas admins)
+ALTER TABLE ip_blocks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admins can manage ip blocks" ON ip_blocks;
+CREATE POLICY "Admins can manage ip blocks" ON ip_blocks
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles 
+      WHERE user_profiles.id = auth.uid() 
+      AND user_profiles.role IN ('admin', 'moderator')
+    )
+  );
+
+-- 10. ÍNDICES PARA PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user_id ON user_activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_activity_logs_created_at ON user_activity_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
@@ -214,6 +277,11 @@ CREATE INDEX IF NOT EXISTS idx_threat_detection_status ON threat_detection(statu
 CREATE INDEX IF NOT EXISTS idx_threat_detection_severity ON threat_detection(severity_level DESC);
 CREATE INDEX IF NOT EXISTS idx_dynamic_firewall_ip ON dynamic_firewall(ip_address);
 CREATE INDEX IF NOT EXISTS idx_dynamic_firewall_active ON dynamic_firewall(is_active);
+CREATE INDEX IF NOT EXISTS idx_blocked_ips_ip ON blocked_ips(ip_address);
+CREATE INDEX IF NOT EXISTS idx_blocked_ips_active ON blocked_ips(ativo);
+CREATE INDEX IF NOT EXISTS idx_ip_blocks_ip ON ip_blocks(ip_address);
+CREATE INDEX IF NOT EXISTS idx_ip_blocks_active ON ip_blocks(ativo);
+CREATE INDEX IF NOT EXISTS idx_ip_blocks_created ON ip_blocks(created_at DESC);
 
 -- 10. CONFIGURAÇÕES PADRÃO DE SEGURANÇA
 INSERT INTO security_config (config_key, config_value, description, category) VALUES

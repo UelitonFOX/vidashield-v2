@@ -242,43 +242,98 @@ src/
 
 ## 🎬 Demonstração
 
+### 🎨 **Identidade Visual**
+
+<div align="center">
+
+#### **🛡️ Logo Principal - VidaShield**
+<img src="./public/assets/logos/logo-vidashield.png" alt="VidaShield Logo" width="300">
+
+#### **🎓 Programa Acadêmico**
+<img src="./public/assets/logos/talento-tech.png" alt="Talento Tech Paraná" width="250">
+
+#### **🤝 Apoiadores do Programa**
+<img src="./public/assets/logos/apoiadores.png" alt="Apoiadores" width="400">
+
+</div>
+
+---
+
+### 📱 **Interface do Sistema**
+
+#### **🔐 Tela de Login**
+<div align="center">
+<img src="./public/screenshots/login-screen.png" alt="Tela de Login VidaShield" width="800">
+
+*Tela de login com autenticação Google OAuth, hCaptcha e design responsivo*
+</div>
+
+#### **📈 Dashboard Principal**
+<div align="center">
+<img src="./public/screenshots/dashboard-main.png" alt="Dashboard Principal" width="800">
+
+*Dashboard com métricas em tempo real, gráficos interativos e indicadores de segurança*
+</div>
+
+#### **🎨 Principais Elementos Visuais**
+
+| **Componente** | **Localização** | **Funcionalidade** | **Tecnologia** |
+|----------------|-------------------|--------------------|-----------------|
+| **🛡️ Logo VidaShield** | Header/Login | Identidade da marca | SVG/PNG otimizado |
+| **🔐 Formulário de Login** | `/login` | Autenticação segura | React Hook Form + Zod |
+| **🔴 Botão Google OAuth** | `/login` | Login social | Supabase Auth |
+| **🤖 hCaptcha** | `/login` | Proteção anti-bot | hCaptcha Integration |
+| **📈 Gráficos Interativos** | `/dashboard` | Métricas em tempo real | Recharts |
+| **🚨 Alertas de Segurança** | Dashboard | Notificações | Custom Components |
+| **📊 Widgets KPI** | Dashboard | Estatísticas principais | TailwindCSS |
+
+#### **🌈 Paleta de Cores**
+
+```css
+/* Cores Principais */
+:root {
+  --primary: #00d4aa;      /* Verde VidaShield */
+  --secondary: #1e293b;    /* Cinza escuro */
+  --accent: #3b82f6;       /* Azul destaque */
+  --success: #22c55e;      /* Verde sucesso */
+  --warning: #f59e0b;      /* Laranja alerta */
+  --danger: #ef4444;       /* Vermelho perigo */
+  --background: #f8fafc;   /* Fundo claro */
+  --surface: #ffffff;      /* Superfícies */
+}
+```
+
+#### **📡 Responsividade**
+
+| **Dispositivo** | **Breakpoint** | **Layout** | **Funcionalidades** |
+|-----------------|----------------|------------|---------------------|
+| **📱 Mobile** | < 768px | Stack vertical | Menu colapsável, toques |
+| **📺 Tablet** | 768px - 1024px | Grid adaptativo | Gestos, orientação |
+| **💻 Desktop** | > 1024px | Layout completo | Hover, shortcuts |
+| **🖥️ Large Screen** | > 1440px | Máximo aproveitamento | Multi-widgets |
+
 ### 🌐 **Demo Local**
-🔗 **Execute localmente:** `npm run dev` → `http://localhost:3001`
+🔗 **Execute localmente:** `npm run dev` → `http://localhost:3004`
 
-### 📱 **Interface Atual**
+### 🌍 **Demo Online**
 
-> 🚧 **Em Desenvolvimento**: Screenshots serão adicionadas após finalização da interface
+| **Ambiente** | **URL** | **Status** | **Observações** |
+|--------------|---------|------------|-----------------|
+| **Apresentação** | [vidashield-v2.vercel.app/apresentacao](https://uelitonfox.github.io/vidashield-v2/apresentacao/) | ✅ **Ativo** | GitHub Pages |
+| **Sistema Completo** | Em desenvolvimento | 🚧 **Em breve** | Requer deploy Vercel |
+| **Documentação** | [GitHub Repository](https://github.com/UelitonFOX/vidashield-v2) | ✅ **Ativo** | Código-fonte completo |
 
 ### 🎯 **Status Atual de Desenvolvimento**
 
 - ✅ **Dashboard Base**: Interface principal implementada
 - ✅ **Autenticação**: Sistema de login/registro funcional
 - ✅ **Database**: Supabase configurado com tabelas completas
+- ✅ **Sistema de Segurança**: Implementação completa com 7 tabelas
 - ✅ **Banco LGPD**: Estruturas de compliance implementadas
 - ✅ **Deploy pronto**: Build otimizado para produção
 - ✅ **Material de apresentação**: Pitch e slides preparados
-- 🎥 **Vídeo pitch**: Em produção para atividade final
-- 📋 **Próximas Etapas**: Entrega final do Talento Tech Paraná
-
----
-
-## 🎤 Material de Apresentação
-
-### 📹 **Vídeo Pitch - Atividade Final**
-Como parte da **atividade final** do Talento Tech Paraná, desenvolvemos um vídeo pitch de **5 minutos** apresentando o VidaShield v2.0:
-
-**📋 Estrutura do vídeo:**
-- **Equipe**: Ueliton, Beatriz e Camili
-- **Duração**: Até 5 minutos
-- **Plataforma**: YouTube (não listado)
-- **Conteúdo**: Problema, solução, demonstração e próximos passos
-
-**📁 Arquivos de apoio:**
-- [`INSTRUCOES_VIDEO_PITCH.md`](./INSTRUCOES_VIDEO_PITCH.md) - Roteiro detalhado para gravação
-- [`PITCH_APRESENTACAO.md`](./PITCH_APRESENTACAO.md) - Scripts e divisão de falas
-- [`SLIDES_SUGERIDOS.md`](./SLIDES_SUGERIDOS.md) - Estrutura visual da apresentação
-
-**🎯 Objetivo:** Comunicar de forma clara e objetiva a proposta, problema abordado, solução desenvolvida e diferenciais do projeto para a banca avaliadora.
+- ✅ **Documentação**: README completo e profissional
+- 🎉 **Status**: **Projeto Finalizado** - Talento Tech Paraná 2024
 
 ---
 
@@ -437,25 +492,259 @@ npm run lint
 
 ---
 
-## 🔒 Segurança
+## 🛡️ Segurança
 
-### 🛡️ **Medidas Implementadas**
+### **🗄️ Estrutura Completa do Banco de Dados**
 
-- [x] **Autenticação JWT** com refresh tokens
-- [x] **2FA** com Google Authenticator
-- [x] **Rate Limiting** para APIs
-- [x] **SQL Injection** prevenção via RLS
-- [x] **XSS Protection** sanitização de inputs
-- [x] **CSRF Protection** tokens em requisições
-- [x] **Data Encryption** dados sensíveis criptografados
-- [x] **Audit Trails** logs completos de ações
+#### **📊 Tabelas do Sistema VidaShield**
 
-### 🔐 **Compliance**
+| **Tabela** | **Categoria** | **Função Principal** | **Campos Principais** |
+|------------|---------------|---------------------|----------------------|
+| `user_profiles` | 👥 Usuários | Perfis e informações dos usuários | `id`, `email`, `full_name`, `role`, `avatar_url`, `two_factor_enabled` |
+| `user_activity_logs` | 📋 Auditoria | Logs de atividades dos usuários | `user_id`, `action`, `description`, `ip_address`, `created_at` |
+| `user_sessions` | 🔐 Autenticação | Sessões ativas dos usuários | `user_id`, `session_token`, `device_info`, `ip_address`, `is_current` |
+| `auth_logs` | 🔐 Autenticação | **Logs completos de autenticação** | `action`, `success`, `failure_reason`, `email`, `ip_address`, `risk_score` |
+| `threat_detection` | 🚨 Segurança | **Detecção automática de ameaças** | `threat_type`, `severity_level`, `source_ip`, `attempts_count`, `auto_blocked` |
+| `dynamic_firewall` | 🛡️ Firewall | **Regras dinâmicas de firewall** | `ip_address`, `rule_type`, `reason`, `is_active`, `expires_at` |
+| `ip_blocks` | 🚫 Bloqueios | **Bloqueio de IPs suspeitos** | `ip_address`, `reason`, `severity`, `ativo`, `attempts`, `country` |
+| `security_config` | ⚙️ Configuração | Configurações de segurança | `config_key`, `config_value`, `description`, `category` |
+| `backup_config` | 💾 Backup | Configurações de backup | `auto_backup`, `interval`, `retention_days`, `include_user_data` |
+| `notifications` | 🔔 Notificações | Sistema de notificações | `title`, `message`, `type`, `read`, `user_id`, `created_at` |
 
-- ✅ **LGPD**: Proteção de dados pessoais (Lei 13.709/2018)
-- 🚧 **ISO 27001**: Gestão de segurança da informação (em desenvolvimento)
-- 🚧 **CFM**: Normas do Conselho Federal de Medicina (futuro)
-- 🚧 **HIPAA**: Padrões internacionais de privacidade (futuro)
+#### **🎯 Categorização por Funcionalidade**
+
+| **🔐 Autenticação & Sessões** | **🚨 Segurança & Ameaças** | **👥 Usuários & Perfis** | **⚙️ Sistema & Config** |
+|------------------------------|---------------------------|--------------------------|------------------------|
+| `auth_logs` | `threat_detection` | `user_profiles` | `security_config` |
+| `user_sessions` | `dynamic_firewall` | `user_activity_logs` | `backup_config` |
+| | `ip_blocks` | `notifications` | |
+
+#### **📈 Métricas por Tabela**
+
+| **Tabela** | **Volume Esperado** | **Índices de Performance** | **RLS (Row Level Security)** |
+|------------|--------------------|-----------------------------|------------------------------|
+| `auth_logs` | Alto (milhares/dia) | `ip_address`, `created_at`, `success` | ✅ Admins: todos / Users: próprios |
+| `threat_detection` | Médio (centenas/dia) | `source_ip`, `severity_level`, `status` | ✅ Apenas admins e moderadores |
+| `dynamic_firewall` | Baixo (dezenas/dia) | `ip_address`, `is_active`, `rule_type` | ✅ Apenas admins e moderadores |
+| `ip_blocks` | Baixo (dezenas/semana) | `ip_address`, `ativo`, `severity` | ✅ Apenas admins e moderadores |
+| `user_activity_logs` | Alto (milhares/dia) | `user_id`, `created_at` | ✅ Users: apenas próprios |
+| `user_sessions` | Médio (centenas/dia) | `user_id`, `is_current`, `last_active` | ✅ Users: apenas próprios |
+
+#### **🔗 Relacionamentos entre Tabelas**
+
+```mermaid
+graph TD
+    A[auth.users] --> B[user_profiles]
+    A --> C[auth_logs]
+    A --> D[user_sessions]
+    A --> E[user_activity_logs]
+    A --> F[threat_detection]
+    
+    G[threat_detection] --> H[dynamic_firewall]
+    
+    I[security_config] -.-> J[Sistema]
+    K[backup_config] -.-> J
+    L[notifications] --> A
+    
+    M[ip_blocks] -.-> N[Firewall]
+    H --> N
+    
+    style A fill:#e1f5fe
+    style G fill:#ffebee
+    style H fill:#fff3e0
+    style M fill:#fce4ec
+```
+
+#### **📝 Descrição dos Relacionamentos**
+
+| **Tabela Principal** | **Relaciona com** | **Tipo** | **Descrição** |
+|---------------------|-------------------|----------|---------------|
+| `auth.users` | `user_profiles` | 1:1 | Cada usuário tem um perfil |
+| `auth.users` | `auth_logs` | 1:N | Usuário pode ter múltiplos logs |
+| `auth.users` | `user_sessions` | 1:N | Usuário pode ter múltiplas sessões |
+| `threat_detection` | `dynamic_firewall` | 1:1 | Ameaça pode gerar regra de firewall |
+| `auth.users` | `notifications` | 1:N | Usuário recebe múltiplas notificações |
+| `ip_blocks` | `dynamic_firewall` | Independentes | Sistemas complementares de bloqueio |
+
+#### **🔧 Funcionalidades Principais por Tabela**
+
+| **Tabela** | **Funcionalidades Implementadas** | **Status** |
+|------------|----------------------------------|-----------|
+| **`auth_logs`** | • Registro automático de tentativas de login<br>• Detecção de falhas múltiplas<br>• Cálculo de risk score<br>• Geolocalizacção de acessos | ✅ **Implementado** |
+| **`threat_detection`** | • Detecção automática de ataques brute force<br>• Classificação de severidade (1-5)<br>• Trigger automático de bloqueios<br>• Anomalias geográficas e comportamentais | ✅ **Implementado** |
+| **`dynamic_firewall`** | • Regras dinâmicas de bloqueio<br>• Bloqueios temporários e permanentes<br>• Rate limiting<br>• Whitelist automática | ✅ **Implementado** |
+| **`ip_blocks`** | • Bloqueio manual e automático de IPs<br>• Categorização por severidade<br>• Histórico de tentativas<br>• Desbloqueio com justificativa | ✅ **Implementado** |
+| **`user_sessions`** | • Gerenciamento de sessões ativas<br>• Detecção de dispositivos suspeitos<br>• Forçar logout remoto<br>• Timeout automático | ✅ **Implementado** |
+| **`security_config`** | • Configurações dinâmicas de segurança<br>• Limites de tentativas de login<br>• Políticas de senha<br>• 2FA obrigatório para admins | ✅ **Implementado** |
+
+### **📋 Funcionalidades de Segurança Implementadas**
+
+#### **🔐 1. Registro e Monitoramento de Autenticação**
+
+**✅ Tentativas de Login com Falha:**
+- **Tabela:** `auth_logs`
+- **Campos monitorados:** `action`, `success`, `failure_reason`, `email`, `ip_address`, `risk_score`
+- **Funcionalidade:** Registro automático de todas as tentativas de login falhadas
+- **Localização:** `src/services/securityService.ts` - `authLogsService`
+
+```sql
+-- Exemplo de log de falha de autenticação
+INSERT INTO auth_logs (action, success, failure_reason, email, ip_address, risk_score)
+VALUES ('failed_login', false, 'Senha incorreta', 'user@example.com', '192.168.1.100', 75);
+```
+
+#### **🚨 2. Detecção Automática de Múltiplas Falhas**
+
+**✅ Sistema de Análise Comportamental:**
+- **Tabela:** `threat_detection`
+- **Algoritmo:** Detecção automática baseada em padrões suspeitos
+- **Triggers:** Múltiplas tentativas do mesmo IP, geolocalização anômala, padrões de ataque
+- **Resposta:** Bloqueio automático e notificação em tempo real
+
+**Critérios de Detecção:**
+- `≥ 5 tentativas falhadas` em 15 minutos → **Alerta Médio**
+- `≥ 10 tentativas falhadas` em 30 minutos → **Alerta Alto + Bloqueio Temporário**
+- `≥ 20 tentativas falhadas` em 1 hora → **Alerta Crítico + Bloqueio Permanente**
+
+#### **🛡️ 3. Tabelas de Ameaças & Mecanismos de Resposta**
+
+**✅ Tabela `threat_detection`:**
+```sql
+CREATE TABLE threat_detection (
+  id UUID PRIMARY KEY,
+  threat_type TEXT NOT NULL,                    -- Tipo: brute_force, sql_injection, etc.
+  severity_level INTEGER CHECK (1 <= severity_level <= 5),
+  source_ip INET NOT NULL,
+  target_user UUID REFERENCES auth.users(id),
+  description TEXT NOT NULL,
+  attempts_count INTEGER DEFAULT 1,
+  auto_blocked BOOLEAN DEFAULT FALSE,           -- Bloqueio automático ativado
+  status TEXT DEFAULT 'detected',               -- detected, investigating, mitigated
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**✅ Tabela `dynamic_firewall`:**
+```sql
+CREATE TABLE dynamic_firewall (
+  id UUID PRIMARY KEY,
+  ip_address INET NOT NULL,
+  rule_type TEXT CHECK (rule_type IN ('block', 'rate_limit', 'monitor', 'whitelist')),
+  reason TEXT NOT NULL,
+  threat_id UUID REFERENCES threat_detection(id),
+  auto_generated BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+  expires_at TIMESTAMP WITH TIME ZONE,          -- Bloqueios temporários
+  attempts_blocked INTEGER DEFAULT 0
+);
+```
+
+**✅ Tabela `ip_blocks` (Principal):**
+```sql
+CREATE TABLE ip_blocks (
+  id UUID PRIMARY KEY,
+  ip_address INET NOT NULL,
+  reason TEXT NOT NULL,
+  severity TEXT CHECK (severity IN ('baixa', 'media', 'alta', 'critica')),
+  block_type TEXT CHECK (block_type IN ('automatico', 'manual')),
+  ativo BOOLEAN DEFAULT TRUE,
+  attempts INTEGER DEFAULT 1,
+  country TEXT, city TEXT,                      -- Geolocalização
+  expires_at TIMESTAMP WITH TIME ZONE,          -- Bloqueio temporário vs permanente
+  unblocked_at TIMESTAMP WITH TIME ZONE         -- Histórico de desbloqueios
+);
+```
+
+#### **📊 4. Dashboard de Segurança com Alertas em Tempo Real**
+
+**✅ SecurityDashboard (`src/pages/SecurityDashboard.tsx`):**
+
+**Métricas Exibidas:**
+- **Total de Logs de Autenticação** (24h)
+- **Logins Bem-sucedidos** vs **Tentativas Falhadas**
+- **IPs Bloqueados Ativos**
+- **Ameaças Detectadas** (ativas)
+- **Score de Risco** (0-100, calculado automaticamente)
+
+**Painéis de Monitoramento:**
+1. **Overview:** Visão geral com métricas principais
+2. **Auth Logs:** Histórico detalhado de autenticação
+3. **Threats:** Lista de ameaças detectadas com severidade
+4. **Firewall:** Regras ativas do firewall dinâmico
+
+**Alertas em Tempo Real:**
+- 🟢 **Verde:** Sistema seguro, operação normal
+- 🟡 **Amarelo:** Ameaças detectadas, sob monitoramento
+- 🔴 **Vermelho:** Ameaças críticas, ação automática tomada
+
+#### **⚡ 5. Resposta Automática a Ameaças**
+
+**✅ Sistema de Resposta Implementado:**
+
+**Fluxo de Detecção → Resposta:**
+```typescript
+// 1. Detecção automática (src/services/securityService.ts)
+const threatDetected = await threatDetectionService.createThreat({
+  threat_type: 'brute_force',
+  source_ip: '192.168.1.100',
+  severity_level: 4,
+  attempts_count: 12,
+  auto_blocked: true
+});
+
+// 2. Bloqueio automático no firewall
+await firewallService.blockIP({
+  ip_address: '192.168.1.100',
+  reason: 'Múltiplas tentativas de login falhadas',
+  rule_type: 'block',
+  auto_generated: true
+});
+
+// 3. Notificação em tempo real
+await NotificationService.notifySuspiciousLogin({
+  ip: '192.168.1.100',
+  attempts: 12,
+  location: 'São Paulo, Brasil'
+});
+```
+
+### **🔧 Configurações de Segurança**
+
+**Configurações Automáticas (`security_config`):**
+```json
+{
+  "max_login_attempts": 5,
+  "session_timeout": 3600,
+  "2fa_required_for_admin": true,
+  "auto_block_suspicious_ips": true,
+  "log_retention_days": 90
+}
+```
+
+### **📈 KPIs de Segurança Monitorados**
+
+| **Métrica** | **Descrição** | **Fonte** |
+|-------------|---------------|-----------|
+| **Failed Login Rate** | Taxa de falha de login (%) | `auth_logs` |
+| **Threat Detection Rate** | Ameaças detectadas por hora | `threat_detection` |
+| **Auto-Block Efficiency** | % de ameaças bloqueadas automaticamente | `dynamic_firewall` |
+| **Response Time** | Tempo médio de resposta a ameaças | Calculado em tempo real |
+| **Risk Score** | Pontuação geral de risco (0-100) | Algoritmo proprietário |
+
+### **🚀 Demonstração em Tempo Real**
+
+**Para testar as funcionalidades de segurança:**
+
+1. **Acesse o Security Dashboard:** `/security-dashboard`
+2. **Simule tentativas de login falhadas** (máx. 5 por IP)
+3. **Observe o bloqueio automático** no painel de Firewall
+4. **Verifique as notificações** em tempo real
+5. **Analise os logs detalhados** na aba Auth Logs
+
+**URLs de Demonstração:**
+- **Dashboard de Segurança:** `http://localhost:3004/security-dashboard`
+- **Logs de Autenticação:** `http://localhost:3004/logs`
+- **Configurações:** `http://localhost:3004/security-settings`
 
 ---
 
