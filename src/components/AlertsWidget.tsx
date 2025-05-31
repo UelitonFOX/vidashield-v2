@@ -122,7 +122,6 @@ const AlertsWidget: React.FC<AlertsWidgetProps> = ({ limit = 5 }) => {
       title="Alertas Recentes"
       loading={loading}
       error={error}
-      fullHeight={true}
       actions={
         <Link 
           to="/alertas" 

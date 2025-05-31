@@ -68,3 +68,69 @@ backend/logs/
 # Ignorar banco local e pastas temporárias
 backend/app.db
 temp/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+*.local.*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables (SEGURANÇA)
+.env
+.env.local
+.env.docker
+.env.production
+.env.development
+
+# Database & API Keys (NUNCA committar)
+supabase/.temp/
+*.db
+*.sqlite
+*.db3
+
+# Cache & Build artifacts
+.turbo/
+.cache/
+build/
+dist/
+coverage/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+*.tmp
+*.temp
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+
+# Packages
+*.tgz
+*.tar.gz

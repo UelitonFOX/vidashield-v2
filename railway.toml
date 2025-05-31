@@ -1,0 +1,22 @@
+# 🚄 Railway - Deploy Configuration
+[build]
+  builder = "dockerfile"
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  startCommand = "nginx -g 'daemon off;'"
+  restartPolicyType = "on_failure"
+  restartPolicyMaxRetries = 3
+
+# 🌐 Configurações de rede
+[[services]]
+  name = "vidashield"
+  
+  [services.domains]
+    # Railway gerará automaticamente: vidashield-production.up.railway.app
+    
+  [services.variables]
+    # Adicionar via Railway Dashboard:
+    # VITE_SUPABASE_URL=https://rqucoiabfiocasxuuvea.supabase.co
+    # VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiI...
+    # VITE_HCAPTCHA_SITE_KEY=866663ec-b850-4a54-8884-8376d11051c4 

@@ -315,8 +315,6 @@ const PremiumDashboard: React.FC = () => {
           </div>
         </div>
 
-
-
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile & Stats */}
@@ -459,6 +457,7 @@ const PremiumDashboard: React.FC = () => {
               title="IPs Bloqueados"
               loading={loadingBlocked}
               error={errorBlocked ? 'Erro ao carregar dados de segurança' : null}
+              fullHeight={true}
               actions={
                 <VidaStatus 
                   status={totalBlocked > 0 ? 'warning' : 'online'}
@@ -473,7 +472,7 @@ const PremiumDashboard: React.FC = () => {
                   description="Nenhuma ameaça detectada. Seu sistema está seguro."
                 />
               ) : (
-                <VidaScrollContainer maxHeight="max-h-64">
+                <div className="space-y-3 h-[480px] overflow-y-auto custom-scrollbar">
                   {blockedIPs.map((blocked) => (
                     <VidaInnerCard key={blocked.id}>
                       <div className="flex items-center justify-between mb-1">
@@ -493,7 +492,7 @@ const PremiumDashboard: React.FC = () => {
                       </div>
                     </VidaInnerCard>
                   ))}
-                </VidaScrollContainer>
+                </div>
               )}
             </VidaWidget>
 

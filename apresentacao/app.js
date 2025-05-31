@@ -41,10 +41,10 @@ createApp({
                     initials: 'UF',
                     photo: 'images/ueliton.jpg',
                     contacts: {
-                        linkedin: 'https://www.linkedin.com/in/ueliton-fermino/',
-                        github: 'https://github.com/UelitonFOX',
-                        instagram: 'https://www.instagram.com/ueliton_fox/',
-                        whatsapp: 'https://wa.me/5543998209462'
+                        linkedin: '@ueliton-fermino',
+                        github: '@UelitonFOX',
+                        instagram: '@ueliton.fox',
+                        whatsapp: '(43)9 9601-5958'
                     }
                 },
                 { 
@@ -53,10 +53,10 @@ createApp({
                     initials: 'BD',
                     photo: 'images/beatriz.jpg',
                     contacts: {
-                        linkedin: 'https://linkedin.com/in/beatriz-delgado',
-                        github: 'https://github.com/beatriz-delgado',
-                        instagram: 'https://instagram.com/beatriz.delgado',
-                        whatsapp: 'https://wa.me/5544888888888'
+                        linkedin: '@beatriz-delgado',
+                        github: '@beatriz-delgado',
+                        instagram: '@beatriz.delgado',
+                        whatsapp: '(xx)x xxxx-xxxx'
                     }
                 },
                 { 
@@ -65,10 +65,10 @@ createApp({
                     initials: 'CM',
                     photo: 'images/camili.jpg',
                     contacts: {
-                        linkedin: 'https://linkedin.com/in/camili-machado',
-                        github: 'https://github.com/camili-machado',
-                        instagram: 'https://instagram.com/camili.machado',
-                        whatsapp: 'https://wa.me/5544777777777'
+                        linkedin: '@camili-machado',
+                        github: '@camili-machado',
+                        instagram: '@camili.machado',
+                        whatsapp: '(xx)x xxxx-xxxx'
                     }
                 }
             ],

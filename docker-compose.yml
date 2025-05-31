@@ -1,0 +1,70 @@
+# 🐳 VidaShield - Docker Compose Profissional
+
+services:
+  # 🚀 Frontend VidaShield
+  vidashield-frontend:
+    # Build local (usa o Dockerfile multi-stage)
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_HCAPTCHA_SITE_KEY=${VITE_HCAPTCHA_SITE_KEY}
+    
+    # Nome do container
+    container_name: vidashield-app
+    
+    # Portas: localhost:3004 → container:80 (Nginx)
+    ports:
+      - "3004:80"
+    
+    # 🔐 Variáveis de ambiente (arquivo específico para Docker)
+    env_file:
+      - .env.docker
+    
+    # 🏥 Healthcheck automático (monitora se app está funcionando)
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s      # Verifica a cada 30s
+      timeout: 10s       # Timeout de 10s
+      retries: 5         # 5 tentativas antes de marcar como unhealthy
+      start_period: 40s  # Aguarda 40s antes do primeiro check (tempo para build)
+    
+    # 🔄 Restart automático (a menos que seja parado manualmente)
+    restart: unless-stopped
+    
+    # 🏷️ Labels para organização
+    labels:
+      - "project=vidashield"
+      - "tier=frontend"
+      - "environment=production"
+      - "version=2.0.0"
+    
+    # 📊 Limits de recursos (opcional - descomente se necessário)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 512M
+    #       cpus: '0.5'
+    #     reservations:
+    #       memory: 256M
+    #       cpus: '0.25'
+
+# 🌐 Networks (isolamento)
+networks:
+  default:
+    name: vidashield-network
+    driver: bridge
+
+# 💾 Volumes (se precisar no futuro)
+volumes:
+  nginx-cache:
+    driver: local
+
+# 🎯 Como usar:
+# docker compose --env-file .env.docker up          # Subir em foreground
+# docker compose --env-file .env.docker up -d       # Subir em background 
+# docker compose ps                                  # Ver status + healthcheck
+# docker compose down                                # Parar e remover
+# docker compose logs -f                             # Ver logs em tempo real 

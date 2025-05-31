@@ -19,14 +19,16 @@ export const VidaCard: React.FC<VidaCardProps> = ({
   fullHeight = false 
 }) => {
   return (
-    <div className={`card-dark shadow-glow-soft ${fullHeight ? 'h-80' : ''} ${className}`}>
+    <div className={`card-dark shadow-glow-soft ${fullHeight ? 'h-full flex flex-col' : ''} ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && <h3 className="text-lg font-semibold text-green-300">{title}</h3>}
           {subtitle && <p className="text-sm text-zinc-400 mt-1">{subtitle}</p>}
         </div>
       )}
-      {children}
+      <div className={fullHeight ? 'flex-1' : ''}>
+        {children}
+      </div>
     </div>
   );
 };
@@ -87,7 +89,9 @@ export const VidaWidget: React.FC<VidaWidgetProps> = ({
         <h3 className="text-lg font-semibold text-green-300">{title}</h3>
         {actions}
       </div>
-      {children}
+      <div className={fullHeight ? 'flex-1 flex flex-col' : ''}>
+        {children}
+      </div>
     </VidaCard>
   );
 };

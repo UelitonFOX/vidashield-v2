@@ -63,71 +63,88 @@ const Dashboard: React.FC = () => {
         <AlertsWidget limit={5} />
       </div>
 
-      {/* Segurança - IPs Bloqueados */}
-      <VidaWidget
-        title="Segurança - IPs Bloqueados"
-        loading={loadingBlocked}
-        error={errorBlocked ? 'Erro ao carregar dados de segurança' : null}
-        actions={
-          <VidaStatus 
-            status={totalBlocked > 0 ? 'warning' : 'online'}
-            text={`${totalBlocked} ${totalBlocked === 1 ? 'IP' : 'IPs'}`}
-          />
-        }
-      >
-        {totalBlocked === 0 ? (
-          <VidaEmptyState
-            icon={<Shield />}
-            title="Sistema Protegido"
-            description="Nenhuma ameaça detectada. Seu sistema está seguro."
-          />
-        ) : (
-          <VidaScrollContainer maxHeight="max-h-64">
-            {blockedIPs.map((blocked) => (
-              <VidaInnerCard key={blocked.id}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-mono text-zinc-200">{blocked.ip_address}</span>
-                  <span className={`text-xs ${blocked.expires_at ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {blocked.expires_at ? 'Bloqueio Temporário' : 'Bloqueio Permanente'}
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-400 truncate">{blocked.reason}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-zinc-500">
-                    Bloqueado em: {new Date(blocked.created_at).toLocaleDateString('pt-BR')}
-                  </p>
-                  <span className="text-xs text-zinc-500">
-                    {blocked.attempts} tentativas
-                  </span>
-                </div>
-              </VidaInnerCard>
-            ))}
-          </VidaScrollContainer>
-        )}
-      </VidaWidget>
+      {/* Seção de Segurança - Grid com 3 colunas */}
+      <div className="bg-zinc-900/30 backdrop-blur-sm rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Shield className="w-6 h-6 text-green-400" />
+          <h2 className="text-xl font-bold text-white">Segurança do Sistema</h2>
+        </div>
 
-      {/* Insights Avançados */}
-      <AdvancedInsightsWidget />
-
-      {/* Card de Acesso Rápido - Segurança Avançada */}
-      <div 
-        onClick={() => navigate('/security')}
-        className="p-6 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-green-400/10"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-500/20 rounded-lg">
-              <Target className="w-8 h-8 text-green-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-green-300 mb-1">Segurança Avançada</h3>
-              <p className="text-zinc-400 text-sm">
-                Acesse logs de autenticação, detecção de ameaças e firewall dinâmico
-              </p>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Segurança - IPs Bloqueados */}
+          <div className="h-[500px] border border-yellow-400 bg-purple-500" style={{ height: '500px !important', border: '2px solid yellow !important', backgroundColor: 'purple !important' }}>
+            <VidaWidget
+              title="🔥 TESTE IPs Bloqueados 🔥"
+              loading={loadingBlocked}
+              error={errorBlocked ? 'Erro ao carregar dados de segurança' : null}
+              fullHeight={true}
+              className="h-full"
+              actions={
+                <VidaStatus 
+                  status={totalBlocked > 0 ? 'warning' : 'online'}
+                  text={`${totalBlocked} ${totalBlocked === 1 ? 'IP' : 'IPs'}`}
+                />
+              }
+            >
+              {totalBlocked === 0 ? (
+                <VidaEmptyState
+                  icon={<Shield />}
+                  title="Sistema Protegido"
+                  description="Nenhuma ameaça detectada. Seu sistema está seguro."
+                />
+              ) : (
+                <div 
+                  className="space-y-3 overflow-y-auto custom-scrollbar border border-red-400" 
+                  style={{ height: '350px !important', minHeight: '350px !important', border: '2px solid red !important' }}
+                >
+                  {blockedIPs.map((blocked) => (
+                    <VidaInnerCard key={blocked.id}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-mono text-zinc-200">{blocked.ip_address}</span>
+                        <span className={`text-xs ${blocked.expires_at ? 'text-yellow-400' : 'text-red-400'}`}>
+                          {blocked.expires_at ? 'Bloqueio Temporário' : 'Bloqueio Permanente'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 truncate">{blocked.reason}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-zinc-500">
+                          Bloqueado em: {new Date(blocked.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                        <span className="text-xs text-zinc-500">
+                          {blocked.attempts} tentativas
+                        </span>
+                      </div>
+                    </VidaInnerCard>
+                  ))}
+                </div>
+              )}
+            </VidaWidget>
           </div>
-          <div className="text-green-400 opacity-60">
-            <Target className="w-6 h-6" />
+
+          {/* Insights Avançados */}
+          <AdvancedInsightsWidget />
+
+          {/* Card de Acesso Rápido - Segurança Avançada */}
+          <div 
+            onClick={() => navigate('/security')}
+            className="p-6 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-green-400/10 flex flex-col justify-center"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-500/20 rounded-lg">
+                  <Target className="w-8 h-8 text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-green-300 mb-1">Segurança Avançada</h3>
+                  <p className="text-zinc-400 text-sm">
+                    Acesse logs de autenticação, detecção de ameaças e firewall dinâmico
+                  </p>
+                </div>
+              </div>
+              <div className="text-green-400 opacity-60">
+                <Target className="w-6 h-6" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
