@@ -13,16 +13,12 @@ services:
     domains:
       - vidashield.onrender.com
     
-    # 🔐 Environment Variables (adicionar via Render Dashboard)
-    envVars:
-      - key: VITE_SUPABASE_URL
-        value: https://rqucoiabfiocasxuuvea.supabase.co
-      - key: VITE_SUPABASE_ANON_KEY  
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxdWNvaWFiZmlvY2FzeHV1dmVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwMzY2MjMsImV4cCI6MjA2MzYxMjYyM30.YUIlLBPeNu4H4gHXIywUnuEHG1uSDu05XwAaAjRzbec
-      - key: VITE_HCAPTCHA_SITE_KEY
-        value: 866663ec-b850-4a54-8884-8376d11051c4
-      - key: NODE_ENV
-        value: production
+    # 🔐 Environment Variables
+    # ⚠️ CONFIGURE AS VARIÁVEIS VIA RENDER DASHBOARD:
+    # VITE_SUPABASE_URL=SUA_URL_SUPABASE
+    # VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANONIMA
+    # VITE_HCAPTCHA_SITE_KEY=SUA_CHAVE_HCAPTCHA
+    # NODE_ENV=production
     
     # 🔄 Auto-deploy
     autoDeploy: true
