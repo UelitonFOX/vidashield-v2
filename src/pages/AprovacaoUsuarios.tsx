@@ -29,6 +29,33 @@ const AprovacaoUsuarios: React.FC = () => {
     }
   };
 
+  // CARREGAR solicitações offline
+  const loadOfflineRequests = () => {
+    try {
+      console.log('📱 Carregando solicitações offline...');
+      const offlineData = localStorage.getItem('vidashield_offline_requests');
+      
+      if (offlineData) {
+        const requests = JSON.parse(offlineData);
+        console.log(`📦 Encontradas ${requests.length} solicitações offline`);
+        
+        // Adicionar flag para identificar origem
+        const formattedRequests = requests.map((req: any) => ({
+          ...req,
+          source: 'offline_mode'
+        }));
+        
+        setPendingRequests(formattedRequests);
+        alert(`✅ Carregadas ${formattedRequests.length} solicitações do modo offline!`);
+      } else {
+        alert('📱 Nenhuma solicitação offline encontrada');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar offline:', error);
+      alert('❌ Erro ao carregar solicitações offline');
+    }
+  };
+
   useEffect(() => {
     fetchPendingRequests();
   }, []);
@@ -146,6 +173,13 @@ const AprovacaoUsuarios: React.FC = () => {
               <RefreshCw className="w-4 h-4" />
               Atualizar Lista
             </button>
+            
+            <button
+              onClick={loadOfflineRequests}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              📱 Carregar Offline
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -214,6 +248,11 @@ const AprovacaoUsuarios: React.FC = () => {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleColor(request.role)}`}>
                           {request.role}
                         </span>
+                        {(request as any).source === 'offline_mode' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                            📱 Offline
+                          </span>
+                        )}
                       </div>
                       
                       <div className="space-y-1">

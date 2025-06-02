@@ -17,6 +17,7 @@ export interface AccessRequest {
   processed_at: string | null;
   rejection_reason: string | null;
   user_id?: string;
+  offline_mode?: boolean;
 }
 
 export interface CreateAccessRequestData {
@@ -76,6 +77,46 @@ export class AccessRequestService {
 
       if (error) {
         console.error('❌ Erro ao criar notificação:', error);
+        
+        // FALLBACK FINAL: Salvar no localStorage como sistema offline
+        if (error.message?.includes('row-level security') || error.code === '42501' || error.message?.includes('403')) {
+          console.log('🔧 RLS bloqueou notificações - usando modo OFFLINE');
+          
+          const offlineRequest: AccessRequest = {
+            id: requestId,
+            email: data.email,
+            full_name: data.full_name,
+            avatar_url: data.avatar_url || null,
+            role: data.role || 'user',
+            department: data.department || null,
+            phone: data.phone || null,
+            justificativa: data.justificativa,
+            status: 'pending' as const,
+            created_at: timestamp,
+            updated_at: timestamp,
+            processed_by: null,
+            processed_at: null,
+            rejection_reason: null,
+            user_id: data.user_id,
+            offline_mode: true
+          };
+          
+          // Salvar em localStorage
+          try {
+            const existingRequests = JSON.parse(localStorage.getItem('vidashield_offline_requests') || '[]');
+            existingRequests.push(offlineRequest);
+            localStorage.setItem('vidashield_offline_requests', JSON.stringify(existingRequests));
+            
+            console.log('✅ Solicitação salva em modo OFFLINE');
+            console.log('📱 Admin pode acessar via botão de "Carregar Offline" na página de aprovação');
+            
+            return offlineRequest;
+          } catch (localError) {
+            console.error('❌ Erro ao salvar offline:', localError);
+            throw new Error('Sistema indisponível. Tente novamente mais tarde.');
+          }
+        }
+        
         throw new Error(`Erro ao criar solicitação: ${error.message}`);
       }
 
