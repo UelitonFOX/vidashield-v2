@@ -19,12 +19,12 @@ const AprovacaoUsuarios: React.FC = () => {
       // WORKAROUND: Buscar dados das notificações em vez da tabela pending_users
       console.log('🔧 Usando workaround: buscando dados de notificações...');
       
+      // Buscar TODAS as notificações de solicitação de acesso (não apenas do usuário atual)
       const { data: notifications, error: notifError } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
         .contains('title', 'Nova Solicitação de Acesso')
-        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (notifError) {
@@ -57,8 +57,13 @@ const AprovacaoUsuarios: React.FC = () => {
         };
       });
 
-      setPendingRequests(mockRequests);
-      console.log(`📊 Processadas ${mockRequests.length} solicitações das notificações`);
+      // Filtrar apenas as não processadas (que não foram marcadas como read)
+      const pendingOnly = mockRequests.filter((req, index) => 
+        !notifications![index].read
+      );
+
+      setPendingRequests(pendingOnly);
+      console.log(`📊 Processadas ${pendingOnly.length} solicitações pendentes das notificações`);
       
     } catch (error) {
       console.error('❌ Erro ao buscar solicitações:', error);

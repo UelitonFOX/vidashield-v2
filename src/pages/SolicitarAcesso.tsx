@@ -28,21 +28,7 @@ const SolicitarAcesso: React.FC = () => {
       console.log('🔍 Verificando se existe administrador no sistema...');
       console.log('👤 Usuário atual:', user?.email);
       
-      // PRIMEIRO: Listar TODOS os usuários para debug
-      console.log('📋 Listando TODOS os usuários na tabela user_profiles...');
-      const { data: allUsers, error: allUsersError } = await supabase
-        .from('user_profiles')
-        .select('id, email, role, status, created_at')
-        .order('created_at', { ascending: false });
-
-      if (allUsersError) {
-        console.error('❌ Erro ao listar todos os usuários:', allUsersError);
-      } else {
-        console.log('📊 Total de usuários na tabela:', allUsers?.length || 0);
-        console.log('👥 Lista completa de usuários:', allUsers);
-      }
-      
-      // SEGUNDO: Buscar especificamente admins
+      // Verificar se existem admins no sistema
       const { data: admins, error } = await supabase
         .from('user_profiles')
         .select('id, email, role, status')
@@ -55,79 +41,17 @@ const SolicitarAcesso: React.FC = () => {
       }
 
       console.log(`👥 Administradores ativos encontrados: ${admins?.length || 0}`);
-      console.log('🔍 Admins encontrados:', admins);
-      
-      // TERCEIRO: Buscar especificamente por email conhecido
-      console.log('🔍 Buscando especificamente por ueliton.talento.tech@gmail.com...');
-      const { data: specificAdmin, error: specificError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', 'ueliton.talento.tech@gmail.com');
-
-      if (specificError) {
-        console.error('❌ Erro ao buscar admin específico:', specificError);
-      } else {
-        console.log('📄 Admin específico encontrado:', specificAdmin);
-      }
       
       if (!admins || admins.length === 0) {
-        console.log('⚠️ Nenhum admin encontrado! Tentando identificar usuário atual como potencial admin...');
-        
-        // Verificar se o usuário atual tem um email que sugere ser admin
-        const currentUserEmail = user?.email?.toLowerCase();
-        console.log('📧 Email para verificação:', currentUserEmail);
-        
-        const isLikelyAdmin = currentUserEmail?.includes('admin') || 
-                             currentUserEmail?.includes('uelitonfox') ||
-                             currentUserEmail?.includes('talento.tech') ||
-                             currentUserEmail?.includes('fox.tech') ||
-                             currentUserEmail?.includes('uel.rod');
-        
-        console.log('🔍 É provável admin?', isLikelyAdmin);
-        
-        if (isLikelyAdmin && user?.id) {
-          console.log('🔧 Criando profile de admin para usuário atual...');
-          console.log('📋 Dados do admin a ser criado:', {
-            id: user.id,
-            email: user.email,
-            name: user.email?.split('@')[0] || 'Admin'
-          });
-          
-          const { data: createResult, error: createError } = await supabase
-            .from('user_profiles')
-            .insert({
-              id: user.id,
-              email: user.email,
-              name: user.email?.split('@')[0] || 'Admin',
-              role: 'admin',
-              status: 'active',
-              department: 'Administração',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select();
-
-          if (createError) {
-            console.error('❌ Erro ao criar admin:', createError);
-            console.error('❌ Detalhes do erro:', createError.message, createError.details);
-          } else {
-            console.log('✅ Admin criado com sucesso para:', user.email);
-            console.log('📄 Resultado da criação:', createResult);
-            
-            // Recarregar a página para atualizar o contexto de auth
-            setTimeout(() => {
-              console.log('🔄 Recarregando página para atualizar contexto...');
-              window.location.reload();
-            }, 1000);
-          }
-        } else {
-          console.log('❌ Email não corresponde aos padrões de admin ou usuário não encontrado');
-        }
+        console.log('⚠️ Nenhum admin encontrado no sistema!');
+        console.log('📧 Sistema permitirá solicitações de acesso para qualquer usuário');
       } else {
-        console.log('✅ Administradores já existem no sistema');
+        console.log('✅ Sistema já possui administradores configurados');
+        console.log('📋 Admins:', admins.map(a => a.email).join(', '));
       }
     } catch (error) {
-      console.error('💥 Erro ao verificar/criar admin:', error);
+      console.error('💥 Erro ao verificar admins:', error);
+      // Continuar mesmo com erro - permitir que qualquer usuário solicite acesso
     }
   };
 
@@ -319,9 +243,10 @@ const SolicitarAcesso: React.FC = () => {
           <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
             <p className="text-amber-400 text-sm font-medium">⚠️ Importante</p>
             <p className="text-amber-300 text-xs mt-1">
-              • Apenas funcionários autorizados podem acessar o sistema<br/>
+              • Qualquer usuário autenticado pode solicitar acesso ao sistema<br/>
               • Suas informações serão verificadas pelos administradores<br/>
-              • O processo de aprovação pode levar até 24 horas
+              • O processo de aprovação pode levar até 24 horas<br/>
+              • Após aprovação, você receberá acesso completo ao VidaShield
             </p>
           </div>
 
