@@ -149,20 +149,40 @@ export class AccessRequestService {
     console.log(`✅ Aprovando solicitação ${requestId}...`);
 
     try {
-      // Buscar a notificação da solicitação
-      const { data: notification, error: fetchError } = await supabase
+      // Buscar notificações do tipo auth não lidas e filtrar no cliente
+      const { data: notifications, error: fetchError } = await supabase
         .from('notifications')
         .select('*')
-        .eq('metadata->request_id', requestId)
         .eq('type', 'auth')
-        .contains('metadata', { system_type: 'access_request' })
-        .single();
+        .eq('read', false);
 
-      if (fetchError || !notification) {
+      if (fetchError) {
+        console.error('❌ Erro ao buscar notificações:', fetchError);
+        throw new Error('Erro ao buscar solicitações de acesso');
+      }
+
+      // Filtrar no cliente pela request_id e system_type
+      const notification = notifications?.find(notif => 
+        notif.metadata?.request_id === requestId && 
+        notif.metadata?.system_type === 'access_request'
+      );
+
+      if (!notification) {
         throw new Error('Solicitação não encontrada nas notificações');
       }
 
       const request = notification.metadata;
+
+      // Verificar se o usuário já existe na tabela user_profiles
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('email', request.email)
+        .single();
+
+      if (existingProfile) {
+        throw new Error('Usuário já possui perfil ativo no sistema');
+      }
 
       // Criar profile do usuário aprovado
       const { error: profileError } = await supabase
@@ -218,16 +238,25 @@ export class AccessRequestService {
     console.log(`❌ Rejeitando solicitação ${requestId}...`);
 
     try {
-      // Buscar e marcar notificação como rejeitada
-      const { data: notification, error: fetchError } = await supabase
+      // Buscar notificações do tipo auth não lidas e filtrar no cliente
+      const { data: notifications, error: fetchError } = await supabase
         .from('notifications')
         .select('*')
-        .eq('metadata->request_id', requestId)
         .eq('type', 'auth')
-        .contains('metadata', { system_type: 'access_request' })
-        .single();
+        .eq('read', false);
 
-      if (fetchError || !notification) {
+      if (fetchError) {
+        console.error('❌ Erro ao buscar notificações:', fetchError);
+        throw new Error('Erro ao buscar solicitações de acesso');
+      }
+
+      // Filtrar no cliente pela request_id e system_type
+      const notification = notifications?.find(notif => 
+        notif.metadata?.request_id === requestId && 
+        notif.metadata?.system_type === 'access_request'
+      );
+
+      if (!notification) {
         throw new Error('Solicitação não encontrada nas notificações');
       }
 
