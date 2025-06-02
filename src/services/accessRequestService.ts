@@ -59,15 +59,28 @@ export class AccessRequestService {
       user_id: data.user_id
     };
 
+    console.log('📋 Dados da solicitação criada:', {
+      id: requestData.id,
+      email: requestData.email,
+      name: requestData.full_name,
+      department: requestData.department,
+      role: requestData.role
+    });
+
     try {
+      console.log('📤 Iniciando processo de notificação aos admins...');
+      
       // Notificar administradores com os dados da solicitação
       await this.notifyAdminsNewRequest(requestData, data.user_id);
+      
       console.log('✅ Solicitação processada e admins notificados!');
+      console.log('🎯 Solicitação ID:', requestData.id);
       
       return requestData;
     } catch (error) {
       console.error('❌ Erro ao notificar admins:', error);
-      throw new Error('Erro ao processar solicitação. Tente novamente.');
+      console.error('💥 Detalhes do erro:', error instanceof Error ? error.message : 'Erro desconhecido');
+      throw new Error(`Erro ao processar solicitação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   }
 
@@ -206,31 +219,73 @@ export class AccessRequestService {
         .eq('role', 'admin')
         .eq('status', 'active');
 
+      console.log(`👥 Encontrados ${admins?.length || 0} administradores ativos`);
+
       if (admins && admins.length > 0) {
+        // VERSÃO MELHORADA: Criar notificações mais detalhadas
         const notifications = admins.map(admin => ({
           type: 'auth',
           title: 'Nova Solicitação de Acesso',
-          message: `${request.full_name || request.email} solicitou acesso ao sistema.`,
+          message: `${request.full_name || request.email} solicitou acesso ao sistema VidaShield.`,
           severity: 'media',
           user_id: admin.id,
           metadata: {
+            // Dados completos da solicitação
             request_id: request.id,
-            pending_user_id: userId,
+            pending_user_id: userId || request.user_id,
             pending_user_email: request.email,
             pending_user_name: request.full_name,
             department: request.department,
             phone: request.phone,
             justificativa: request.justificativa,
-            requested_at: request.created_at
+            requested_role: request.role,
+            requested_at: request.created_at,
+            // Flag para identificar como solicitação via workaround
+            workaround_request: true,
+            // Dados extras para debug
+            submission_method: 'notification_workaround',
+            submitted_by_ip: 'unknown',
+            user_agent: navigator.userAgent
           },
-          action_url: '/aprovacao-usuarios'
+          action_url: '/aprovacao-usuarios',
+          read: false
         }));
 
-        await supabase.from('notifications').insert(notifications);
+        const { data: insertedNotifications, error: insertError } = await supabase
+          .from('notifications')
+          .insert(notifications)
+          .select();
+
+        if (insertError) {
+          console.error('❌ Erro ao inserir notificações:', insertError);
+          throw new Error(`Erro ao notificar admins: ${insertError.message}`);
+        }
+
         console.log(`✅ ${notifications.length} notificações criadas para admins`);
+        console.log('📄 IDs das notificações:', insertedNotifications?.map(n => n.id));
+        
+        // BACKUP: Também salvar dados em localStorage para recuperação
+        const backupData = {
+          request,
+          timestamp: new Date().toISOString(),
+          notificationIds: insertedNotifications?.map(n => n.id) || []
+        };
+        
+        try {
+          const existingBackups = JSON.parse(localStorage.getItem('vidashield_backup_requests') || '[]');
+          existingBackups.push(backupData);
+          localStorage.setItem('vidashield_backup_requests', JSON.stringify(existingBackups));
+          console.log('💾 Backup local salvo em localStorage');
+        } catch (localError) {
+          console.warn('⚠️ Erro ao salvar backup local:', localError);
+        }
+        
+      } else {
+        throw new Error('Nenhum administrador ativo encontrado no sistema');
       }
     } catch (error) {
       console.error('❌ Erro ao notificar admins:', error);
+      throw error;
     }
   }
 
