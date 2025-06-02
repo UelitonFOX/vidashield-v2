@@ -1,18 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabaseClient';
 import { Shield, Send, AlertTriangle, Mail, User, Building, Phone, FileText } from 'lucide-react';
+
+interface FormData {
+  nome: string;
+  departamento: string;
+  telefone: string;
+  justificativa: string;
+}
 
 const SolicitarAcesso: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [solicitado, setSolicitado] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     nome: user?.user_metadata?.full_name || '',
     departamento: '',
     telefone: '',
     justificativa: ''
   });
+
+  // Função para verificar e criar admin padrão se necessário
+  const ensureAdminExists = async () => {
+    try {
+      console.log('🔍 Verificando se existe administrador no sistema...');
+      
+      const { data: admins, error } = await supabase
+        .from('user_profiles')
+        .select('id, email')
+        .eq('role', 'admin')
+        .eq('status', 'active');
+
+      if (error) {
+        console.error('❌ Erro ao verificar admins:', error);
+        return;
+      }
+
+      console.log(`👥 Administradores ativos encontrados: ${admins?.length || 0}`);
+      
+      if (!admins || admins.length === 0) {
+        console.log('⚠️ Nenhum admin encontrado! Tentando identificar usuário atual como potencial admin...');
+        
+        // Verificar se o usuário atual tem um email que sugere ser admin
+        const currentUserEmail = user?.email?.toLowerCase();
+        const isLikelyAdmin = currentUserEmail?.includes('admin') || 
+                             currentUserEmail?.includes('uelitonfox') ||
+                             currentUserEmail?.includes('talento.tech');
+        
+        if (isLikelyAdmin && user?.id) {
+          console.log('🔧 Criando profile de admin para usuário atual...');
+          
+          const { error: createError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              name: user.email?.split('@')[0] || 'Admin',
+              role: 'admin',
+              status: 'active',
+              department: 'Administração',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+
+          if (createError) {
+            console.error('❌ Erro ao criar admin:', createError);
+          } else {
+            console.log('✅ Admin criado com sucesso para:', user.email);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('💥 Erro ao verificar/criar admin:', error);
+    }
+  };
+
+  useEffect(() => {
+    ensureAdminExists();
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,37 +119,62 @@ const SolicitarAcesso: React.FC = () => {
 
       // Notificar admins (tentar criar notificação)
       try {
-        const { data: admins } = await supabase
+        console.log('🔍 Buscando administradores para notificar...');
+        const { data: admins, error: adminError } = await supabase
           .from('user_profiles')
-          .select('id')
+          .select('id, email, name')
           .eq('role', 'admin')
           .eq('status', 'active');
 
+        if (adminError) {
+          console.error('❌ Erro ao buscar admins:', adminError);
+        } else {
+          console.log('👥 Administradores encontrados:', admins?.length || 0);
+          console.log('📋 Lista de admins:', admins?.map(a => a.email));
+        }
+
         if (admins && admins.length > 0) {
+          const notificationData = {
+            pending_user_id: user.id,
+            pending_user_email: user.email,
+            pending_user_name: formData.nome,
+            department: formData.departamento,
+            phone: formData.telefone,
+            justificativa: formData.justificativa,
+            requested_at: new Date().toISOString()
+          };
+          
+          console.log('📦 Dados da notificação que serão salvos:', notificationData);
+          
           const notifications = admins.map(admin => ({
             type: 'auth',
             title: 'Nova Solicitação de Acesso',
             message: `${formData.nome || user.email} solicitou acesso ao sistema.`,
             severity: 'media',
             user_id: admin.id,
-            metadata: {
-              pending_user_id: user.id,
-              pending_user_email: user.email,
-              pending_user_name: formData.nome,
-              department: formData.departamento,
-              phone: formData.telefone,
-              justificativa: formData.justificativa,
-              requested_at: new Date().toISOString()
-            },
-            action_url: '/aprovacao-usuarios'
+            metadata: notificationData,
+            action_url: '/aprovacao-usuarios',
+            created_at: new Date().toISOString()
           }));
 
-          await supabase
+          console.log('📨 Criando notificações para', notifications.length, 'admins...');
+          
+          const { data: insertResult, error: insertError } = await supabase
             .from('notifications')
-            .insert(notifications);
+            .insert(notifications)
+            .select();
+
+          if (insertError) {
+            console.error('❌ Erro ao inserir notificações:', insertError);
+          } else {
+            console.log('✅ Notificações criadas com sucesso:', insertResult?.length);
+            console.log('📝 IDs das notificações criadas:', insertResult?.map(n => n.id));
+          }
+        } else {
+          console.warn('⚠️ Nenhum administrador ativo encontrado!');
         }
       } catch (notificationError) {
-        console.error('Erro ao criar notificações:', notificationError);
+        console.error('💥 Erro ao criar notificações:', notificationError);
         // Continuar mesmo se notificação falhar
       }
 
@@ -189,6 +280,8 @@ const SolicitarAcesso: React.FC = () => {
               value={user?.email || ''}
               disabled
               className="w-full px-3 py-2 bg-zinc-600 border border-zinc-500 rounded-lg text-zinc-300 cursor-not-allowed"
+              aria-label="Email autenticado"
+              title="Email autenticado"
             />
           </div>
 
