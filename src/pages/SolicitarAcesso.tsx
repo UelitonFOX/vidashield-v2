@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabaseClient';
+import { AccessRequestService } from '../services/accessRequestService';
 import { Shield, Send, AlertTriangle, Mail, User, Building, Phone, FileText } from 'lucide-react';
 
 interface FormData {
@@ -143,101 +144,31 @@ const SolicitarAcesso: React.FC = () => {
     setLoading(true);
 
     try {
-      // Tentar inserir na tabela pending_users (se existir) ou simular
-      try {
-        await supabase
-          .from('pending_users')
-          .insert({
-            id: user.id,
-            email: user.email,
-            full_name: formData.nome,
-            department: formData.departamento,
-            phone: formData.telefone,
-            justificativa: formData.justificativa,
-            status: 'pending',
-            created_at: new Date().toISOString()
-          });
-      } catch (dbError) {
-        console.log('Tabela pending_users não encontrada, enviando dados via metadata');
-        
-        // Atualizar metadados do usuário no auth
-        await supabase.auth.updateUser({
-          data: {
-            full_name: formData.nome,
-            department: formData.departamento,
-            phone: formData.telefone,
-            justificativa: formData.justificativa,
-            access_requested: true,
-            request_date: new Date().toISOString()
-          }
-        });
-      }
+      console.log('📝 Enviando solicitação de acesso...');
 
-      // Notificar admins (tentar criar notificação)
-      try {
-        console.log('🔍 Buscando administradores para notificar...');
-        const { data: admins, error: adminError } = await supabase
-          .from('user_profiles')
-          .select('id, email, name')
-          .eq('role', 'admin')
-          .eq('status', 'active');
+      // Usar o AccessRequestService para criar a solicitação
+      await AccessRequestService.createRequest({
+        user_id: user.id,
+        email: user.email!,
+        full_name: formData.nome,
+        avatar_url: user.user_metadata?.avatar_url,
+        department: formData.departamento,
+        phone: formData.telefone,
+        justificativa: formData.justificativa,
+        role: 'user' // Role padrão
+      });
 
-        if (adminError) {
-          console.error('❌ Erro ao buscar admins:', adminError);
-        } else {
-          console.log('👥 Administradores encontrados:', admins?.length || 0);
-          console.log('📋 Lista de admins:', admins?.map(a => a.email));
-        }
-
-        if (admins && admins.length > 0) {
-          const notificationData = {
-            pending_user_id: user.id,
-            pending_user_email: user.email,
-            pending_user_name: formData.nome,
-            department: formData.departamento,
-            phone: formData.telefone,
-            justificativa: formData.justificativa,
-            requested_at: new Date().toISOString()
-          };
-          
-          console.log('📦 Dados da notificação que serão salvos:', notificationData);
-          
-          const notifications = admins.map(admin => ({
-            type: 'auth',
-            title: 'Nova Solicitação de Acesso',
-            message: `${formData.nome || user.email} solicitou acesso ao sistema.`,
-            severity: 'media',
-            user_id: admin.id,
-            metadata: notificationData,
-            action_url: '/aprovacao-usuarios',
-            created_at: new Date().toISOString()
-          }));
-
-          console.log('📨 Criando notificações para', notifications.length, 'admins...');
-          
-          const { data: insertResult, error: insertError } = await supabase
-            .from('notifications')
-            .insert(notifications)
-            .select();
-
-          if (insertError) {
-            console.error('❌ Erro ao inserir notificações:', insertError);
-          } else {
-            console.log('✅ Notificações criadas com sucesso:', insertResult?.length);
-            console.log('📝 IDs das notificações criadas:', insertResult?.map(n => n.id));
-          }
-        } else {
-          console.warn('⚠️ Nenhum administrador ativo encontrado!');
-        }
-      } catch (notificationError) {
-        console.error('💥 Erro ao criar notificações:', notificationError);
-        // Continuar mesmo se notificação falhar
-      }
-
+      console.log('✅ Solicitação criada com sucesso!');
       setSolicitado(true);
+
     } catch (error) {
-      console.error('Erro ao solicitar acesso:', error);
-      alert('Erro ao enviar solicitação. Tente novamente.');
+      console.error('❌ Erro ao solicitar acesso:', error);
+      
+      if (error instanceof Error && error.message.includes('já possui uma solicitação')) {
+        alert('Você já possui uma solicitação de acesso pendente. Aguarde a análise dos administradores.');
+      } else {
+        alert('Erro ao enviar solicitação. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
