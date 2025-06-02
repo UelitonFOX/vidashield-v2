@@ -110,7 +110,34 @@ const AprovacaoUsuarios: React.FC = () => {
       const pendingOnly = mockRequests.filter((req, index) => 
         !notifications![index].read
       );
+      
+      // SEMPRE TENTAR BUSCAR NA TABELA PENDING_USERS COMO BACKUP
+      console.log('🔄 BACKUP: Sempre tentando buscar da tabela pending_users...');
+      
+      try {
+        const { data: pendingData, error: pendingError } = await supabase
+          .from('pending_users')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+          
+        if (pendingError) {
+          console.warn('⚠️ Backup na pending_users falhou:', pendingError.message);
+        } else if (pendingData && pendingData.length > 0) {
+          console.log(`✅ BACKUP SUCESSO: Encontradas ${pendingData.length} solicitações na tabela pending_users`);
+          
+          // Se encontrou dados na pending_users, usar eles (sobrescrever notificações)
+          setPendingRequests(pendingData as AccessRequest[]);
+          setLoading(false);
+          return;
+        } else {
+          console.log('📝 Tabela pending_users vazia ou sem dados pendentes');
+        }
+      } catch (backupError) {
+        console.warn('⚠️ Erro no backup da pending_users:', backupError);
+      }
 
+      // Se chegou até aqui, usar dados das notificações (se houver)
       setPendingRequests(pendingOnly);
       console.log(`📊 Processadas ${pendingOnly.length} solicitações pendentes das notificações`);
       

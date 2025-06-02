@@ -81,7 +81,6 @@ export class AccessRequestService {
           .from('pending_users')
           .insert({
             id: requestData.id,
-            user_id: requestData.user_id,
             email: requestData.email,
             full_name: requestData.full_name,
             avatar_url: requestData.avatar_url,
