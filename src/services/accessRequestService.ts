@@ -102,12 +102,12 @@ export class AccessRequestService {
     console.log('🔍 Buscando solicitações pendentes via notificações...');
 
     try {
+      // Buscar todas as notificações auth não lidas e filtrar no cliente
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
         .eq('read', false)
-        .contains('metadata', { system_type: 'access_request' })
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -115,7 +115,16 @@ export class AccessRequestService {
         throw error;
       }
 
-      const requests = notifications?.map(notif => ({
+      console.log(`🔍 Total de notificações auth não lidas: ${notifications?.length || 0}`);
+
+      // Filtrar no cliente apenas as notificações de access_request
+      const accessRequestNotifications = notifications?.filter(notif => 
+        notif.metadata?.system_type === 'access_request'
+      ) || [];
+
+      console.log(`🔍 Notificações de access_request encontradas: ${accessRequestNotifications.length}`);
+
+      const requests = accessRequestNotifications.map(notif => ({
         id: notif.metadata.request_id,
         email: notif.metadata.email,
         full_name: notif.metadata.full_name,
@@ -131,9 +140,9 @@ export class AccessRequestService {
         processed_at: notif.metadata.processed_at,
         rejection_reason: notif.metadata.rejection_reason,
         user_id: notif.metadata.user_id
-      })) || [];
+      }));
 
-      console.log(`📊 Encontradas ${requests.length} solicitações pendentes`);
+      console.log(`📊 Solicitações pendentes processadas: ${requests.length}`);
       return requests;
       
     } catch (error) {
