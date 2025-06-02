@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle, RefreshCw, UserPlus, Shield } from 'lucide-react';
+import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle, RefreshCw, Shield, UserPlus } from 'lucide-react';
 import { AccessRequestService, AccessRequest } from '../services/accessRequestService';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../services/supabaseClient';
 
 const AprovacaoUsuarios: React.FC = () => {
   const { user } = useAuth();
@@ -10,100 +9,21 @@ const AprovacaoUsuarios: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<{ [key: string]: string }>({});
-  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
 
   const fetchPendingRequests = async () => {
     try {
       setLoading(true);
       console.log('🔍 Buscando solicitações via AccessRequestService...');
       
-      // USAR APENAS O SERVICE - SEM QUERIES DIRETAS
+      // Usar apenas o AccessRequestService unificado
       const requests = await AccessRequestService.getPendingRequests();
       setPendingRequests(requests);
       
     } catch (error) {
-      console.error('❌ Erro geral:', error);
+      console.error('❌ Erro ao buscar solicitações:', error);
       setPendingRequests([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // CARREGAR solicitações offline
-  const loadOfflineRequests = () => {
-    try {
-      console.log('📱 Carregando solicitações de TODOS os locais...');
-      
-      let allRequests: any[] = [];
-      
-      // 1. localStorage local
-      const localData = localStorage.getItem('vidashield_offline_requests');
-      if (localData) {
-        const localRequests = JSON.parse(localData);
-        allRequests.push(...localRequests.map((req: any) => ({ ...req, source: 'localStorage' })));
-        console.log(`📦 localStorage: ${localRequests.length} solicitações`);
-      }
-      
-      // 2. sessionStorage (entre abas)
-      const sessionData = sessionStorage.getItem('vidashield_session_requests');
-      if (sessionData) {
-        const sessionRequests = JSON.parse(sessionData);
-        allRequests.push(...sessionRequests.map((req: any) => ({ ...req, source: 'sessionStorage' })));
-        console.log(`📦 sessionStorage: ${sessionRequests.length} solicitações`);
-      }
-      
-      // 3. Window global (mesma origem)
-      if (typeof window !== 'undefined' && (window as any).vidashieldGlobalRequests) {
-        const globalRequests = (window as any).vidashieldGlobalRequests;
-        allRequests.push(...globalRequests.map((req: any) => ({ ...req, source: 'windowGlobal' })));
-        console.log(`📦 windowGlobal: ${globalRequests.length} solicitações`);
-      }
-      
-      // Remover duplicatas por email + created_at
-      const uniqueRequests = allRequests.filter((req, index, arr) => 
-        index === arr.findIndex(r => r.email === req.email && r.created_at === req.created_at)
-      );
-      
-      if (uniqueRequests.length > 0) {
-        console.log(`📊 Total único: ${uniqueRequests.length} solicitações de ${allRequests.length} encontradas`);
-        setPendingRequests(uniqueRequests);
-        alert(`✅ Carregadas ${uniqueRequests.length} solicitações offline únicas!\n\nOrigens: localStorage, sessionStorage, windowGlobal`);
-      } else {
-        alert('📱 Nenhuma solicitação offline encontrada em qualquer local');
-      }
-    } catch (error) {
-      console.error('❌ Erro ao carregar offline:', error);
-      alert('❌ Erro ao carregar solicitações offline');
-    }
-  };
-
-  // LIMPAR todas as solicitações offline de todos os locais
-  const clearAllOfflineRequests = () => {
-    if (!confirm('⚠️ Tem certeza que deseja limpar TODAS as solicitações offline de todos os locais?\n\nIsso irá remover:\n- localStorage\n- sessionStorage\n- windowGlobal\n\nEsta ação não pode ser desfeita!')) {
-      return;
-    }
-    
-    try {
-      // Limpar localStorage
-      localStorage.removeItem('vidashield_offline_requests');
-      
-      // Limpar sessionStorage  
-      sessionStorage.removeItem('vidashield_session_requests');
-      
-      // Limpar window global
-      if (typeof window !== 'undefined') {
-        delete (window as any).vidashieldGlobalRequests;
-      }
-      
-      // Limpar estado local
-      setPendingRequests([]);
-      
-      console.log('🧹 Todos os dados offline foram limpos');
-      alert('✅ Todas as solicitações offline foram removidas de todos os locais!');
-      
-    } catch (error) {
-      console.error('❌ Erro ao limpar offline:', error);
-      alert('❌ Erro ao limpar dados offline');
     }
   };
 
@@ -118,9 +38,8 @@ const AprovacaoUsuarios: React.FC = () => {
     try {
       const assignedRole = selectedRole[request.id] || request.role || 'user';
       
-      console.log(`✅ Aprovando usuário via SERVICE: ${request.email} como ${assignedRole}`);
+      console.log(`✅ Aprovando usuário: ${request.email} como ${assignedRole}`);
       
-      // USAR APENAS O SERVICE
       await AccessRequestService.approveRequest(request.id, user.id, assignedRole);
       
       // Remover da lista local
@@ -152,9 +71,8 @@ const AprovacaoUsuarios: React.FC = () => {
         return;
       }
       
-      console.log(`❌ Rejeitando usuário via SERVICE: ${request.email}`);
+      console.log(`❌ Rejeitando usuário: ${request.email}`);
       
-      // USAR APENAS O SERVICE
       await AccessRequestService.rejectRequest(request.id, user.id, reason);
       
       // Remover da lista local
@@ -214,8 +132,8 @@ const AprovacaoUsuarios: React.FC = () => {
             Aprovação de Usuários
           </h1>
           
-          {/* Botões de controle */}
-          <div className="flex gap-4 mb-6">
+          {/* Botão de atualizar */}
+          <div className="mb-6">
             <button
               onClick={fetchPendingRequests}
               disabled={loading}
@@ -224,42 +142,6 @@ const AprovacaoUsuarios: React.FC = () => {
               <RefreshCw className="w-4 h-4" />
               Atualizar Lista
             </button>
-            
-            <button
-              onClick={loadOfflineRequests}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-            >
-              📱 Carregar Offline
-            </button>
-            
-            <button
-              onClick={clearAllOfflineRequests}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-            >
-              🧹 Limpar Tudo
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Botão de Refresh */}
-          <button
-            onClick={fetchPendingRequests}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-all duration-200"
-            title="Atualizar lista de solicitações"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Atualizando...' : 'Atualizar'}
-          </button>
-          
-          {/* Contador */}
-          <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-green-400" />
-              <span className="text-sm font-medium text-green-300">
-                {pendingRequests.length} solicitação(ões) pendente(s)
-              </span>
-            </div>
           </div>
         </div>
       </div>
@@ -306,26 +188,6 @@ const AprovacaoUsuarios: React.FC = () => {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleColor(request.role)}`}>
                           {request.role}
                         </span>
-                        {(request as any).source === 'offline_mode' && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                            📱 Offline
-                          </span>
-                        )}
-                        {(request as any).source === 'localStorage' && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                            💾 Local
-                          </span>
-                        )}
-                        {(request as any).source === 'sessionStorage' && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                            🔄 Session
-                          </span>
-                        )}
-                        {(request as any).source === 'windowGlobal' && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
-                            🌍 Global
-                          </span>
-                        )}
                       </div>
                       
                       <div className="space-y-1">
