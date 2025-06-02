@@ -187,6 +187,7 @@ export class AccessRequestService {
     console.log('🔄 Usando sistema unificado v2.0 - Filtro no cliente'); // Force rebuild
 
     try {
+      console.log('🔍 [APROVAÇÃO] Etapa 1: Buscando notificações...');
       // Buscar notificações do tipo auth não lidas e filtrar no cliente
       const { data: notifications, error: fetchError } = await supabase
         .from('notifications')
@@ -195,9 +196,11 @@ export class AccessRequestService {
         .eq('read', false);
 
       if (fetchError) {
-        console.error('❌ Erro ao buscar notificações:', fetchError);
+        console.error('❌ [APROVAÇÃO] Erro ao buscar notificações:', fetchError);
         throw new Error('Erro ao buscar solicitações de acesso');
       }
+
+      console.log(`🔍 [APROVAÇÃO] Etapa 2: Encontradas ${notifications?.length || 0} notificações auth não lidas`);
 
       // Filtrar no cliente pela request_id e system_type
       const notification = notifications?.find(notif => 
@@ -206,11 +209,19 @@ export class AccessRequestService {
       );
 
       if (!notification) {
+        console.error('❌ [APROVAÇÃO] Notificação não encontrada para request_id:', requestId);
         throw new Error('Solicitação não encontrada nas notificações');
       }
 
+      console.log('✅ [APROVAÇÃO] Etapa 3: Notificação encontrada:', notification.id);
       const request = notification.metadata;
+      console.log('📋 [APROVAÇÃO] Dados da solicitação:', {
+        email: request.email,
+        full_name: request.full_name,
+        role: assignedRole || request.role || 'user'
+      });
 
+      console.log('🔍 [APROVAÇÃO] Etapa 4: Verificando usuário existente...');
       // Verificar se o usuário já existe na tabela user_profiles
       const { data: existingProfile } = await supabase
         .from('user_profiles')
@@ -219,9 +230,13 @@ export class AccessRequestService {
         .single();
 
       if (existingProfile) {
+        console.error('❌ [APROVAÇÃO] Usuário já existe:', request.email);
         throw new Error('Usuário já possui perfil ativo no sistema');
       }
 
+      console.log('✅ [APROVAÇÃO] Etapa 5: Usuário não existe, prosseguindo...');
+
+      console.log('🔍 [APROVAÇÃO] Etapa 6: Tentando criar via RPC...');
       // Criar profile do usuário aprovado via RPC para bypass RLS
       const { error: profileError } = await supabase
         .rpc('create_user_profile_admin', {
@@ -235,7 +250,8 @@ export class AccessRequestService {
         });
 
       if (profileError) {
-        console.error('❌ Erro ao criar profile via RPC:', profileError);
+        console.error('❌ [APROVAÇÃO] Erro ao criar profile via RPC:', profileError);
+        console.log('🔍 [APROVAÇÃO] Etapa 7: Tentando fallback direto...');
         
         // Fallback: tentar inserção direta com service_role
         const { error: directError } = await supabase
@@ -254,10 +270,15 @@ export class AccessRequestService {
           });
 
         if (directError) {
+          console.error('❌ [APROVAÇÃO] Erro no fallback direto:', directError);
           throw new Error(`Erro ao criar profile: ${directError.message}`);
         }
+        console.log('✅ [APROVAÇÃO] Profile criado via fallback direto');
+      } else {
+        console.log('✅ [APROVAÇÃO] Profile criado via RPC');
       }
 
+      console.log('🔍 [APROVAÇÃO] Etapa 8: Atualizando notificação...');
       // Marcar notificação como lida (processada)
       const { error: updateError } = await supabase
         .from('notifications')
@@ -273,13 +294,17 @@ export class AccessRequestService {
         .eq('id', notification.id);
 
       if (updateError) {
-        console.error('❌ Erro ao atualizar notificação:', updateError);
+        console.error('❌ [APROVAÇÃO] Erro ao atualizar notificação:', updateError);
+      } else {
+        console.log('✅ [APROVAÇÃO] Notificação atualizada com sucesso');
       }
 
-      console.log(`✅ Solicitação ${requestId} aprovada com sucesso`);
+      console.log(`✅ [APROVAÇÃO] Solicitação ${requestId} aprovada com sucesso`);
       
     } catch (error) {
-      console.error('❌ Erro ao aprovar solicitação:', error);
+      console.error('❌ [APROVAÇÃO] Erro geral:', error);
+      console.error('❌ [APROVAÇÃO] Error message:', error instanceof Error ? error.message : 'Erro desconhecido');
+      console.error('❌ [APROVAÇÃO] Error stack:', error instanceof Error ? error.stack : 'Sem stack trace');
       throw error;
     }
   }
