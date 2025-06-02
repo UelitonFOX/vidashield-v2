@@ -185,25 +185,40 @@ export class AccessRequestService {
         throw new Error('Usuário já possui perfil ativo no sistema');
       }
 
-      // Criar profile do usuário aprovado
+      // Criar profile do usuário aprovado via RPC para bypass RLS
       const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: request.user_id || crypto.randomUUID(),
-          email: request.email,
-          name: request.full_name || request.email.split('@')[0],
-          role: assignedRole || request.role || 'user',
-          status: 'active',
-          department: request.department,
-          phone: request.phone,
-          avatar_url: request.avatar_url,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+        .rpc('create_user_profile_admin', {
+          p_id: request.user_id || crypto.randomUUID(),
+          p_email: request.email,
+          p_name: request.full_name || request.email.split('@')[0],
+          p_role: assignedRole || request.role || 'user',
+          p_department: request.department,
+          p_phone: request.phone,
+          p_avatar_url: request.avatar_url
         });
 
       if (profileError) {
-        console.error('❌ Erro ao criar profile:', profileError);
-        throw new Error(`Erro ao criar profile: ${profileError.message}`);
+        console.error('❌ Erro ao criar profile via RPC:', profileError);
+        
+        // Fallback: tentar inserção direta com service_role
+        const { error: directError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: request.user_id || crypto.randomUUID(),
+            email: request.email,
+            name: request.full_name || request.email.split('@')[0],
+            role: assignedRole || request.role || 'user',
+            status: 'active',
+            department: request.department,
+            phone: request.phone,
+            avatar_url: request.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (directError) {
+          throw new Error(`Erro ao criar profile: ${directError.message}`);
+        }
       }
 
       // Marcar notificação como lida (processada)
