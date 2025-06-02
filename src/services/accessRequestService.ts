@@ -139,6 +139,18 @@ export class AccessRequestService {
 
       console.log(`🔍 Total de notificações auth não lidas: ${notifications?.length || 0}`);
 
+      // LOG DETALHADO: Vamos ver o metadata de cada notificação não lida
+      notifications?.forEach((notif, index) => {
+        console.log(`🔍 [NOTIF ${index}] Estrutura completa:`, {
+          id: notif.id,
+          type: notif.type,
+          read: notif.read,
+          title: notif.title,
+          metadata: notif.metadata,
+          created_at: notif.created_at
+        });
+      });
+
       // Filtrar no cliente apenas as notificações de access_request
       const accessRequestNotifications = notifications?.filter(notif => 
         notif.metadata?.system_type === 'access_request'
