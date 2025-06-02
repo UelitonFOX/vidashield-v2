@@ -25,16 +25,40 @@ const AprovacaoUsuarios: React.FC = () => {
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
-        .like('title', '%Nova Solicitação de Acesso%')
+        .ilike('title', '%Solicitação%')
+        .eq('read', false)
         .order('created_at', { ascending: false });
 
       if (notifError) {
         console.error('❌ Erro ao buscar notificações:', notifError);
+        console.error('🔍 Detalhes do erro:', notifError.message);
+        
+        // Tentar busca alternativa sem filtros
+        console.log('🔄 Tentando busca alternativa...');
+        const { data: allNotifs, error: allError } = await supabase
+          .from('notifications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+          
+        if (allError) {
+          console.error('❌ Erro na busca alternativa:', allError);
+        } else {
+          console.log('📊 Total de notificações encontradas:', allNotifs?.length || 0);
+          console.log('📋 Tipos de notificações:', [...new Set(allNotifs?.map(n => n.type))]);
+          console.log('🔍 Títulos encontrados:', allNotifs?.map(n => n.title).slice(0, 5));
+        }
+        
         setPendingRequests([]);
         return;
       }
 
       console.log('📧 Notificações encontradas:', notifications?.length || 0);
+      
+      if (notifications && notifications.length > 0) {
+        console.log('📋 Títulos das notificações:', notifications.map(n => n.title));
+        console.log('🔍 Primeira notificação completa:', notifications[0]);
+      }
 
       // Converter notificações em solicitações mockadas
       const mockRequests: AccessRequest[] = (notifications || []).map((notification: any) => {
@@ -224,7 +248,7 @@ const AprovacaoUsuarios: React.FC = () => {
           source: 'emergency_mode'
         }));
         
-        setApprovalRequests(formattedRequests);
+        setPendingRequests(formattedRequests);
         setLoading(false);
         alert(`✅ Carregadas ${formattedRequests.length} solicitações do modo emergência!`);
       } else {
@@ -234,6 +258,32 @@ const AprovacaoUsuarios: React.FC = () => {
       console.error('❌ Erro ao carregar dados de emergência:', error);
       alert('❌ Erro ao carregar dados de emergência');
     }
+  };
+
+  // DEBUG: Verificar todo o localStorage
+  const debugLocalStorage = () => {
+    console.log('🔍 DEBUG: Verificando localStorage completo...');
+    
+    // Verificar todas as chaves do localStorage
+    const keys = Object.keys(localStorage);
+    console.log('🗝️ Chaves encontradas no localStorage:', keys);
+    
+    // Verificar dados específicos
+    ['vidashield_emergency_requests', 'vidashield_backup_requests'].forEach(key => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          console.log(`📦 ${key}:`, parsed);
+        } catch (e) {
+          console.log(`📦 ${key} (texto):`, data);
+        }
+      } else {
+        console.log(`❌ ${key}: não encontrado`);
+      }
+    });
+    
+    alert('🔍 Dados de debug enviados para o console. Pressione F12 para ver.');
   };
 
   if (loading) {
@@ -270,6 +320,13 @@ const AprovacaoUsuarios: React.FC = () => {
               className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
             >
               🆘 Carregar Modo Emergência
+            </button>
+            
+            <button
+              onClick={debugLocalStorage}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              🔍 Debug localStorage
             </button>
           </div>
         </div>
