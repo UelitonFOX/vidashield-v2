@@ -73,6 +73,36 @@ export class AccessRequestService {
       // Notificar administradores com os dados da solicitação
       await this.notifyAdminsNewRequest(requestData, data.user_id);
       
+      // BACKUP ADICIONAL: Salvar também numa tabela de backup caso notificações falhem
+      console.log('💾 Salvando backup adicional na tabela pending_users...');
+      
+      try {
+        const { error: backupError } = await supabase
+          .from('pending_users')
+          .insert({
+            id: requestData.id,
+            user_id: requestData.user_id,
+            email: requestData.email,
+            full_name: requestData.full_name,
+            avatar_url: requestData.avatar_url,
+            role: requestData.role,
+            department: requestData.department,
+            phone: requestData.phone,
+            justificativa: requestData.justificativa,
+            status: 'pending',
+            created_at: requestData.created_at,
+            updated_at: requestData.updated_at
+          });
+          
+        if (backupError) {
+          console.warn('⚠️ Backup na tabela pending_users falhou (RLS):', backupError.message);
+        } else {
+          console.log('✅ Backup salvo com sucesso na tabela pending_users');
+        }
+      } catch (backupErr) {
+        console.warn('⚠️ Erro no backup:', backupErr);
+      }
+      
       console.log('✅ Solicitação processada e admins notificados!');
       console.log('🎯 Solicitação ID:', requestData.id);
       

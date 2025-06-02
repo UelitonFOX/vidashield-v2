@@ -49,6 +49,30 @@ const AprovacaoUsuarios: React.FC = () => {
           console.log('🔍 Títulos encontrados:', allNotifs?.map(n => n.title).slice(0, 5));
         }
         
+        // BACKUP FINAL: Tentar buscar da tabela pending_users diretamente
+        console.log('🔄 BACKUP: Tentando buscar da tabela pending_users...');
+        
+        try {
+          const { data: pendingData, error: pendingError } = await supabase
+            .from('pending_users')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+            
+          if (pendingError) {
+            console.warn('⚠️ Backup na pending_users também falhou:', pendingError.message);
+          } else if (pendingData && pendingData.length > 0) {
+            console.log(`✅ BACKUP SUCESSO: Encontradas ${pendingData.length} solicitações na tabela pending_users`);
+            setPendingRequests(pendingData as AccessRequest[]);
+            setLoading(false);
+            return;
+          } else {
+            console.log('📝 Tabela pending_users vazia ou sem dados pendentes');
+          }
+        } catch (backupError) {
+          console.warn('⚠️ Erro no backup da pending_users:', backupError);
+        }
+        
         setPendingRequests([]);
         return;
       }
@@ -139,6 +163,17 @@ const AprovacaoUsuarios: React.FC = () => {
         .update({ read: true })
         .eq('metadata->request_id', request.id);
       
+      // BACKUP: Também marcar na tabela pending_users se existir
+      await supabase
+        .from('pending_users')
+        .update({ 
+          status: 'approved',
+          processed_by: user.id,
+          processed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+      
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
       
@@ -184,6 +219,18 @@ const AprovacaoUsuarios: React.FC = () => {
           }
         })
         .eq('metadata->request_id', request.id);
+      
+      // BACKUP: Também marcar na tabela pending_users se existir
+      await supabase
+        .from('pending_users')
+        .update({ 
+          status: 'rejected',
+          processed_by: user.id,
+          processed_at: new Date().toISOString(),
+          rejection_reason: reason,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
       
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
