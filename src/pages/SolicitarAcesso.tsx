@@ -36,6 +36,12 @@ const SolicitarAcesso: React.FC = () => {
         .eq('status', 'active');
 
       if (error) {
+        // RLS pode estar bloqueando a consulta - assumir que existem admins
+        if (error.code === 'PGRST116' || error.message?.includes('406') || error.message?.includes('Not Acceptable')) {
+          console.log('🔒 RLS bloqueou consulta de admins - assumindo que sistema já tem administradores');
+          console.log('📧 Sistema permitirá solicitações de acesso normalmente');
+          return;
+        }
         console.error('❌ Erro ao verificar admins:', error);
         return;
       }
@@ -52,6 +58,7 @@ const SolicitarAcesso: React.FC = () => {
     } catch (error) {
       console.error('💥 Erro ao verificar admins:', error);
       // Continuar mesmo com erro - permitir que qualquer usuário solicite acesso
+      console.log('🔧 Continuando com funcionamento normal do sistema');
     }
   };
 

@@ -68,7 +68,14 @@ export class ProfileService {
         .eq('id', user.id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        // Se é erro RLS (406), significa que usuário não tem perfil aprovado
+        if (error.code === 'PGRST116' || error.message?.includes('406') || error.message?.includes('Not Acceptable')) {
+          console.log('🔒 RLS bloqueou busca de perfil - usuário não aprovado ainda');
+          return null;
+        }
+        throw error;
+      }
 
       return {
         ...data,

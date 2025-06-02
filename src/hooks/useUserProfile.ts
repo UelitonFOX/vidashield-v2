@@ -50,7 +50,12 @@ export const useUserProfile = () => {
         // 🚨 SEGURANÇA: Se NÃO há profile na tabela, retornar NULL
         // Isso forçará o redirecionamento para solicitar acesso
         if (profileError || !profileData) {
-          console.log('👤 Usuário autenticado mas SEM profile aprovado:', currentUser.email)
+          // Se é erro RLS (406), é normal - usuário não aprovado ainda
+          if (profileError?.code === 'PGRST116' || profileError?.message?.includes('406') || profileError?.message?.includes('Not Acceptable')) {
+            console.log('🔒 RLS bloqueou busca de perfil - usuário não aprovado:', currentUser.email)
+          } else {
+            console.log('👤 Usuário autenticado mas SEM profile aprovado:', currentUser.email)
+          }
           setProfile(null)
           setError(null)
           return
