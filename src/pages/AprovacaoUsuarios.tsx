@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle, RefreshCcw, UserPlus } from 'lucide-react';
+import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle, RefreshCw, UserPlus, Shield } from 'lucide-react';
 import { AccessRequestService, AccessRequest } from '../services/accessRequestService';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabaseClient';
@@ -10,6 +10,7 @@ const AprovacaoUsuarios: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<{ [key: string]: string }>({});
+  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
 
   const fetchPendingRequests = async () => {
     try {
@@ -199,6 +200,42 @@ const AprovacaoUsuarios: React.FC = () => {
     return colors[role as keyof typeof colors] || colors.user;
   };
 
+  // MODO EMERGÊNCIA: Carregar dados do localStorage
+  const loadEmergencyRequests = () => {
+    try {
+      console.log('🆘 Carregando solicitações em modo emergência...');
+      const emergencyData = localStorage.getItem('vidashield_emergency_requests');
+      
+      if (emergencyData) {
+        const requests = JSON.parse(emergencyData);
+        console.log(`📦 Encontradas ${requests.length} solicitações em modo emergência`);
+        
+        // Converter para formato compatível
+        const formattedRequests = requests.map((item: any) => ({
+          id: item.request.id,
+          email: item.request.email,
+          full_name: item.request.full_name,
+          department: item.request.department,
+          phone: item.request.phone,
+          justificativa: item.request.justificativa,
+          role: item.request.role,
+          status: 'pending',
+          created_at: item.timestamp,
+          source: 'emergency_mode'
+        }));
+        
+        setApprovalRequests(formattedRequests);
+        setLoading(false);
+        alert(`✅ Carregadas ${formattedRequests.length} solicitações do modo emergência!`);
+      } else {
+        alert('⚠️ Nenhuma solicitação encontrada no modo emergência');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados de emergência:', error);
+      alert('❌ Erro ao carregar dados de emergência');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -212,10 +249,29 @@ const AprovacaoUsuarios: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Aprovação de Usuários</h1>
-          <p className="text-zinc-400 mt-2">
-            Gerencie solicitações de acesso ao sistema
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-8 flex items-center gap-3">
+            <Shield className="w-8 h-8 text-green-400" />
+            Aprovação de Usuários
+          </h1>
+          
+          {/* Botões de controle */}
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={fetchPendingRequests}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Atualizar Lista
+            </button>
+            
+            <button
+              onClick={loadEmergencyRequests}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              🆘 Carregar Modo Emergência
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           {/* Botão de Refresh */}
@@ -225,7 +281,7 @@ const AprovacaoUsuarios: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-all duration-200"
             title="Atualizar lista de solicitações"
           >
-            <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Atualizando...' : 'Atualizar'}
           </button>
           
