@@ -24,7 +24,7 @@ const AprovacaoUsuarios: React.FC = () => {
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
-        .contains('title', 'Nova Solicitação de Acesso')
+        .like('title', '%Nova Solicitação de Acesso%')
         .order('created_at', { ascending: false });
 
       if (notifError) {
