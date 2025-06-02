@@ -102,7 +102,29 @@ export class AccessRequestService {
     console.log('🔍 Buscando solicitações pendentes via notificações...');
 
     try {
-      // Buscar todas as notificações auth não lidas e filtrar no cliente
+      // PRIMEIRO: Buscar TODAS as notificações auth (lidas e não lidas) para debug
+      const { data: allNotifications, error: allError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('type', 'auth')
+        .order('created_at', { ascending: false });
+
+      console.log(`🔍 [DEBUG] Total de notificações auth (todas): ${allNotifications?.length || 0}`);
+      
+      // Log das notificações para debug
+      allNotifications?.forEach((notif, index) => {
+        if (notif.metadata?.system_type === 'access_request') {
+          console.log(`🔍 [DEBUG ${index}] Notificação access_request:`, {
+            id: notif.id,
+            read: notif.read,
+            email: notif.metadata?.email,
+            request_id: notif.metadata?.request_id,
+            created_at: notif.created_at
+          });
+        }
+      });
+
+      // SEGUNDO: Buscar apenas as não lidas
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
