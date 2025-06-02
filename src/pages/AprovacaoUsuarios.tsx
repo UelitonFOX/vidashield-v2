@@ -24,16 +24,21 @@ const AprovacaoUsuarios: React.FC = () => {
 
   const fetchPendingUsers = async () => {
     try {
-      // PRIMEIRO: tentar buscar usuários da tabela pending_users (dados demo/simulação)
-      const { data: mockPendingUsers, error: mockError } = await supabase
+      setLoading(true);
+      
+      // 🚨 CORREÇÃO: Buscar usuários REAIS que solicitaram acesso
+      
+      // PRIMEIRO: Tentar buscar da tabela pending_users (se existir)
+      const { data: pendingUsersData } = await supabase
         .from('pending_users')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (!mockError && mockPendingUsers && mockPendingUsers.length > 0) {
-        // Usar dados da tabela pending_users se existirem
-        const formattedUsers = mockPendingUsers.map(user => ({
+      if (pendingUsersData && pendingUsersData.length > 0) {
+        console.log('📋 Encontrados usuários na tabela pending_users:', pendingUsersData.length);
+        
+        const formattedUsers = pendingUsersData.map(user => ({
           id: user.id,
           email: user.email,
           full_name: user.full_name,
@@ -47,95 +52,69 @@ const AprovacaoUsuarios: React.FC = () => {
         }));
         
         setPendingUsers(formattedUsers);
-        
-        // Notificar admins se houver usuários pendentes
-        if (formattedUsers.length > 0) {
-          try {
-            await NotificationService.notifyPendingUserApproval(formattedUsers.length);
-          } catch (notificationError) {
-            console.error('Erro ao enviar notificação de usuários pendentes:', notificationError);
-          }
-        }
         return;
       }
 
-      // FALLBACK: se não há dados na pending_users, usar dados estáticos para demonstração
-      console.log('⚠️ API Admin não disponível - usando dados de demonstração');
+      // SEGUNDO: Buscar usuários do auth.users que têm access_requested = true
+      console.log('🔍 Buscando usuários com solicitações pendentes via metadata...');
       
-      const demoPendingUsers = [
-        {
-          id: 'demo-1-joao-carlos-silva',
-          email: 'joao.carlos@empresa.com',
-          full_name: 'João Carlos Silva',
-          avatar_url: null,
-          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'pending' as const,
-          role: 'user',
-          department: 'Análise de Segurança',
-          phone: '(11) 99999-0001',
-          justificativa: 'Preciso de acesso para monitorar ameaças de segurança na filial de São Paulo.'
-        },
-        {
-          id: 'demo-2-maria-fernanda-santos',
-          email: 'maria.fernanda@empresa.com',
-          full_name: 'Maria Fernanda Santos',
-          avatar_url: null,
-          created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'pending' as const,
-          role: 'admin',
-          department: 'Gerência de TI',
-          phone: '(11) 99999-0002',
-          justificativa: 'Gerente de TI responsável pela implementação do sistema de segurança.'
-        },
-        {
-          id: 'demo-3-carlos-roberto-oliveira',
-          email: 'carlos.roberto@empresa.com',
-          full_name: 'Carlos Roberto Oliveira',
-          avatar_url: null,
-          created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-          status: 'pending' as const,
-          role: 'user',
-          department: 'Desenvolvimento',
-          phone: '(11) 99999-0003',
-          justificativa: 'Desenvolvedor que trabalhará na integração de novos módulos de segurança.'
-        },
-        {
-          id: 'demo-4-ana-paula-costa',
-          email: 'ana.paula@empresa.com',
-          full_name: 'Ana Paula Costa',
-          avatar_url: null,
-          created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          status: 'pending' as const,
-          role: 'user',
-          department: 'Compliance',
-          phone: '(11) 99999-0004',
-          justificativa: 'Analista de compliance que precisa verificar conformidade das políticas de segurança.'
+      // Como não temos acesso direto ao auth.users via RLS, vamos buscar 
+      // usuários que estão logados mas não têm profile na user_profiles
+      const { data: existingProfiles } = await supabase
+        .from('user_profiles')
+        .select('id');
+
+      const profileIds = existingProfiles?.map(p => p.id) || [];
+
+      // Buscar notificações de solicitação de acesso para descobrir quem solicitou
+      const { data: accessNotifications } = await supabase
+        .from('notifications')
+        .select('metadata')
+        .eq('type', 'auth')
+        .like('title', '%Solicitação de Acesso%')
+        .order('created_at', { ascending: false });
+
+      if (accessNotifications && accessNotifications.length > 0) {
+        console.log('📧 Encontradas notificações de solicitação:', accessNotifications.length);
+        
+        const pendingList: PendingUser[] = [];
+        
+        for (const notification of accessNotifications) {
+          const metadata = notification.metadata;
+          if (metadata?.pending_user_id && !profileIds.includes(metadata.pending_user_id)) {
+            // Verificar se já existe na lista para evitar duplicatas
+            const exists = pendingList.find(u => u.id === metadata.pending_user_id);
+            if (!exists) {
+              pendingList.push({
+                id: metadata.pending_user_id,
+                email: metadata.pending_user_email || '',
+                full_name: metadata.pending_user_name || null,
+                avatar_url: null,
+                created_at: metadata.requested_at || new Date().toISOString(),
+                status: 'pending',
+                role: 'user',
+                department: metadata.department || null,
+                phone: metadata.phone || null,
+                justificativa: metadata.justificativa || null
+              });
+            }
+          }
         }
-      ];
-      
-      setPendingUsers(demoPendingUsers);
-      
-      // Notificar admins sobre os usuários pendentes
-      try {
-        await NotificationService.notifyPendingUserApproval(demoPendingUsers.length);
-      } catch (notificationError) {
-        console.error('Erro ao enviar notificação de usuários pendentes:', notificationError);
+
+        if (pendingList.length > 0) {
+          setPendingUsers(pendingList);
+          console.log('✅ Usuários pendentes encontrados:', pendingList.length);
+          return;
+        }
       }
+
+      // TERCEIRO: Se não encontrou nada, não mostrar dados mockados
+      console.log('ℹ️ Nenhuma solicitação de acesso encontrada');
+      setPendingUsers([]);
       
     } catch (error) {
       console.error('Erro ao buscar usuários pendentes:', error);
-      
-      // Em último caso, usar dados mínimos
-      setPendingUsers([
-        {
-          id: 'fallback-1',
-          email: 'usuario.teste@demo.com',
-          full_name: 'Usuário de Teste',
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-          status: 'pending'
-        }
-      ]);
+      setPendingUsers([]);
     } finally {
       setLoading(false);
     }
@@ -168,18 +147,45 @@ const AprovacaoUsuarios: React.FC = () => {
   const approveUser = async (user: PendingUser) => {
     setProcessingId(user.id);
     try {
-      // Simulação: Atualizar status na tabela pending_users ou usar apenas dados locais
-      try {
-        // Tentar atualizar na tabela pending_users se existir
-        await supabase
-          .from('pending_users')
-          .update({ status: 'approved', approved_at: new Date().toISOString() })
-          .eq('id', user.id);
-      } catch (dbError) {
-        console.log('Tabela pending_users não encontrada, usando simulação local');
+      console.log(`🔄 Aprovando usuário: ${user.email}`);
+      
+      // 🚨 PRINCIPAL: Criar profile na tabela user_profiles
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          name: user.full_name || user.email.split('@')[0],
+          role: user.role || 'user',
+          status: 'active',
+          department: user.department,
+          phone: user.phone,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error('Erro ao criar profile:', profileError);
+        throw new Error(`Erro ao criar profile: ${profileError.message}`);
       }
 
-      // Enviar notificações (simuladas)
+      console.log(`✅ Profile criado na user_profiles para: ${user.email}`);
+
+      // Atualizar status na tabela pending_users (se existir)
+      try {
+        await supabase
+          .from('pending_users')
+          .update({ 
+            status: 'approved', 
+            approved_at: new Date().toISOString(),
+            approved_by: currentAdmin?.email || 'admin'
+          })
+          .eq('id', user.id);
+      } catch (dbError) {
+        console.log('Tabela pending_users não encontrada, continuando...');
+      }
+
+      // Enviar notificações
       try {
         await NotificationService.notifyUserApproved({
           userId: user.id,
@@ -198,16 +204,18 @@ const AprovacaoUsuarios: React.FC = () => {
         });
       } catch (notificationError) {
         console.error('Erro ao enviar notificações:', notificationError);
+        // Continuar mesmo se notificação falhar
       }
 
       // Atualizar lista local (remover da lista de pendentes)
       setPendingUsers(prev => prev.filter(u => u.id !== user.id));
       
       console.log(`✅ Usuário ${user.email} aprovado com sucesso!`);
-      alert(`✅ Usuário ${user.full_name || user.email} foi aprovado!\n\n⚠️ MODO DEMONSTRAÇÃO: Em um ambiente real, o usuário seria notificado por email e poderia fazer login no sistema.`);
+      alert(`✅ Usuário ${user.full_name || user.email} foi aprovado e já pode acessar o sistema!`);
+      
     } catch (error) {
       console.error('Erro ao aprovar usuário:', error);
-      alert('Erro ao aprovar usuário. Tente novamente.');
+      alert(`Erro ao aprovar usuário: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setProcessingId(null);
     }

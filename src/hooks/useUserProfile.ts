@@ -32,94 +32,50 @@ export const useUserProfile = () => {
         }
 
         if (!currentUser) {
-          throw new Error('Usuário não encontrado')
+          setUser(null)
+          setProfile(null)
+          setError(null)
+          return
         }
 
         setUser(currentUser)
 
-        // Buscar perfil do usuário na tabela profiles (se existir)
-        const { data: profileData } = await supabase
-          .from('profiles')
+        // 🚨 CORREÇÃO: Buscar perfil do usuário na tabela user_profiles (NÃO profiles)
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
           .select('*')
           .eq('id', currentUser.id)
           .single()
 
-        // Se não encontrar perfil na tabela, usar dados do auth
-        const avatarUrl = profileData?.avatar_url || 
-                         currentUser.user_metadata?.avatar_url || 
-                         currentUser.user_metadata?.picture || 
-                         null
+        // 🚨 SEGURANÇA: Se NÃO há profile na tabela, retornar NULL
+        // Isso forçará o redirecionamento para solicitar acesso
+        if (profileError || !profileData) {
+          console.log('👤 Usuário autenticado mas SEM profile aprovado:', currentUser.email)
+          setProfile(null)
+          setError(null)
+          return
+        }
 
+        // Se há profile aprovado na tabela, usar esses dados
         const userProfile: UserProfile = {
-          id: currentUser.id,
-          email: currentUser.email || '',
-          full_name: profileData?.full_name || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || null,
-          avatar_url: avatarUrl,
-          role: profileData?.role || 'user',
-          status: profileData?.status || 'active',
-          created_at: currentUser.created_at,
+          id: profileData.id,
+          email: profileData.email,
+          full_name: profileData.name || profileData.full_name || null,
+          avatar_url: profileData.avatar_url || currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null,
+          role: profileData.role,
+          status: profileData.status,
+          created_at: profileData.created_at || currentUser.created_at,
           last_sign_in: currentUser.last_sign_in_at || null
         }
 
-        // Se há avatar do OAuth mas não está salvo no profile, salvar
-        if (avatarUrl && !profileData?.avatar_url) {
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: currentUser.id,
-              email: currentUser.email,
-              full_name: userProfile.full_name,
-              avatar_url: avatarUrl,
-              role: userProfile.role,
-              status: userProfile.status,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'id'
-            })
-        }
-
-        // Se não tiver localização no perfil, tentar detectar automaticamente (apenas uma vez)
-        if (!profileData?.location && navigator.geolocation && !localStorage.getItem('geolocation_attempted')) {
-          localStorage.setItem('geolocation_attempted', 'true');
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              try {
-                // Usar API de geocoding reverso para detectar cidade
-                const response = await fetch(
-                  `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=pt`
-                );
-                const data = await response.json();
-                const cidade = `${data.city}, ${data.principalSubdivision}`;
-                
-                // Atualizar no banco de dados
-                await supabase
-                  .from('profiles')
-                  .upsert({
-                    id: currentUser.id,
-                    email: currentUser.email,
-                    full_name: userProfile.full_name,
-                    avatar_url: userProfile.avatar_url,
-                    role: userProfile.role,
-                    location: cidade,
-                    updated_at: new Date().toISOString()
-                  });
-                
-                console.log(`Localização detectada: ${cidade}`);
-              } catch (error) {
-                console.log('Erro ao detectar localização:', error);
-              }
-            },
-            (error) => {
-              console.log('Geolocalização negada pelo usuário:', error);
-            }
-          );
-        }
-
+        console.log('✅ Profile aprovado encontrado:', userProfile.email, 'Role:', userProfile.role)
         setProfile(userProfile)
         setError(null)
+        
       } catch (err) {
         console.error('Erro ao carregar perfil:', err)
         setError(err instanceof Error ? err.message : 'Erro desconhecido')
+        setProfile(null)
       } finally {
         setLoading(false)
       }
