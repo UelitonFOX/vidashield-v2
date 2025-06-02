@@ -15,151 +15,26 @@ const AprovacaoUsuarios: React.FC = () => {
   const fetchPendingRequests = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Buscando solicitações de acesso pendentes...');
+      console.log('🔍 Buscando solicitações pendentes SIMPLES...');
       
-      // WORKAROUND: Buscar dados das notificações em vez da tabela pending_users
-      console.log('🔧 Usando workaround: buscando dados de notificações...');
-      
-      // Buscar notificações de solicitação de acesso (incluindo as de emergência)
-      let { data: notifications, error: notifError } = await supabase
-        .from('notifications')
+      // SIMPLES: Buscar diretamente na pending_users
+      const { data: requests, error } = await supabase
+        .from('pending_users')
         .select('*')
-        .eq('type', 'auth')
-        .ilike('title', '%Solicitação%')
-        .eq('read', false)
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (notifError) {
-        console.error('❌ Erro ao buscar notificações:', notifError);
-        console.error('🔍 Detalhes do erro:', notifError.message);
-        
-        // Tentar busca alternativa sem filtros mas incluindo notificações de emergência
-        console.log('🔄 Tentando busca alternativa incluindo notificações de emergência...');
-        const { data: allNotifs, error: allError } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('type', 'auth')
-          .order('created_at', { ascending: false })
-          .limit(20);
-          
-        if (allError) {
-          console.error('❌ Erro na busca alternativa:', allError);
-        } else {
-          console.log('📊 Total de notificações encontradas:', allNotifs?.length || 0);
-          console.log('📋 Tipos de notificações:', [...new Set(allNotifs?.map(n => n.type))]);
-          console.log('🔍 Títulos encontrados:', allNotifs?.map(n => n.title).slice(0, 5));
-          
-          // Filtrar apenas notificações de solicitação
-          const accessNotifications = allNotifs?.filter(n => 
-            n.title?.includes('Solicitação') || n.metadata?.emergency_mode
-          ) || [];
-          
-          if (accessNotifications.length > 0) {
-            console.log(`🆘 Encontradas ${accessNotifications.length} notificações de emergência!`);
-            notifications = accessNotifications;
-          }
-        }
-        
-        // BACKUP FINAL: Tentar buscar da tabela pending_users diretamente
-        console.log('🔄 BACKUP: Tentando buscar da tabela pending_users...');
-        
-        try {
-          const { data: pendingData, error: pendingError } = await supabase
-            .from('pending_users')
-            .select('*')
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
-            
-          if (pendingError) {
-            console.warn('⚠️ Backup na pending_users também falhou:', pendingError.message);
-          } else if (pendingData && pendingData.length > 0) {
-            console.log(`✅ BACKUP SUCESSO: Encontradas ${pendingData.length} solicitações na tabela pending_users`);
-            setPendingRequests(pendingData as AccessRequest[]);
-            setLoading(false);
-            return;
-          } else {
-            console.log('📝 Tabela pending_users vazia ou sem dados pendentes');
-          }
-        } catch (backupError) {
-          console.warn('⚠️ Erro no backup da pending_users:', backupError);
-        }
-        
+      if (error) {
+        console.error('❌ Erro ao buscar pending_users:', error);
         setPendingRequests([]);
         return;
       }
 
-      console.log('📧 Notificações encontradas:', notifications?.length || 0);
-      
-      if (notifications && notifications.length > 0) {
-        console.log('📋 Títulos das notificações:', notifications.map(n => n.title));
-        console.log('🔍 Primeira notificação completa:', notifications[0]);
-      }
-
-      // Converter notificações em solicitações mockadas
-      const mockRequests: AccessRequest[] = (notifications || []).map((notification: any) => {
-        const metadata = notification.metadata || {};
-        return {
-          id: metadata.request_id || notification.id,
-          email: metadata.pending_user_email || 'email@exemplo.com',
-          full_name: metadata.pending_user_name || 'Nome não informado',
-          avatar_url: null,
-          role: 'user',
-          department: metadata.department || null,
-          phone: metadata.phone || null,
-          justificativa: metadata.justificativa || null,
-          status: 'pending' as const,
-          created_at: metadata.requested_at || notification.created_at,
-          updated_at: notification.created_at,
-          processed_by: null,
-          processed_at: null,
-          rejection_reason: null,
-          user_id: metadata.pending_user_id
-        };
-      });
-
-      // Filtrar apenas as não processadas (que não foram marcadas como read)
-      const pendingOnly = mockRequests.filter((req, index) => 
-        !notifications![index].read
-      );
-      
-      // SEMPRE TENTAR BUSCAR NA TABELA PENDING_USERS COMO BACKUP
-      console.log('🔄 BACKUP: Sempre tentando buscar da tabela pending_users...');
-      
-      try {
-        const { data: pendingData, error: pendingError } = await supabase
-          .from('pending_users')
-          .select('*')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-          
-        if (pendingError) {
-          console.warn('⚠️ Backup na pending_users falhou:', pendingError.message);
-        } else if (pendingData && pendingData.length > 0) {
-          console.log(`✅ BACKUP SUCESSO: Encontradas ${pendingData.length} solicitações na tabela pending_users`);
-          
-          // Log detalhado dos dados encontrados
-          console.log('📋 Dados encontrados na pending_users:');
-          pendingData.forEach((item: any, index: number) => {
-            console.log(`  ${index + 1}. ${item.full_name || item.email} (${item.email}) - ${item.created_at}`);
-          });
-          
-          // Se encontrou dados na pending_users, usar eles (sobrescrever notificações)
-          setPendingRequests(pendingData as AccessRequest[]);
-          setLoading(false);
-          return;
-        } else {
-          console.log('📝 Tabela pending_users vazia ou sem dados pendentes');
-        }
-      } catch (backupError) {
-        console.warn('⚠️ Erro no backup da pending_users:', backupError);
-      }
-
-      // Se chegou até aqui, usar dados das notificações (se houver)
-      setPendingRequests(pendingOnly);
-      console.log(`📊 Processadas ${pendingOnly.length} solicitações pendentes das notificações`);
+      console.log(`📊 Encontradas ${requests?.length || 0} solicitações pendentes`);
+      setPendingRequests(requests || []);
       
     } catch (error) {
-      console.error('❌ Erro ao buscar solicitações:', error);
+      console.error('❌ Erro geral:', error);
       setPendingRequests([]);
     } finally {
       setLoading(false);
@@ -177,15 +52,13 @@ const AprovacaoUsuarios: React.FC = () => {
     try {
       const assignedRole = selectedRole[request.id] || request.role || 'user';
       
-      console.log(`✅ Aprovando usuário: ${request.email} com role: ${assignedRole}`);
+      console.log(`✅ Aprovando usuário SIMPLES: ${request.email} como ${assignedRole}`);
       
-      // WORKAROUND: Criar profile diretamente em vez de usar AccessRequestService
-      console.log('🔧 Criando profile diretamente...');
-      
+      // SIMPLES: Criar profile em user_profiles
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          id: request.user_id || crypto.randomUUID(),
+          id: crypto.randomUUID(),
           email: request.email,
           name: request.full_name || request.email.split('@')[0],
           role: assignedRole,
@@ -201,31 +74,24 @@ const AprovacaoUsuarios: React.FC = () => {
         throw new Error(`Erro ao criar profile: ${profileError.message}`);
       }
 
-      // Marcar notificação como processada (se possível)
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('metadata->request_id', request.id);
-      
-      // BACKUP: Também marcar na tabela pending_users se existir
-      await supabase
+      // SIMPLES: Remover da pending_users
+      const { error: deleteError } = await supabase
         .from('pending_users')
-        .update({ 
-          status: 'approved',
-          processed_by: user.id,
-          processed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .delete()
         .eq('id', request.id);
+
+      if (deleteError) {
+        console.warn('⚠️ Erro ao remover de pending_users:', deleteError);
+      }
       
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
       
-      alert(`✅ Usuário ${request.full_name || request.email} foi aprovado como ${assignedRole}!`);
+      alert(`✅ ${request.full_name || request.email} aprovado como ${assignedRole}!`);
       
     } catch (error) {
-      console.error('❌ Erro ao aprovar usuário:', error);
-      alert(`Erro ao aprovar usuário: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      console.error('❌ Erro ao aprovar:', error);
+      alert(`❌ Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setProcessingId(null);
     }

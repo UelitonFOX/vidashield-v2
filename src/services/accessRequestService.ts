@@ -33,83 +33,42 @@ export interface CreateAccessRequestData {
 export class AccessRequestService {
   /**
    * Criar uma nova solicitação de acesso
-   * TEMPORÁRIO: Usando workaround para RLS
+   * SIMPLES: Apenas inserir na tabela pending_users
    */
   static async createRequest(data: CreateAccessRequestData): Promise<AccessRequest> {
-    console.log('📝 Criando solicitação de acesso...', data);
-
-    // WORKAROUND TEMPORÁRIO: Criar mock request e notificar admins diretamente
-    console.log('🔧 Usando workaround temporário para contornar problema de RLS...');
-    
-    const requestData: AccessRequest = {
-      id: crypto.randomUUID(),
-      email: data.email,
-      full_name: data.full_name,
-      avatar_url: data.avatar_url || null,
-      role: data.role || 'user',
-      department: data.department || null,
-      phone: data.phone || null,
-      justificativa: data.justificativa || null,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      processed_by: null,
-      processed_at: null,
-      rejection_reason: null,
-      user_id: data.user_id
-    };
-
-    console.log('📋 Dados da solicitação criada:', {
-      id: requestData.id,
-      email: requestData.email,
-      name: requestData.full_name,
-      department: requestData.department,
-      role: requestData.role
-    });
+    console.log('📝 Criando solicitação de acesso SIMPLES...', data);
 
     try {
-      console.log('📤 Iniciando processo de notificação aos admins...');
-      
-      // Notificar administradores com os dados da solicitação
-      await this.notifyAdminsNewRequest(requestData, data.user_id);
-      
-      // BACKUP ADICIONAL: Salvar também numa tabela de backup caso notificações falhem
-      console.log('💾 Salvando backup adicional na tabela pending_users...');
-      
-      try {
-        const { error: backupError } = await supabase
-          .from('pending_users')
-          .insert({
-            id: requestData.id,
-            email: requestData.email,
-            full_name: requestData.full_name,
-            avatar_url: requestData.avatar_url,
-            role: requestData.role,
-            department: requestData.department,
-            phone: requestData.phone,
-            justificativa: requestData.justificativa,
-            status: 'pending',
-            created_at: requestData.created_at,
-            updated_at: requestData.updated_at
-          });
-          
-        if (backupError) {
-          console.warn('⚠️ Backup na tabela pending_users falhou (RLS):', backupError.message);
-        } else {
-          console.log('✅ Backup salvo com sucesso na tabela pending_users');
-        }
-      } catch (backupErr) {
-        console.warn('⚠️ Erro no backup:', backupErr);
+      // SIMPLES: Inserir diretamente na pending_users
+      const { data: insertedRequest, error } = await supabase
+        .from('pending_users')
+        .insert({
+          id: crypto.randomUUID(),
+          email: data.email,
+          full_name: data.full_name,
+          avatar_url: data.avatar_url,
+          role: data.role || 'user',
+          department: data.department,
+          phone: data.phone,
+          justificativa: data.justificativa,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao inserir na pending_users:', error);
+        throw new Error(`Erro ao criar solicitação: ${error.message}`);
       }
+
+      console.log('✅ Solicitação criada na pending_users:', insertedRequest.id);
+      return insertedRequest as AccessRequest;
       
-      console.log('✅ Solicitação processada e admins notificados!');
-      console.log('🎯 Solicitação ID:', requestData.id);
-      
-      return requestData;
     } catch (error) {
-      console.error('❌ Erro ao notificar admins:', error);
-      console.error('💥 Detalhes do erro:', error instanceof Error ? error.message : 'Erro desconhecido');
-      throw new Error(`Erro ao processar solicitação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      console.error('❌ Erro ao processar solicitação:', error);
+      throw error;
     }
   }
 
