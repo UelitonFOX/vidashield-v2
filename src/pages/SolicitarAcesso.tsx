@@ -25,6 +25,7 @@ const SolicitarAcesso: React.FC = () => {
   const ensureAdminExists = async () => {
     try {
       console.log('🔍 Verificando se existe administrador no sistema...');
+      console.log('👤 Usuário atual:', user?.email);
       
       const { data: admins, error } = await supabase
         .from('user_profiles')
@@ -44,14 +45,24 @@ const SolicitarAcesso: React.FC = () => {
         
         // Verificar se o usuário atual tem um email que sugere ser admin
         const currentUserEmail = user?.email?.toLowerCase();
+        console.log('📧 Email para verificação:', currentUserEmail);
+        
         const isLikelyAdmin = currentUserEmail?.includes('admin') || 
                              currentUserEmail?.includes('uelitonfox') ||
-                             currentUserEmail?.includes('talento.tech');
+                             currentUserEmail?.includes('talento.tech') ||
+                             currentUserEmail?.includes('fox.tech');
+        
+        console.log('🔍 É provável admin?', isLikelyAdmin);
         
         if (isLikelyAdmin && user?.id) {
           console.log('🔧 Criando profile de admin para usuário atual...');
+          console.log('📋 Dados do admin a ser criado:', {
+            id: user.id,
+            email: user.email,
+            name: user.email?.split('@')[0] || 'Admin'
+          });
           
-          const { error: createError } = await supabase
+          const { data: createResult, error: createError } = await supabase
             .from('user_profiles')
             .insert({
               id: user.id,
@@ -62,14 +73,27 @@ const SolicitarAcesso: React.FC = () => {
               department: 'Administração',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
-            });
+            })
+            .select();
 
           if (createError) {
             console.error('❌ Erro ao criar admin:', createError);
+            console.error('❌ Detalhes do erro:', createError.message, createError.details);
           } else {
             console.log('✅ Admin criado com sucesso para:', user.email);
+            console.log('📄 Resultado da criação:', createResult);
+            
+            // Recarregar a página para atualizar o contexto de auth
+            setTimeout(() => {
+              console.log('🔄 Recarregando página para atualizar contexto...');
+              window.location.reload();
+            }, 1000);
           }
+        } else {
+          console.log('❌ Email não corresponde aos padrões de admin ou usuário não encontrado');
         }
+      } else {
+        console.log('✅ Administradores já existem no sistema');
       }
     } catch (error) {
       console.error('💥 Erro ao verificar/criar admin:', error);
@@ -77,8 +101,11 @@ const SolicitarAcesso: React.FC = () => {
   };
 
   useEffect(() => {
-    ensureAdminExists();
-  }, [user]);
+    // Evitar múltiplas execuções
+    if (user?.email && !solicitado) {
+      ensureAdminExists();
+    }
+  }, [user?.email]); // Depender apenas do email para evitar múltiplas execuções
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
