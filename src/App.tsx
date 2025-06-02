@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Login from './pages/Login'
@@ -20,6 +21,7 @@ import Reports from './pages/Reports'
 import Help from './pages/Help'
 import MyDataPage from './pages/MyDataPage'
 import Layout from './components/Layout'
+import SolicitarAcesso from './pages/SolicitarAcesso'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import { NotificationProvider } from './context/NotificationContext'
@@ -78,6 +80,17 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        {/* Rota para solicitar acesso - SEM requiresApproval */}
+        <Route 
+          path="/solicitar-acesso" 
+          element={
+            <ProtectedRoute requiresApproval={false}>
+              <SolicitarAcesso />
+            </ProtectedRoute>
+          } 
+        />
+        
         <Route 
           path="/dashboard-classic" 
           element={

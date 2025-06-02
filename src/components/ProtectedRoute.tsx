@@ -34,9 +34,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
 
-      // 🚨 CORREÇÃO DE SEGURANÇA: USUÁRIO SEM PROFILE = BLOQUEADO
-      // Todos os usuários DEVEM ter profile para acessar qualquer área
+      // 🚨 CORREÇÃO DE SEGURANÇA: USUÁRIO SEM PROFILE = BLOQUEADO/REDIRECIONADO
+      // Todos os usuários DEVEM ter profile para acessar áreas protegidas (exceto solicitar-acesso)
       if (!profile) {
+        // Se requiresApproval é false, permitir acesso (página de solicitar acesso)
+        if (!requiresApproval) {
+          setAuthorizationStatus('authorized');
+          return;
+        }
+        
+        // Caso contrário, redirecionar para solicitar acesso
         setAuthorizationStatus('pending');
         return;
       }
@@ -92,6 +99,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Conta pendente de aprovação
   if (authorizationStatus === 'pending') {
+    // Se usuário está autenticado mas não tem profile, redirecionar para solicitar acesso
+    if (user && !profile) {
+      return <Navigate to="/solicitar-acesso" replace />;
+    }
+    
+    // Se tem profile mas status é pendente/suspenso
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-zinc-800 rounded-2xl p-8 text-center border border-zinc-700">
@@ -99,22 +112,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             <AlertTriangle className="w-8 h-8 text-yellow-400" />
           </div>
           
-          <h2 className="text-2xl font-bold text-white mb-4">🚨 Acesso Não Autorizado</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">🚨 Acesso Pendente</h2>
           
           <p className="text-zinc-300 mb-6 leading-relaxed">
-            Sua conta não está autorizada para acessar este sistema. Para obter acesso, entre em contato com o administrador.
+            Sua solicitação de acesso ainda está sendo analisada pelos administradores.
           </p>
           
           <div className="bg-zinc-700/50 rounded-lg p-4 mb-6">
             <p className="text-sm text-zinc-400 mb-2">Email autenticado:</p>
             <p className="text-yellow-400 font-semibold">{user?.email}</p>
-            <p className="text-sm text-zinc-500 mt-1">Status: Aguardando autorização</p>
+            <p className="text-sm text-zinc-500 mt-1">Status: Aguardando aprovação</p>
           </div>
           
-          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-6">
-            <p className="text-red-400 text-sm font-medium">⚠️ Aviso de Segurança</p>
-            <p className="text-red-300 text-xs mt-1">
-              Este sistema possui controle de acesso restrito. Apenas usuários autorizados podem acessar.
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6">
+            <p className="text-blue-400 text-sm font-medium">⏱️ Próximos Passos</p>
+            <p className="text-blue-300 text-xs mt-1">
+              • Aguarde a análise dos administradores<br/>
+              • Você receberá um email quando aprovado<br/>
+              • O processo pode levar até 24 horas
             </p>
           </div>
           
