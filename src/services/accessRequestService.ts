@@ -124,12 +124,11 @@ export class AccessRequestService {
         }
       });
 
-      // SEGUNDO: Buscar apenas as não lidas
+      // SEGUNDO: Buscar notificações de access_request não processadas (lidas ou não lidas)
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
-        .eq('read', false)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -137,24 +136,19 @@ export class AccessRequestService {
         throw error;
       }
 
-      console.log(`🔍 Total de notificações auth não lidas: ${notifications?.length || 0}`);
+      console.log(`🔍 Total de notificações auth (todas): ${notifications?.length || 0}`);
 
-      // LOG DETALHADO: Vamos ver o metadata de cada notificação não lida
-      notifications?.forEach((notif, index) => {
-        console.log(`🔍 [NOTIF ${index}] Estrutura completa:`, {
-          id: notif.id,
-          type: notif.type,
-          read: notif.read,
-          title: notif.title,
-          metadata: notif.metadata,
-          created_at: notif.created_at
-        });
-      });
-
-      // Filtrar no cliente apenas as notificações de access_request
-      const accessRequestNotifications = notifications?.filter(notif => 
-        notif.metadata?.system_type === 'access_request'
-      ) || [];
+      // Filtrar no cliente apenas as notificações de access_request ainda não processadas
+      const accessRequestNotifications = notifications?.filter(notif => {
+        const isAccessRequest = notif.metadata?.system_type === 'access_request';
+        const notProcessed = !notif.metadata?.status || notif.metadata?.status === 'pending';
+        
+        if (isAccessRequest) {
+          console.log(`🔍 [ACCESS_REQUEST] Email: ${notif.metadata?.email}, Status: ${notif.metadata?.status}, Read: ${notif.read}`);
+        }
+        
+        return isAccessRequest && notProcessed;
+      }) || [];
 
       console.log(`🔍 Notificações de access_request encontradas: ${accessRequestNotifications.length}`);
 
