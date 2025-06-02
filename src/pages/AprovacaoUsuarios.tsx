@@ -27,43 +27,11 @@ const AprovacaoUsuarios: React.FC = () => {
       setLoading(true);
       console.log('🔍 Iniciando busca por usuários pendentes...');
       
-      // 🚨 CORREÇÃO: Buscar usuários REAIS que solicitaram acesso
+      // 🚨 CORREÇÃO: Buscar APENAS usuários REAIS via notificações (ignorar tabela pending_users)
       
-      // PRIMEIRO: Tentar buscar da tabela pending_users (se existir)
-      console.log('📋 Verificando tabela pending_users...');
-      const { data: pendingUsersData, error: pendingError } = await supabase
-        .from('pending_users')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-
-      if (pendingError) {
-        console.log('⚠️ Tabela pending_users não encontrada ou erro:', pendingError.message);
-      } else if (pendingUsersData && pendingUsersData.length > 0) {
-        console.log('📋 Encontrados usuários na tabela pending_users:', pendingUsersData.length);
-        
-        const formattedUsers = pendingUsersData.map(user => ({
-          id: user.id,
-          email: user.email,
-          full_name: user.full_name,
-          avatar_url: user.avatar_url,
-          created_at: user.created_at,
-          status: 'pending' as const,
-          role: user.role || 'user',
-          department: user.department,
-          phone: user.phone,
-          justificativa: user.justificativa
-        }));
-        
-        setPendingUsers(formattedUsers);
-        return;
-      }
-
-      // SEGUNDO: Buscar usuários do auth.users que têm access_requested = true
       console.log('🔍 Buscando usuários com solicitações pendentes via notificações...');
       
-      // Como não temos acesso direto ao auth.users via RLS, vamos buscar 
-      // usuários que estão logados mas não têm profile na user_profiles
+      // Buscar usuários que estão logados mas não têm profile na user_profiles
       const { data: existingProfiles, error: profileError } = await supabase
         .from('user_profiles')
         .select('id');
@@ -90,47 +58,73 @@ const AprovacaoUsuarios: React.FC = () => {
       }
 
       if (accessNotifications && accessNotifications.length > 0) {
-        console.log('📧 Encontradas notificações de solicitação:', accessNotifications.length);
+        console.log('📧 Processando notificações de solicitação:', accessNotifications.length);
+        
+        // Log detalhado de todas as notificações encontradas
+        accessNotifications.forEach((notification, index) => {
+          console.log(`📝 Notificação ${index + 1}:`, {
+            created_at: notification.created_at,
+            metadata: notification.metadata,
+            has_pending_user_id: !!notification.metadata?.pending_user_id,
+            pending_user_email: notification.metadata?.pending_user_email
+          });
+        });
         
         const pendingList: PendingUser[] = [];
         
         for (const notification of accessNotifications) {
           const metadata = notification.metadata;
-          console.log('🔍 Metadata da notificação:', metadata);
+          console.log('🔍 Processando metadata:', metadata);
           
-          if (metadata?.pending_user_id && !profileIds.includes(metadata.pending_user_id)) {
-            // Verificar se já existe na lista para evitar duplicatas
-            const exists = pendingList.find(u => u.id === metadata.pending_user_id);
-            if (!exists) {
-              const newUser = {
-                id: metadata.pending_user_id,
-                email: metadata.pending_user_email || '',
-                full_name: metadata.pending_user_name || null,
-                avatar_url: null,
-                created_at: metadata.requested_at || notification.created_at,
-                status: 'pending' as const,
-                role: 'user',
-                department: metadata.department || null,
-                phone: metadata.phone || null,
-                justificativa: metadata.justificativa || null
-              };
-              
-              console.log('➕ Adicionando usuário pendente:', newUser.email);
-              pendingList.push(newUser);
+          if (metadata?.pending_user_id) {
+            console.log(`📊 Verificando se ${metadata.pending_user_id} já tem profile...`);
+            const hasProfile = profileIds.includes(metadata.pending_user_id);
+            console.log(`📊 Usuário ${metadata.pending_user_email} tem profile: ${hasProfile}`);
+            
+            if (!hasProfile) {
+              // Verificar se já existe na lista para evitar duplicatas
+              const exists = pendingList.find(u => u.id === metadata.pending_user_id);
+              if (!exists) {
+                const newUser = {
+                  id: metadata.pending_user_id,
+                  email: metadata.pending_user_email || '',
+                  full_name: metadata.pending_user_name || null,
+                  avatar_url: null,
+                  created_at: metadata.requested_at || notification.created_at,
+                  status: 'pending' as const,
+                  role: 'user',
+                  department: metadata.department || null,
+                  phone: metadata.phone || null,
+                  justificativa: metadata.justificativa || null
+                };
+                
+                console.log('➕ Adicionando usuário pendente REAL:', {
+                  email: newUser.email,
+                  name: newUser.full_name,
+                  department: newUser.department,
+                  phone: newUser.phone,
+                  justificativa: newUser.justificativa
+                });
+                pendingList.push(newUser);
+              } else {
+                console.log(`⏭️ Usuário ${metadata.pending_user_email} já está na lista, pulando...`);
+              }
+            } else {
+              console.log(`✅ Usuário ${metadata.pending_user_email} já tem profile ativo, pulando...`);
             }
           }
         }
 
         if (pendingList.length > 0) {
-          console.log('✅ Usuários pendentes encontrados:', pendingList.length);
-          console.log('📋 Lista de usuários:', pendingList.map(u => u.email));
+          console.log('✅ Usuários pendentes REAIS encontrados:', pendingList.length);
+          console.log('📋 Lista de usuários REAIS:', pendingList.map(u => u.email));
           setPendingUsers(pendingList);
           return;
         }
       }
 
-      // TERCEIRO: Se não encontrou nada, não mostrar dados mockados
-      console.log('ℹ️ Nenhuma solicitação de acesso encontrada');
+      // Se não encontrou nada, mostrar lista vazia
+      console.log('ℹ️ Nenhuma solicitação de acesso real encontrada');
       setPendingUsers([]);
       
     } catch (error) {
@@ -192,19 +186,7 @@ const AprovacaoUsuarios: React.FC = () => {
 
       console.log(`✅ Profile criado na user_profiles para: ${user.email}`);
 
-      // Atualizar status na tabela pending_users (se existir)
-      try {
-        await supabase
-          .from('pending_users')
-          .update({ 
-            status: 'approved', 
-            approved_at: new Date().toISOString(),
-            approved_by: currentAdmin?.email || 'admin'
-          })
-          .eq('id', user.id);
-      } catch (dbError) {
-        console.log('Tabela pending_users não encontrada, continuando...');
-      }
+      // Não tentar atualizar pending_users - estamos usando apenas notificações
 
       // Enviar notificações
       try {
