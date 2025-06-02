@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Bell, BellRing, X, CheckCheck, Trash2, AlertTriangle, Shield, User, Server, Wifi, WifiOff, RefreshCw, Settings } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../../context/NotificationContext'
 import { RealTimeNotification } from '../../hooks/useRealTimeNotifications'
 import { formatDistanceToNow } from 'date-fns'
@@ -10,6 +11,7 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' }) => {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all')
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -44,6 +46,22 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
     setRefreshing(true)
     await refreshNotifications()
     setTimeout(() => setRefreshing(false), 500)
+  }
+
+  const handleNotificationClick = async (notification: RealTimeNotification) => {
+    console.log('🔗 Clicou na notificação:', notification.title)
+    
+    // Marcar como lida
+    await markAsRead(notification.id)
+    
+    // Redirecionar se tiver action_url
+    if (notification.action_url) {
+      console.log('🚀 Redirecionando para:', notification.action_url)
+      setIsOpen(false) // Fechar o painel
+      navigate(notification.action_url)
+    } else {
+      console.log('⚠️ Notificação sem action_url definido')
+    }
   }
 
   const getNotificationIcon = (type: RealTimeNotification['type']) => {
@@ -293,7 +311,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
                           ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 hover:from-blue-500/20 hover:to-purple-500/20' 
                           : 'bg-zinc-800/30 hover:bg-zinc-700/50 border border-zinc-700/50'
                       }`}
-                      onClick={() => markAsRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-4">
                         {/* Icon */}

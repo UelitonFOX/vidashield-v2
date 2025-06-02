@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle } from 'lucide-react';
+import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle, RefreshCcw } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { NotificationService } from '../services/notificationService';
 
@@ -25,17 +25,21 @@ const AprovacaoUsuarios: React.FC = () => {
   const fetchPendingUsers = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Iniciando busca por usuários pendentes...');
       
       // 🚨 CORREÇÃO: Buscar usuários REAIS que solicitaram acesso
       
       // PRIMEIRO: Tentar buscar da tabela pending_users (se existir)
-      const { data: pendingUsersData } = await supabase
+      console.log('📋 Verificando tabela pending_users...');
+      const { data: pendingUsersData, error: pendingError } = await supabase
         .from('pending_users')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (pendingUsersData && pendingUsersData.length > 0) {
+      if (pendingError) {
+        console.log('⚠️ Tabela pending_users não encontrada ou erro:', pendingError.message);
+      } else if (pendingUsersData && pendingUsersData.length > 0) {
         console.log('📋 Encontrados usuários na tabela pending_users:', pendingUsersData.length);
         
         const formattedUsers = pendingUsersData.map(user => ({
@@ -56,23 +60,34 @@ const AprovacaoUsuarios: React.FC = () => {
       }
 
       // SEGUNDO: Buscar usuários do auth.users que têm access_requested = true
-      console.log('🔍 Buscando usuários com solicitações pendentes via metadata...');
+      console.log('🔍 Buscando usuários com solicitações pendentes via notificações...');
       
       // Como não temos acesso direto ao auth.users via RLS, vamos buscar 
       // usuários que estão logados mas não têm profile na user_profiles
-      const { data: existingProfiles } = await supabase
+      const { data: existingProfiles, error: profileError } = await supabase
         .from('user_profiles')
         .select('id');
 
+      if (profileError) {
+        console.error('❌ Erro ao buscar profiles existentes:', profileError);
+      }
+
       const profileIds = existingProfiles?.map(p => p.id) || [];
+      console.log(`📊 Profiles existentes: ${profileIds.length}`);
 
       // Buscar notificações de solicitação de acesso para descobrir quem solicitou
-      const { data: accessNotifications } = await supabase
+      const { data: accessNotifications, error: notificationError } = await supabase
         .from('notifications')
-        .select('metadata')
+        .select('metadata, created_at')
         .eq('type', 'auth')
-        .like('title', '%Solicitação de Acesso%')
+        .or('title.ilike.%Nova Solicitação de Acesso%,title.ilike.%Novo Usuário Aguardando%')
         .order('created_at', { ascending: false });
+
+      if (notificationError) {
+        console.error('❌ Erro ao buscar notificações:', notificationError);
+      } else {
+        console.log('📧 Notificações de acesso encontradas:', accessNotifications?.length || 0);
+      }
 
       if (accessNotifications && accessNotifications.length > 0) {
         console.log('📧 Encontradas notificações de solicitação:', accessNotifications.length);
@@ -81,29 +96,35 @@ const AprovacaoUsuarios: React.FC = () => {
         
         for (const notification of accessNotifications) {
           const metadata = notification.metadata;
+          console.log('🔍 Metadata da notificação:', metadata);
+          
           if (metadata?.pending_user_id && !profileIds.includes(metadata.pending_user_id)) {
             // Verificar se já existe na lista para evitar duplicatas
             const exists = pendingList.find(u => u.id === metadata.pending_user_id);
             if (!exists) {
-              pendingList.push({
+              const newUser = {
                 id: metadata.pending_user_id,
                 email: metadata.pending_user_email || '',
                 full_name: metadata.pending_user_name || null,
                 avatar_url: null,
-                created_at: metadata.requested_at || new Date().toISOString(),
-                status: 'pending',
+                created_at: metadata.requested_at || notification.created_at,
+                status: 'pending' as const,
                 role: 'user',
                 department: metadata.department || null,
                 phone: metadata.phone || null,
                 justificativa: metadata.justificativa || null
-              });
+              };
+              
+              console.log('➕ Adicionando usuário pendente:', newUser.email);
+              pendingList.push(newUser);
             }
           }
         }
 
         if (pendingList.length > 0) {
-          setPendingUsers(pendingList);
           console.log('✅ Usuários pendentes encontrados:', pendingList.length);
+          console.log('📋 Lista de usuários:', pendingList.map(u => u.email));
+          setPendingUsers(pendingList);
           return;
         }
       }
@@ -113,7 +134,7 @@ const AprovacaoUsuarios: React.FC = () => {
       setPendingUsers([]);
       
     } catch (error) {
-      console.error('Erro ao buscar usuários pendentes:', error);
+      console.error('❌ Erro ao buscar usuários pendentes:', error);
       setPendingUsers([]);
     } finally {
       setLoading(false);
@@ -304,12 +325,26 @@ const AprovacaoUsuarios: React.FC = () => {
             Gerencie solicitações de acesso ao sistema
           </p>
         </div>
-        <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-green-400" />
-            <span className="text-sm font-medium text-green-300">
-              {pendingUsers.length} usuário(s) aguardando aprovação
-            </span>
+        <div className="flex items-center gap-4">
+          {/* Botão de Refresh */}
+          <button
+            onClick={fetchPendingUsers}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-all duration-200"
+            title="Atualizar lista de usuários pendentes"
+          >
+            <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Atualizando...' : 'Atualizar'}
+          </button>
+          
+          {/* Contador */}
+          <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-green-400" />
+              <span className="text-sm font-medium text-green-300">
+                {pendingUsers.length} usuário(s) aguardando aprovação
+              </span>
+            </div>
           </div>
         </div>
       </div>
