@@ -373,7 +373,7 @@ const AprovacaoUsuarios: React.FC = () => {
         const { error } = await supabase
           .from('pending_users')
           .delete()
-          .neq('id', 'nunca-existira'); // Delete all
+          .eq('status', 'pending'); // Delete apenas os pendentes
           
         if (error) {
           console.error('❌ Erro ao limpar dados:', error);
