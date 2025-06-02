@@ -15,23 +15,11 @@ const AprovacaoUsuarios: React.FC = () => {
   const fetchPendingRequests = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Buscando solicitações pendentes SIMPLES...');
+      console.log('🔍 Buscando solicitações via AccessRequestService...');
       
-      // SIMPLES: Buscar diretamente na pending_users
-      const { data: requests, error } = await supabase
-        .from('pending_users')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('❌ Erro ao buscar pending_users:', error);
-        setPendingRequests([]);
-        return;
-      }
-
-      console.log(`📊 Encontradas ${requests?.length || 0} solicitações pendentes`);
-      setPendingRequests(requests || []);
+      // USAR APENAS O SERVICE - SEM QUERIES DIRETAS
+      const requests = await AccessRequestService.getPendingRequests();
+      setPendingRequests(requests);
       
     } catch (error) {
       console.error('❌ Erro geral:', error);
@@ -52,37 +40,10 @@ const AprovacaoUsuarios: React.FC = () => {
     try {
       const assignedRole = selectedRole[request.id] || request.role || 'user';
       
-      console.log(`✅ Aprovando usuário SIMPLES: ${request.email} como ${assignedRole}`);
+      console.log(`✅ Aprovando usuário via SERVICE: ${request.email} como ${assignedRole}`);
       
-      // SIMPLES: Criar profile em user_profiles
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: crypto.randomUUID(),
-          email: request.email,
-          name: request.full_name || request.email.split('@')[0],
-          role: assignedRole,
-          status: 'active',
-          department: request.department,
-          phone: request.phone,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (profileError) {
-        console.error('❌ Erro ao criar profile:', profileError);
-        throw new Error(`Erro ao criar profile: ${profileError.message}`);
-      }
-
-      // SIMPLES: Remover da pending_users
-      const { error: deleteError } = await supabase
-        .from('pending_users')
-        .delete()
-        .eq('id', request.id);
-
-      if (deleteError) {
-        console.warn('⚠️ Erro ao remover de pending_users:', deleteError);
-      }
+      // USAR APENAS O SERVICE
+      await AccessRequestService.approveRequest(request.id, user.id, assignedRole);
       
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
@@ -113,34 +74,10 @@ const AprovacaoUsuarios: React.FC = () => {
         return;
       }
       
-      console.log(`❌ Rejeitando usuário: ${request.email}`);
+      console.log(`❌ Rejeitando usuário via SERVICE: ${request.email}`);
       
-      // WORKAROUND: Marcar apenas como rejeitada nas notificações
-      await supabase
-        .from('notifications')
-        .update({ 
-          read: true,
-          metadata: {
-            ...request,
-            status: 'rejected',
-            rejection_reason: reason,
-            processed_by: user.id,
-            processed_at: new Date().toISOString()
-          }
-        })
-        .eq('metadata->request_id', request.id);
-      
-      // BACKUP: Também marcar na tabela pending_users se existir
-      await supabase
-        .from('pending_users')
-        .update({ 
-          status: 'rejected',
-          processed_by: user.id,
-          processed_at: new Date().toISOString(),
-          rejection_reason: reason,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', request.id);
+      // USAR APENAS O SERVICE
+      await AccessRequestService.rejectRequest(request.id, user.id, reason);
       
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
@@ -181,92 +118,6 @@ const AprovacaoUsuarios: React.FC = () => {
     return colors[role as keyof typeof colors] || colors.user;
   };
 
-  // MODO EMERGÊNCIA: Carregar dados do localStorage
-  const loadEmergencyRequests = () => {
-    try {
-      console.log('🆘 Carregando solicitações em modo emergência...');
-      const emergencyData = localStorage.getItem('vidashield_emergency_requests');
-      
-      if (emergencyData) {
-        const requests = JSON.parse(emergencyData);
-        console.log(`📦 Encontradas ${requests.length} solicitações em modo emergência`);
-        
-        // Converter para formato compatível
-        const formattedRequests = requests.map((item: any) => ({
-          id: item.request.id,
-          email: item.request.email,
-          full_name: item.request.full_name,
-          department: item.request.department,
-          phone: item.request.phone,
-          justificativa: item.request.justificativa,
-          role: item.request.role,
-          status: 'pending',
-          created_at: item.timestamp,
-          source: 'emergency_mode'
-        }));
-        
-        setPendingRequests(formattedRequests);
-        setLoading(false);
-        alert(`✅ Carregadas ${formattedRequests.length} solicitações do modo emergência!`);
-      } else {
-        alert('⚠️ Nenhuma solicitação encontrada no modo emergência');
-      }
-    } catch (error) {
-      console.error('❌ Erro ao carregar dados de emergência:', error);
-      alert('❌ Erro ao carregar dados de emergência');
-    }
-  };
-
-  // DEBUG: Verificar todo o localStorage
-  const debugLocalStorage = () => {
-    console.log('🔍 DEBUG: Verificando localStorage completo...');
-    
-    // Verificar todas as chaves do localStorage
-    const keys = Object.keys(localStorage);
-    console.log('🗝️ Chaves encontradas no localStorage:', keys);
-    
-    // Verificar dados específicos
-    ['vidashield_emergency_requests', 'vidashield_backup_requests'].forEach(key => {
-      const data = localStorage.getItem(key);
-      if (data) {
-        try {
-          const parsed = JSON.parse(data);
-          console.log(`📦 ${key}:`, parsed);
-        } catch (e) {
-          console.log(`📦 ${key} (texto):`, data);
-        }
-      } else {
-        console.log(`❌ ${key}: não encontrado`);
-      }
-    });
-    
-    alert('🔍 Dados de debug enviados para o console. Pressione F12 para ver.');
-  };
-
-  // LIMPAR dados antigos mockados
-  const clearOldData = async () => {
-    if (confirm('⚠️ ATENÇÃO: Isto irá LIMPAR todos os dados antigos da tabela pending_users. Continuar?')) {
-      try {
-        const { error } = await supabase
-          .from('pending_users')
-          .delete()
-          .eq('status', 'pending'); // Delete apenas os pendentes
-          
-        if (error) {
-          console.error('❌ Erro ao limpar dados:', error);
-          alert('❌ Erro ao limpar dados: ' + error.message);
-        } else {
-          console.log('✅ Dados antigos limpos com sucesso');
-          alert('✅ Dados antigos limpos! Faça uma nova solicitação para testar.');
-          fetchPendingRequests();
-        }
-      } catch (error) {
-        console.error('❌ Erro:', error);
-        alert('❌ Erro: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
-      }
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -294,27 +145,6 @@ const AprovacaoUsuarios: React.FC = () => {
             >
               <RefreshCw className="w-4 h-4" />
               Atualizar Lista
-            </button>
-            
-            <button
-              onClick={loadEmergencyRequests}
-              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-            >
-              🆘 Carregar Modo Emergência
-            </button>
-            
-            <button
-              onClick={debugLocalStorage}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-            >
-              🔍 Debug localStorage
-            </button>
-            
-            <button
-              onClick={clearOldData}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-            >
-              🗑️ Limpar Dados Antigos
             </button>
           </div>
         </div>

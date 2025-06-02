@@ -33,17 +33,24 @@ export interface CreateAccessRequestData {
 export class AccessRequestService {
   /**
    * Criar uma nova solicitação de acesso
-   * SIMPLES: Apenas inserir na tabela pending_users
+   * SOLUÇÃO FINAL: Usar apenas notificações (sem RLS)
    */
   static async createRequest(data: CreateAccessRequestData): Promise<AccessRequest> {
-    console.log('📝 Criando solicitação de acesso SIMPLES...', data);
+    console.log('📝 Criando solicitação via NOTIFICAÇÕES (sem RLS)...', data);
 
     try {
-      // SIMPLES: Inserir diretamente na pending_users
-      const { data: insertedRequest, error } = await supabase
-        .from('pending_users')
-        .insert({
-          id: crypto.randomUUID(),
+      const requestId = crypto.randomUUID();
+      const timestamp = new Date().toISOString();
+      
+      // USAR NOTIFICAÇÕES COMO BANCO DE DADOS
+      const notificationData = {
+        type: 'pending_user_request',
+        title: 'Nova Solicitação de Acesso',
+        message: `${data.full_name || data.email} solicitou acesso ao sistema VidaShield.`,
+        severity: 'media',
+        user_id: '00000000-0000-0000-0000-000000000000', // Admin genérico
+        metadata: {
+          request_id: requestId,
           email: data.email,
           full_name: data.full_name,
           avatar_url: data.avatar_url,
@@ -52,19 +59,45 @@ export class AccessRequestService {
           phone: data.phone,
           justificativa: data.justificativa,
           status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+          created_at: timestamp,
+          updated_at: timestamp,
+          user_id: data.user_id,
+          system_type: 'access_request'
+        },
+        action_url: '/aprovacao-usuarios',
+        read: false
+      };
+
+      const { data: insertedNotification, error } = await supabase
+        .from('notifications')
+        .insert(notificationData)
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Erro ao inserir na pending_users:', error);
+        console.error('❌ Erro ao criar notificação:', error);
         throw new Error(`Erro ao criar solicitação: ${error.message}`);
       }
 
-      console.log('✅ Solicitação criada na pending_users:', insertedRequest.id);
-      return insertedRequest as AccessRequest;
+      console.log('✅ Solicitação criada como notificação ID:', insertedNotification.id);
+      
+      return {
+        id: requestId,
+        email: data.email,
+        full_name: data.full_name,
+        avatar_url: data.avatar_url || null,
+        role: data.role || 'user',
+        department: data.department || null,
+        phone: data.phone || null,
+        justificativa: data.justificativa,
+        status: 'pending',
+        created_at: timestamp,
+        updated_at: timestamp,
+        processed_by: null,
+        processed_at: null,
+        rejection_reason: null,
+        user_id: data.user_id
+      };
       
     } catch (error) {
       console.error('❌ Erro ao processar solicitação:', error);
@@ -73,48 +106,70 @@ export class AccessRequestService {
   }
 
   /**
-   * Buscar todas as solicitações pendentes (apenas admins)
+   * Buscar todas as solicitações pendentes via notificações
    */
   static async getPendingRequests(): Promise<AccessRequest[]> {
-    console.log('🔍 Buscando solicitações pendentes...');
+    console.log('🔍 Buscando solicitações via notificações...');
 
-    const { data: requests, error } = await supabase
-      .from('pending_users')
+    const { data: notifications, error } = await supabase
+      .from('notifications')
       .select('*')
-      .eq('status', 'pending')
+      .eq('type', 'pending_user_request')
+      .eq('read', false)
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('❌ Erro ao buscar solicitações:', error);
-      throw new Error(`Erro ao buscar solicitações: ${error.message}`);
+      console.error('❌ Erro ao buscar notificações:', error);
+      return [];
     }
 
-    console.log(`📊 Encontradas ${requests?.length || 0} solicitações pendentes`);
-    return requests || [];
+    const requests = notifications?.map(notif => ({
+      id: notif.metadata.request_id,
+      email: notif.metadata.email,
+      full_name: notif.metadata.full_name,
+      avatar_url: notif.metadata.avatar_url,
+      role: notif.metadata.role,
+      department: notif.metadata.department,
+      phone: notif.metadata.phone,
+      justificativa: notif.metadata.justificativa,
+      status: notif.metadata.status,
+      created_at: notif.metadata.created_at,
+      updated_at: notif.metadata.updated_at,
+      processed_by: notif.metadata.processed_by,
+      processed_at: notif.metadata.processed_at,
+      rejection_reason: notif.metadata.rejection_reason,
+      user_id: notif.metadata.user_id
+    })) || [];
+
+    console.log(`📊 Encontradas ${requests.length} solicitações via notificações`);
+    return requests;
   }
 
   /**
-   * Aprovar uma solicitação de acesso
+   * Aprovar uma solicitação (criar user_profile + marcar notificação como lida)
    */
   static async approveRequest(requestId: string, approvedBy: string, assignedRole?: string): Promise<void> {
     console.log(`✅ Aprovando solicitação ${requestId}...`);
 
-    // Buscar a solicitação
-    const { data: request, error: fetchError } = await supabase
-      .from('pending_users')
+    // Buscar a notificação da solicitação
+    const { data: notification, error: fetchError } = await supabase
+      .from('notifications')
       .select('*')
-      .eq('id', requestId)
+      .eq('metadata->request_id', requestId)
+      .eq('type', 'pending_user_request')
       .single();
 
-    if (fetchError || !request) {
+    if (fetchError || !notification) {
       throw new Error('Solicitação não encontrada');
     }
+
+    const request = notification.metadata;
 
     // Criar profile do usuário aprovado
     const { error: profileError } = await supabase
       .from('user_profiles')
       .insert({
-        id: request.user_id || crypto.randomUUID(), // Usar user_id se disponível, senão gerar novo
+        id: request.user_id || crypto.randomUUID(),
         email: request.email,
         name: request.full_name || request.email.split('@')[0],
         role: assignedRole || request.role || 'user',
@@ -131,275 +186,53 @@ export class AccessRequestService {
       throw new Error(`Erro ao criar profile: ${profileError.message}`);
     }
 
-    // Atualizar status da solicitação
+    // Marcar notificação como lida (processada)
     const { error: updateError } = await supabase
-      .from('pending_users')
+      .from('notifications')
       .update({
-        status: 'approved',
-        processed_by: approvedBy,
-        processed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        read: true,
+        metadata: {
+          ...request,
+          status: 'approved',
+          processed_by: approvedBy,
+          processed_at: new Date().toISOString()
+        }
       })
-      .eq('id', requestId);
+      .eq('id', notification.id);
 
     if (updateError) {
-      console.error('❌ Erro ao atualizar solicitação:', updateError);
-      throw new Error(`Erro ao atualizar solicitação: ${updateError.message}`);
+      console.error('❌ Erro ao atualizar notificação:', updateError);
     }
-
-    // Notificar aprovação
-    await this.notifyUserApproved(request, assignedRole || request.role);
 
     console.log(`✅ Solicitação ${requestId} aprovada com sucesso`);
   }
 
   /**
-   * Rejeitar uma solicitação de acesso
+   * Rejeitar uma solicitação
    */
   static async rejectRequest(requestId: string, rejectedBy: string, reason?: string): Promise<void> {
     console.log(`❌ Rejeitando solicitação ${requestId}...`);
 
-    // Buscar a solicitação
-    const { data: request, error: fetchError } = await supabase
-      .from('pending_users')
-      .select('*')
-      .eq('id', requestId)
-      .single();
-
-    if (fetchError || !request) {
-      throw new Error('Solicitação não encontrada');
-    }
-
-    // Atualizar status da solicitação
+    // Marcar notificação como rejeitada
     const { error: updateError } = await supabase
-      .from('pending_users')
+      .from('notifications')
       .update({
-        status: 'rejected',
-        processed_by: rejectedBy,
-        processed_at: new Date().toISOString(),
-        rejection_reason: reason,
-        updated_at: new Date().toISOString()
+        read: true,
+        metadata: {
+          status: 'rejected',
+          processed_by: rejectedBy,
+          processed_at: new Date().toISOString(),
+          rejection_reason: reason
+        }
       })
-      .eq('id', requestId);
+      .eq('metadata->request_id', requestId)
+      .eq('type', 'pending_user_request');
 
     if (updateError) {
-      console.error('❌ Erro ao atualizar solicitação:', updateError);
-      throw new Error(`Erro ao atualizar solicitação: ${updateError.message}`);
+      console.error('❌ Erro ao atualizar notificação:', updateError);
+      throw new Error(`Erro ao rejeitar solicitação: ${updateError.message}`);
     }
-
-    // Notificar rejeição
-    await this.notifyUserRejected(request, reason);
 
     console.log(`❌ Solicitação ${requestId} rejeitada`);
-  }
-
-  /**
-   * Notificar administradores sobre nova solicitação
-   */
-  private static async notifyAdminsNewRequest(request: AccessRequest, userId?: string): Promise<void> {
-    try {
-      console.log('📧 Notificando administradores sobre nova solicitação...');
-      
-      // Verificar se a tabela user_profiles existe e tem dados
-      console.log('🔍 Verificando tabela user_profiles...');
-      
-      const { data: allUsers, error: allUsersError } = await supabase
-        .from('user_profiles')
-        .select('id, email, role, status')
-        .limit(5);
-        
-      if (allUsersError) {
-        console.error('❌ Erro ao acessar tabela user_profiles:', allUsersError);
-        throw new Error(`Erro no banco de dados: ${allUsersError.message}`);
-      }
-      
-      console.log(`📊 Total de usuários na tabela: ${allUsers?.length || 0}`);
-      console.log('👥 Usuários encontrados:', allUsers?.map(u => `${u.email} (${u.role})`));
-
-      // Buscar administradores ativos
-      const { data: admins, error: adminsError } = await supabase
-        .from('user_profiles')
-        .select('id, email, name')
-        .eq('role', 'admin')
-        .eq('status', 'active');
-
-      if (adminsError) {
-        console.error('❌ Erro ao buscar administradores:', adminsError);
-        throw new Error(`Erro ao buscar administradores: ${adminsError.message}`);
-      }
-
-      console.log(`👥 Encontrados ${admins?.length || 0} administradores ativos`);
-      console.log('📋 Admins:', admins?.map(a => a.email));
-
-      if (!admins || admins.length === 0) {
-        console.error('⚠️ ERRO: Nenhum administrador ativo encontrado!');
-        console.log('🔧 MODO EMERGÊNCIA: Criando notificação mesmo sem admin específico...');
-        
-        // MODO EMERGÊNCIA: Criar notificação genérica para qualquer admin que entrar depois
-        const emergencyNotification = {
-          type: 'auth',
-          title: 'Nova Solicitação de Acesso',
-          message: `${request.full_name || request.email} solicitou acesso ao sistema VidaShield.`,
-          severity: 'media',
-          user_id: '00000000-0000-0000-0000-000000000000', // Admin genérico
-          metadata: {
-            // Dados completos da solicitação
-            request_id: request.id,
-            pending_user_id: userId || request.user_id,
-            pending_user_email: request.email,
-            pending_user_name: request.full_name,
-            department: request.department,
-            phone: request.phone,
-            justificativa: request.justificativa,
-            requested_role: request.role,
-            requested_at: request.created_at,
-            // Flag para identificar como solicitação via workaround
-            workaround_request: true,
-            emergency_mode: true,
-            // Dados extras para debug
-            submission_method: 'emergency_notification',
-            submitted_by_ip: 'unknown',
-            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-          },
-          action_url: '/aprovacao-usuarios',
-          read: false
-        };
-
-        const { data: insertedNotification, error: insertError } = await supabase
-          .from('notifications')
-          .insert(emergencyNotification)
-          .select();
-
-        if (insertError) {
-          console.error('❌ Erro ao inserir notificação de emergência:', insertError);
-          throw new Error(`Erro ao notificar admins: ${insertError.message}`);
-        }
-
-        console.log(`✅ Notificação de emergência criada:`, insertedNotification?.[0]?.id);
-        
-        // Salvar dados completos em localStorage para recuperação posterior
-        const emergencyData = {
-          type: 'emergency_request',
-          request,
-          userId,
-          timestamp: new Date().toISOString(),
-          reason: 'No active admins found - emergency notification created'
-        };
-        
-        try {
-          const existingEmergency = JSON.parse(localStorage.getItem('vidashield_emergency_requests') || '[]');
-          existingEmergency.push(emergencyData);
-          localStorage.setItem('vidashield_emergency_requests', JSON.stringify(existingEmergency));
-          console.log('💾 Dados salvos em modo emergência no localStorage');
-        } catch (localError) {
-          console.warn('⚠️ Erro ao salvar dados de emergência:', localError);
-        }
-        
-        // Retornar sucesso para não bloquear o usuário
-        console.log('✅ Solicitação processada em modo emergência via notificação');
-        return;
-      }
-
-      if (admins && admins.length > 0) {
-        // VERSÃO MELHORADA: Criar notificações mais detalhadas
-        const notifications = admins.map(admin => ({
-          type: 'auth',
-          title: 'Nova Solicitação de Acesso',
-          message: `${request.full_name || request.email} solicitou acesso ao sistema VidaShield.`,
-          severity: 'media',
-          user_id: admin.id,
-          metadata: {
-            // Dados completos da solicitação
-            request_id: request.id,
-            pending_user_id: userId || request.user_id,
-            pending_user_email: request.email,
-            pending_user_name: request.full_name,
-            department: request.department,
-            phone: request.phone,
-            justificativa: request.justificativa,
-            requested_role: request.role,
-            requested_at: request.created_at,
-            // Flag para identificar como solicitação via workaround
-            workaround_request: true,
-            // Dados extras para debug
-            submission_method: 'notification_workaround',
-            submitted_by_ip: 'unknown',
-            user_agent: navigator.userAgent
-          },
-          action_url: '/aprovacao-usuarios',
-          read: false
-        }));
-
-        const { data: insertedNotifications, error: insertError } = await supabase
-          .from('notifications')
-          .insert(notifications)
-          .select();
-
-        if (insertError) {
-          console.error('❌ Erro ao inserir notificações:', insertError);
-          throw new Error(`Erro ao notificar admins: ${insertError.message}`);
-        }
-
-        console.log(`✅ ${notifications.length} notificações criadas para admins`);
-        console.log('📄 IDs das notificações:', insertedNotifications?.map(n => n.id));
-        
-        // BACKUP: Também salvar dados em localStorage para recuperação
-        const backupData = {
-          request,
-          timestamp: new Date().toISOString(),
-          notificationIds: insertedNotifications?.map(n => n.id) || []
-        };
-        
-        try {
-          const existingBackups = JSON.parse(localStorage.getItem('vidashield_backup_requests') || '[]');
-          existingBackups.push(backupData);
-          localStorage.setItem('vidashield_backup_requests', JSON.stringify(existingBackups));
-          console.log('💾 Backup local salvo em localStorage');
-        } catch (localError) {
-          console.warn('⚠️ Erro ao salvar backup local:', localError);
-        }
-        
-      } else {
-        throw new Error('Nenhum administrador ativo encontrado no sistema');
-      }
-    } catch (error) {
-      console.error('❌ Erro ao notificar admins:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Notificar usuário sobre aprovação
-   */
-  private static async notifyUserApproved(request: AccessRequest, assignedRole: string): Promise<void> {
-    try {
-      await NotificationService.notifyUserApproved({
-        userId: request.user_id || request.id,
-        userName: request.full_name || request.email.split('@')[0],
-        userEmail: request.email,
-        approvedBy: 'Admin',
-        role: assignedRole,
-        department: request.department || 'Geral'
-      });
-    } catch (error) {
-      console.error('❌ Erro ao notificar aprovação:', error);
-    }
-  }
-
-  /**
-   * Notificar usuário sobre rejeição
-   */
-  private static async notifyUserRejected(request: AccessRequest, reason?: string): Promise<void> {
-    try {
-      await NotificationService.notifyUserRejected({
-        userId: request.user_id || request.id,
-        userName: request.full_name || request.email.split('@')[0],
-        userEmail: request.email,
-        rejectedBy: 'Admin',
-        reason
-      });
-    } catch (error) {
-      console.error('❌ Erro ao notificar rejeição:', error);
-    }
   }
 } 
