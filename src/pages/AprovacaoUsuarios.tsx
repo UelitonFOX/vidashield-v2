@@ -126,6 +126,12 @@ const AprovacaoUsuarios: React.FC = () => {
         } else if (pendingData && pendingData.length > 0) {
           console.log(`✅ BACKUP SUCESSO: Encontradas ${pendingData.length} solicitações na tabela pending_users`);
           
+          // Log detalhado dos dados encontrados
+          console.log('📋 Dados encontrados na pending_users:');
+          pendingData.forEach((item: any, index: number) => {
+            console.log(`  ${index + 1}. ${item.full_name || item.email} (${item.email}) - ${item.created_at}`);
+          });
+          
           // Se encontrou dados na pending_users, usar eles (sobrescrever notificações)
           setPendingRequests(pendingData as AccessRequest[]);
           setLoading(false);
@@ -360,6 +366,30 @@ const AprovacaoUsuarios: React.FC = () => {
     alert('🔍 Dados de debug enviados para o console. Pressione F12 para ver.');
   };
 
+  // LIMPAR dados antigos mockados
+  const clearOldData = async () => {
+    if (confirm('⚠️ ATENÇÃO: Isto irá LIMPAR todos os dados antigos da tabela pending_users. Continuar?')) {
+      try {
+        const { error } = await supabase
+          .from('pending_users')
+          .delete()
+          .neq('id', 'nunca-existira'); // Delete all
+          
+        if (error) {
+          console.error('❌ Erro ao limpar dados:', error);
+          alert('❌ Erro ao limpar dados: ' + error.message);
+        } else {
+          console.log('✅ Dados antigos limpos com sucesso');
+          alert('✅ Dados antigos limpos! Faça uma nova solicitação para testar.');
+          fetchPendingRequests();
+        }
+      } catch (error) {
+        console.error('❌ Erro:', error);
+        alert('❌ Erro: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -401,6 +431,13 @@ const AprovacaoUsuarios: React.FC = () => {
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
             >
               🔍 Debug localStorage
+            </button>
+            
+            <button
+              onClick={clearOldData}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              🗑️ Limpar Dados Antigos
             </button>
           </div>
         </div>
