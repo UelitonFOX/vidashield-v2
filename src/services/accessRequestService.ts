@@ -147,6 +147,7 @@ export class AccessRequestService {
    */
   static async approveRequest(requestId: string, approvedBy: string, assignedRole?: string): Promise<void> {
     console.log(`✅ Aprovando solicitação ${requestId}...`);
+    console.log('🔄 Usando sistema unificado v2.0 - Filtro no cliente'); // Force rebuild
 
     try {
       // Buscar notificações do tipo auth não lidas e filtrar no cliente
