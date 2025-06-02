@@ -211,15 +211,42 @@ export class AccessRequestService {
   private static async notifyAdminsNewRequest(request: AccessRequest, userId?: string): Promise<void> {
     try {
       console.log('📧 Notificando administradores sobre nova solicitação...');
+      
+      // Verificar se a tabela user_profiles existe e tem dados
+      console.log('🔍 Verificando tabela user_profiles...');
+      
+      const { data: allUsers, error: allUsersError } = await supabase
+        .from('user_profiles')
+        .select('id, email, role, status')
+        .limit(5);
+        
+      if (allUsersError) {
+        console.error('❌ Erro ao acessar tabela user_profiles:', allUsersError);
+        throw new Error(`Erro no banco de dados: ${allUsersError.message}`);
+      }
+      
+      console.log(`📊 Total de usuários na tabela: ${allUsers?.length || 0}`);
+      console.log('👥 Usuários encontrados:', allUsers?.map(u => `${u.email} (${u.role})`));
 
       // Buscar administradores ativos
-      const { data: admins } = await supabase
+      const { data: admins, error: adminsError } = await supabase
         .from('user_profiles')
         .select('id, email, name')
         .eq('role', 'admin')
         .eq('status', 'active');
 
+      if (adminsError) {
+        console.error('❌ Erro ao buscar administradores:', adminsError);
+        throw new Error(`Erro ao buscar administradores: ${adminsError.message}`);
+      }
+
       console.log(`👥 Encontrados ${admins?.length || 0} administradores ativos`);
+      console.log('📋 Admins:', admins?.map(a => a.email));
+
+      if (!admins || admins.length === 0) {
+        console.error('⚠️ ERRO: Nenhum administrador ativo encontrado!');
+        throw new Error('Nenhum administrador ativo encontrado no sistema. Contate o suporte técnico.');
+      }
 
       if (admins && admins.length > 0) {
         // VERSÃO MELHORADA: Criar notificações mais detalhadas

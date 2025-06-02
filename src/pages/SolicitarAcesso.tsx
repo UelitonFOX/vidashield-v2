@@ -89,11 +89,24 @@ const SolicitarAcesso: React.FC = () => {
     } catch (error) {
       console.error('❌ Erro ao solicitar acesso:', error);
       
-      if (error instanceof Error && error.message.includes('já possui uma solicitação')) {
-        alert('Você já possui uma solicitação de acesso pendente. Aguarde a análise dos administradores.');
-      } else {
-        alert('Erro ao enviar solicitação. Tente novamente.');
+      let errorMessage = 'Erro ao enviar solicitação. Tente novamente.';
+      
+      if (error instanceof Error) {
+        console.error('💥 Mensagem do erro:', error.message);
+        
+        if (error.message.includes('já possui uma solicitação')) {
+          errorMessage = 'Você já possui uma solicitação de acesso pendente. Aguarde a análise dos administradores.';
+        } else if (error.message.includes('administrador')) {
+          errorMessage = 'Erro no sistema de administradores. Contate o suporte técnico.';
+        } else if (error.message.includes('notificar')) {
+          errorMessage = 'Erro ao notificar administradores. Verifique sua conexão e tente novamente.';
+        } else {
+          // Mostrar erro real em desenvolvimento
+          errorMessage = `Erro técnico: ${error.message}`;
+        }
       }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
