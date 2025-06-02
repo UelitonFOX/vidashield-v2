@@ -20,8 +20,8 @@ const AprovacaoUsuarios: React.FC = () => {
       // WORKAROUND: Buscar dados das notificações em vez da tabela pending_users
       console.log('🔧 Usando workaround: buscando dados de notificações...');
       
-      // Buscar TODAS as notificações de solicitação de acesso (não apenas do usuário atual)
-      const { data: notifications, error: notifError } = await supabase
+      // Buscar notificações de solicitação de acesso (incluindo as de emergência)
+      let { data: notifications, error: notifError } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
@@ -33,11 +33,12 @@ const AprovacaoUsuarios: React.FC = () => {
         console.error('❌ Erro ao buscar notificações:', notifError);
         console.error('🔍 Detalhes do erro:', notifError.message);
         
-        // Tentar busca alternativa sem filtros
-        console.log('🔄 Tentando busca alternativa...');
+        // Tentar busca alternativa sem filtros mas incluindo notificações de emergência
+        console.log('🔄 Tentando busca alternativa incluindo notificações de emergência...');
         const { data: allNotifs, error: allError } = await supabase
           .from('notifications')
           .select('*')
+          .eq('type', 'auth')
           .order('created_at', { ascending: false })
           .limit(20);
           
@@ -47,6 +48,16 @@ const AprovacaoUsuarios: React.FC = () => {
           console.log('📊 Total de notificações encontradas:', allNotifs?.length || 0);
           console.log('📋 Tipos de notificações:', [...new Set(allNotifs?.map(n => n.type))]);
           console.log('🔍 Títulos encontrados:', allNotifs?.map(n => n.title).slice(0, 5));
+          
+          // Filtrar apenas notificações de solicitação
+          const accessNotifications = allNotifs?.filter(n => 
+            n.title?.includes('Solicitação') || n.metadata?.emergency_mode
+          ) || [];
+          
+          if (accessNotifications.length > 0) {
+            console.log(`🆘 Encontradas ${accessNotifications.length} notificações de emergência!`);
+            notifications = accessNotifications;
+          }
         }
         
         // BACKUP FINAL: Tentar buscar da tabela pending_users diretamente

@@ -274,10 +274,49 @@ export class AccessRequestService {
 
       if (!admins || admins.length === 0) {
         console.error('⚠️ ERRO: Nenhum administrador ativo encontrado!');
-        console.log('🔧 MODO EMERGÊNCIA: Processando solicitação sem notificar admins...');
+        console.log('🔧 MODO EMERGÊNCIA: Criando notificação mesmo sem admin específico...');
         
-        // MODO EMERGÊNCIA: Se não há admins, salvar dados localmente e continuar
-        console.warn('⚠️ ATENÇÃO: Sistema em modo emergência - dados salvos apenas localmente');
+        // MODO EMERGÊNCIA: Criar notificação genérica para qualquer admin que entrar depois
+        const emergencyNotification = {
+          type: 'auth',
+          title: 'Nova Solicitação de Acesso',
+          message: `${request.full_name || request.email} solicitou acesso ao sistema VidaShield.`,
+          severity: 'media',
+          user_id: '00000000-0000-0000-0000-000000000000', // Admin genérico
+          metadata: {
+            // Dados completos da solicitação
+            request_id: request.id,
+            pending_user_id: userId || request.user_id,
+            pending_user_email: request.email,
+            pending_user_name: request.full_name,
+            department: request.department,
+            phone: request.phone,
+            justificativa: request.justificativa,
+            requested_role: request.role,
+            requested_at: request.created_at,
+            // Flag para identificar como solicitação via workaround
+            workaround_request: true,
+            emergency_mode: true,
+            // Dados extras para debug
+            submission_method: 'emergency_notification',
+            submitted_by_ip: 'unknown',
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+          },
+          action_url: '/aprovacao-usuarios',
+          read: false
+        };
+
+        const { data: insertedNotification, error: insertError } = await supabase
+          .from('notifications')
+          .insert(emergencyNotification)
+          .select();
+
+        if (insertError) {
+          console.error('❌ Erro ao inserir notificação de emergência:', insertError);
+          throw new Error(`Erro ao notificar admins: ${insertError.message}`);
+        }
+
+        console.log(`✅ Notificação de emergência criada:`, insertedNotification?.[0]?.id);
         
         // Salvar dados completos em localStorage para recuperação posterior
         const emergencyData = {
@@ -285,7 +324,7 @@ export class AccessRequestService {
           request,
           userId,
           timestamp: new Date().toISOString(),
-          reason: 'No active admins found - RLS blocking queries'
+          reason: 'No active admins found - emergency notification created'
         };
         
         try {
@@ -298,7 +337,7 @@ export class AccessRequestService {
         }
         
         // Retornar sucesso para não bloquear o usuário
-        console.log('✅ Solicitação processada em modo emergência');
+        console.log('✅ Solicitação processada em modo emergência via notificação');
         return;
       }
 
