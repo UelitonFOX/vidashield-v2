@@ -27,9 +27,24 @@ const SolicitarAcesso: React.FC = () => {
       console.log('🔍 Verificando se existe administrador no sistema...');
       console.log('👤 Usuário atual:', user?.email);
       
+      // PRIMEIRO: Listar TODOS os usuários para debug
+      console.log('📋 Listando TODOS os usuários na tabela user_profiles...');
+      const { data: allUsers, error: allUsersError } = await supabase
+        .from('user_profiles')
+        .select('id, email, role, status, created_at')
+        .order('created_at', { ascending: false });
+
+      if (allUsersError) {
+        console.error('❌ Erro ao listar todos os usuários:', allUsersError);
+      } else {
+        console.log('📊 Total de usuários na tabela:', allUsers?.length || 0);
+        console.log('👥 Lista completa de usuários:', allUsers);
+      }
+      
+      // SEGUNDO: Buscar especificamente admins
       const { data: admins, error } = await supabase
         .from('user_profiles')
-        .select('id, email')
+        .select('id, email, role, status')
         .eq('role', 'admin')
         .eq('status', 'active');
 
@@ -39,6 +54,20 @@ const SolicitarAcesso: React.FC = () => {
       }
 
       console.log(`👥 Administradores ativos encontrados: ${admins?.length || 0}`);
+      console.log('🔍 Admins encontrados:', admins);
+      
+      // TERCEIRO: Buscar especificamente por email conhecido
+      console.log('🔍 Buscando especificamente por ueliton.talento.tech@gmail.com...');
+      const { data: specificAdmin, error: specificError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', 'ueliton.talento.tech@gmail.com');
+
+      if (specificError) {
+        console.error('❌ Erro ao buscar admin específico:', specificError);
+      } else {
+        console.log('📄 Admin específico encontrado:', specificAdmin);
+      }
       
       if (!admins || admins.length === 0) {
         console.log('⚠️ Nenhum admin encontrado! Tentando identificar usuário atual como potencial admin...');
