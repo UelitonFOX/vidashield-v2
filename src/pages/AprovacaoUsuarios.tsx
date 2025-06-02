@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Check, X, Clock, Mail, Calendar, AlertTriangle, RefreshCcw, UserPlus } from 'lucide-react';
 import { AccessRequestService, AccessRequest } from '../services/accessRequestService';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../services/supabaseClient';
 
 const AprovacaoUsuarios: React.FC = () => {
   const { user } = useAuth();
@@ -15,10 +16,50 @@ const AprovacaoUsuarios: React.FC = () => {
       setLoading(true);
       console.log('🔍 Buscando solicitações de acesso pendentes...');
       
-      const requests = await AccessRequestService.getPendingRequests();
-      setPendingRequests(requests);
+      // WORKAROUND: Buscar dados das notificações em vez da tabela pending_users
+      console.log('🔧 Usando workaround: buscando dados de notificações...');
       
-      console.log(`📊 Encontradas ${requests.length} solicitações pendentes`);
+      const { data: notifications, error: notifError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('type', 'auth')
+        .contains('title', 'Nova Solicitação de Acesso')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (notifError) {
+        console.error('❌ Erro ao buscar notificações:', notifError);
+        setPendingRequests([]);
+        return;
+      }
+
+      console.log('📧 Notificações encontradas:', notifications?.length || 0);
+
+      // Converter notificações em solicitações mockadas
+      const mockRequests: AccessRequest[] = (notifications || []).map((notification: any) => {
+        const metadata = notification.metadata || {};
+        return {
+          id: metadata.request_id || notification.id,
+          email: metadata.pending_user_email || 'email@exemplo.com',
+          full_name: metadata.pending_user_name || 'Nome não informado',
+          avatar_url: null,
+          role: 'user',
+          department: metadata.department || null,
+          phone: metadata.phone || null,
+          justificativa: metadata.justificativa || null,
+          status: 'pending' as const,
+          created_at: metadata.requested_at || notification.created_at,
+          updated_at: notification.created_at,
+          processed_by: null,
+          processed_at: null,
+          rejection_reason: null,
+          user_id: metadata.pending_user_id
+        };
+      });
+
+      setPendingRequests(mockRequests);
+      console.log(`📊 Processadas ${mockRequests.length} solicitações das notificações`);
+      
     } catch (error) {
       console.error('❌ Erro ao buscar solicitações:', error);
       setPendingRequests([]);
@@ -40,7 +81,33 @@ const AprovacaoUsuarios: React.FC = () => {
       
       console.log(`✅ Aprovando usuário: ${request.email} com role: ${assignedRole}`);
       
-      await AccessRequestService.approveRequest(request.id, user.id, assignedRole);
+      // WORKAROUND: Criar profile diretamente em vez de usar AccessRequestService
+      console.log('🔧 Criando profile diretamente...');
+      
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: request.user_id || crypto.randomUUID(),
+          email: request.email,
+          name: request.full_name || request.email.split('@')[0],
+          role: assignedRole,
+          status: 'active',
+          department: request.department,
+          phone: request.phone,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error('❌ Erro ao criar profile:', profileError);
+        throw new Error(`Erro ao criar profile: ${profileError.message}`);
+      }
+
+      // Marcar notificação como processada (se possível)
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('metadata->request_id', request.id);
       
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));
@@ -73,7 +140,20 @@ const AprovacaoUsuarios: React.FC = () => {
       
       console.log(`❌ Rejeitando usuário: ${request.email}`);
       
-      await AccessRequestService.rejectRequest(request.id, user.id, reason || undefined);
+      // WORKAROUND: Marcar apenas como rejeitada nas notificações
+      await supabase
+        .from('notifications')
+        .update({ 
+          read: true,
+          metadata: {
+            ...request,
+            status: 'rejected',
+            rejection_reason: reason,
+            processed_by: user.id,
+            processed_at: new Date().toISOString()
+          }
+        })
+        .eq('metadata->request_id', request.id);
       
       // Remover da lista local
       setPendingRequests(prev => prev.filter(r => r.id !== request.id));

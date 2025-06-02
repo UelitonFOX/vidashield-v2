@@ -80,7 +80,8 @@ const SolicitarAcesso: React.FC = () => {
         const isLikelyAdmin = currentUserEmail?.includes('admin') || 
                              currentUserEmail?.includes('uelitonfox') ||
                              currentUserEmail?.includes('talento.tech') ||
-                             currentUserEmail?.includes('fox.tech');
+                             currentUserEmail?.includes('fox.tech') ||
+                             currentUserEmail?.includes('uel.rod');
         
         console.log('🔍 É provável admin?', isLikelyAdmin);
         
