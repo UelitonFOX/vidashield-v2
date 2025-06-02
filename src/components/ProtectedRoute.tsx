@@ -34,8 +34,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
 
-      // Se requer aprovação e não tem profile (usuário novo)
-      if (requiresApproval && !profile) {
+      // 🚨 CORREÇÃO DE SEGURANÇA: USUÁRIO SEM PROFILE = BLOQUEADO
+      // Todos os usuários DEVEM ter profile para acessar qualquer área
+      if (!profile) {
         setAuthorizationStatus('pending');
         return;
       }
@@ -98,26 +99,34 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             <AlertTriangle className="w-8 h-8 text-yellow-400" />
           </div>
           
-          <h2 className="text-2xl font-bold text-white mb-4">Aguardando Aprovação</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">🚨 Acesso Não Autorizado</h2>
           
           <p className="text-zinc-300 mb-6 leading-relaxed">
-            Sua conta foi criada com sucesso, mas precisa ser aprovada por um administrador antes de acessar o sistema.
+            Sua conta não está autorizada para acessar este sistema. Para obter acesso, entre em contato com o administrador.
           </p>
           
           <div className="bg-zinc-700/50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-zinc-400 mb-2">Conta identificada:</p>
-            <p className="text-green-400 font-semibold">{user?.email}</p>
+            <p className="text-sm text-zinc-400 mb-2">Email autenticado:</p>
+            <p className="text-yellow-400 font-semibold">{user?.email}</p>
+            <p className="text-sm text-zinc-500 mt-1">Status: Aguardando autorização</p>
           </div>
           
-          <p className="text-zinc-400 text-sm mb-6">
-            Você receberá um email quando sua conta for aprovada. Entre em contato com o administrador se necessário.
-          </p>
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-6">
+            <p className="text-red-400 text-sm font-medium">⚠️ Aviso de Segurança</p>
+            <p className="text-red-300 text-xs mt-1">
+              Este sistema possui controle de acesso restrito. Apenas usuários autorizados podem acessar.
+            </p>
+          </div>
           
           <button
-            onClick={() => window.location.href = '/login'}
+            onClick={() => {
+              localStorage.clear();
+              sessionStorage.clear();
+              window.location.href = '/login';
+            }}
             className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
           >
-            Voltar ao Login
+            Sair e Voltar ao Login
           </button>
         </div>
       </div>
