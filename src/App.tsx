@@ -20,7 +20,8 @@ import Analytics from './pages/Analytics'
 import Reports from './pages/Reports'
 import Help from './pages/Help'
 import MyDataPage from './pages/MyDataPage'
-import Layout from './components/Layout'
+import PremiumLayout from './components/ui/PremiumLayout'
+import PremiumHeader from './components/ui/PremiumHeader'
 import SolicitarAcesso from './pages/SolicitarAcesso'
 
 import ProtectedRoute from './components/ProtectedRoute'
@@ -71,7 +72,7 @@ function App() {
           element={user ? <Navigate to="/dashboard" replace /> : <Login />} 
         />
         
-        {/* Páginas protegidas com controle de acesso */}
+        {/* Páginas protegidas com controle de acesso - TODAS usando PremiumLayout */}
         <Route 
           path="/dashboard" 
           element={
@@ -95,7 +96,9 @@ function App() {
           path="/dashboard-classic" 
           element={
             <ProtectedRoute>
-              <Layout><Dashboard /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Dashboard Clássico" />}>
+                <Dashboard />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -103,7 +106,9 @@ function App() {
           path="/alertas" 
           element={
             <ProtectedRoute>
-              <Layout><Alertas /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Alertas" />}>
+                <Alertas />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -111,7 +116,9 @@ function App() {
           path="/monitoramento" 
           element={
             <ProtectedRoute>
-              <Layout><Monitoramento /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Monitoramento" />}>
+                <Monitoramento />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -119,7 +126,9 @@ function App() {
           path="/security" 
           element={
             <ProtectedRoute requiredRole="moderator">
-              <Layout><SecurityDashboard /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Painel de Segurança" />}>
+                <SecurityDashboard />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -127,7 +136,9 @@ function App() {
           path="/logs" 
           element={
             <ProtectedRoute requiredRole="moderator">
-              <Layout><LogsAutenticacao /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Logs de Autenticação" />}>
+                <LogsAutenticacao />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -135,7 +146,9 @@ function App() {
           path="/threats" 
           element={
             <ProtectedRoute>
-              <Layout><AmeacasDetectadas /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Ameaças Detectadas" />}>
+                <AmeacasDetectadas />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -143,7 +156,9 @@ function App() {
           path="/blocked-ips" 
           element={
             <ProtectedRoute>
-              <Layout><IpsBloqueados /></Layout>
+              <PremiumLayout header={<PremiumHeader title="IPs Bloqueados" />}>
+                <IpsBloqueados />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -151,7 +166,9 @@ function App() {
           path="/usuarios" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <Layout><GerenciamentoUsuarios /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Gerenciamento de Usuários" />}>
+                <GerenciamentoUsuarios />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -159,7 +176,9 @@ function App() {
           path="/aprovacao-usuarios" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <Layout><AprovacaoUsuarios /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Aprovação de Usuários" />}>
+                <AprovacaoUsuarios />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -167,7 +186,9 @@ function App() {
           path="/backups" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <Layout><Backups /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Backups" />}>
+                <Backups />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -175,7 +196,9 @@ function App() {
           path="/access-control" 
           element={
             <ProtectedRoute requiredRole="admin">
-              <Layout><AccessControl /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Controle de Acesso" />}>
+                <AccessControl />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -183,7 +206,9 @@ function App() {
           path="/reports" 
           element={
             <ProtectedRoute>
-              <Layout><Reports /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Relatórios" />}>
+                <Reports />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -191,7 +216,9 @@ function App() {
           path="/configuracoes" 
           element={
             <ProtectedRoute>
-              <Layout><Settings /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Configurações" />}>
+                <Settings />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -199,7 +226,9 @@ function App() {
           path="/analytics" 
           element={
             <ProtectedRoute>
-              <Layout><Analytics /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Analytics" />}>
+                <Analytics />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -207,7 +236,19 @@ function App() {
           path="/perfil" 
           element={
             <ProtectedRoute>
-              <Layout><Profile /></Layout>
+              <PremiumLayout header={<PremiumHeader title="Perfil" />}>
+                <Profile />
+              </PremiumLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/help" 
+          element={
+            <ProtectedRoute>
+              <PremiumLayout header={<PremiumHeader title="Ajuda" />}>
+                <Help />
+              </PremiumLayout>
             </ProtectedRoute>
           } 
         />
@@ -219,21 +260,36 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        <Route 
-          path="/ajuda" 
-          element={
-            <ProtectedRoute>
-              <Layout><Help /></Layout>
-            </ProtectedRoute>
-          } 
-        />
+
+        {/* Rotas temporárias para teste */}
+        <Route path="/network" element={
+          <ProtectedRoute>
+            <PremiumLayout header={<PremiumHeader title="Monitoramento de Rede" />}>
+              <TemporaryPage title="Monitoramento de Rede" />
+            </PremiumLayout>
+          </ProtectedRoute>
+        } />
         
-        <Route 
-          path="/" 
-          element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
-        />
-      </Routes>
-    </Router>
+        <Route path="/vulnerability" element={
+          <ProtectedRoute>
+            <PremiumLayout header={<PremiumHeader title="Análise de Vulnerabilidades" />}>
+              <TemporaryPage title="Análise de Vulnerabilidades" />
+            </PremiumLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/compliance" element={
+          <ProtectedRoute>
+            <PremiumLayout header={<PremiumHeader title="Compliance" />}>
+              <TemporaryPage title="Compliance" />
+            </PremiumLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
     </NotificationProvider>
   )
 }
