@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@hcaptcha/react-hcaptcha": "^1.12.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@smithery/sdk": "^1.3.3",

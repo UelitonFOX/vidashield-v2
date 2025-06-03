@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
+import { NotificationService } from './services/notificationService'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import PremiumDashboard from './pages/PremiumDashboard'
@@ -41,6 +42,12 @@ const TemporaryPage = ({ title }: { title: string }) => (
     </div>
   </div>
 )
+
+// Inicializar EmailJS para notificações por email
+React.useEffect(() => {
+  NotificationService.initializeEmailJS()
+  console.log('🔧 Sistema de notificações por email inicializado')
+}, [])
 
 function App() {
   const { user, loading } = useAuth()

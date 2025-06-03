@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import emailjs from '@emailjs/browser'
 
 export interface CreateNotificationParams {
   type: 'threat' | 'security' | 'auth' | 'system'
@@ -10,7 +11,114 @@ export interface CreateNotificationParams {
   user_id?: string
 }
 
+export interface EmailNotificationConfig {
+  enabled: boolean
+  recipients: string[]
+  serviceId: string
+  templateId: string
+  publicKey: string
+}
+
 export class NotificationService {
+  // Configuração de emails (EmailJS - 100% gratuito)
+  private static emailConfig: EmailNotificationConfig = {
+    enabled: true,
+    recipients: ['ueliton.talento.tech@gmail.com'], // Seu email principal
+    serviceId: 'service_vidashield', // Configurar no EmailJS
+    templateId: 'template_vidashield', // Configurar no EmailJS  
+    publicKey: 'YOUR_PUBLIC_KEY' // Configurar no EmailJS
+  }
+
+  /**
+   * Inicializar EmailJS (chamado uma vez ao carregar a aplicação)
+   */
+  static initializeEmailJS() {
+    try {
+      emailjs.init(this.emailConfig.publicKey)
+      console.log('📧 EmailJS inicializado com sucesso')
+    } catch (error) {
+      console.error('❌ Erro ao inicializar EmailJS:', error)
+    }
+  }
+
+  /**
+   * Enviar email via EmailJS (100% gratuito)
+   */
+  private static async sendEmail(subject: string, message: string, recipient: string): Promise<boolean> {
+    try {
+      if (!this.emailConfig.enabled) {
+        console.log('📧 [EMAIL] Notificações por email desabilitadas')
+        return false
+      }
+
+      console.log('📧 Enviando email para:', recipient)
+      console.log('📧 Assunto:', subject)
+
+      // Enviar via EmailJS
+      const templateParams = {
+        to_email: recipient,
+        to_name: 'Administrador VidaShield',
+        subject: subject,
+        message: message,
+        from_name: 'VidaShield Security System',
+        reply_to: 'noreply@vidashield.com',
+        website_url: 'https://vidashield.vercel.app'
+      }
+
+      const response = await emailjs.send(
+        this.emailConfig.serviceId,
+        this.emailConfig.templateId,
+        templateParams
+      )
+
+      if (response.status === 200) {
+        console.log('📧 ✅ Email enviado com sucesso via EmailJS')
+        return true
+      } else {
+        console.log('📧 ❌ Erro ao enviar email:', response)
+        return false
+      }
+    } catch (error) {
+      console.error('❌ Erro ao enviar email via EmailJS:', error)
+      // Fallback: Log detalhado para debug
+      console.log('📧 [FALLBACK] Email seria enviado para:', recipient)
+      console.log('📧 [FALLBACK] Assunto:', subject)
+      console.log('📧 [FALLBACK] Mensagem:', message)
+      return false
+    }
+  }
+
+  /**
+   * Enviar notificações por email para todos os administradores
+   */
+  private static async sendEmailNotifications(title: string, message: string): Promise<void> {
+    if (!this.emailConfig.enabled || this.emailConfig.recipients.length === 0) {
+      console.log('📧 Nenhum email configurado para notificações')
+      return
+    }
+
+    const promises = this.emailConfig.recipients.map(recipient => 
+      this.sendEmail(`🔔 ${title}`, message, recipient)
+    )
+
+    try {
+      const results = await Promise.allSettled(promises)
+      const successful = results.filter(r => r.status === 'fulfilled' && r.value === true).length
+      const total = this.emailConfig.recipients.length
+      
+      console.log(`📧 Emails enviados: ${successful}/${total}`)
+      
+      if (successful === 0) {
+        console.log('⚠️ [EMAIL] Configuração necessária:')
+        console.log('⚠️ [EMAIL] 1. Criar conta gratuita em https://emailjs.com')
+        console.log('⚠️ [EMAIL] 2. Configurar service_id, template_id e public_key')
+        console.log('⚠️ [EMAIL] 3. Adicionar variáveis de ambiente')
+      }
+    } catch (error) {
+      console.error('❌ Erro ao enviar notificações por email:', error)
+    }
+  }
+
   /**
    * Criar uma nova notificação
    */
@@ -259,12 +367,14 @@ export class NotificationService {
       return
     }
 
+    const message = `${pendingUsersCount} usuário${pendingUsersCount > 1 ? 's' : ''} aguardando aprovação para acesso ao sistema.`
+
     // Criar notificação para cada admin
     for (const admin of admins) {
       await this.createNotification({
         type: 'auth',
         title: 'Novos Usuários Aguardando Aprovação',
-        message: `${pendingUsersCount} usuário${pendingUsersCount > 1 ? 's' : ''} aguardando aprovação para acesso ao sistema.`,
+        message: message,
         severity: 'media',
         user_id: admin.id,
         metadata: {
@@ -275,6 +385,21 @@ export class NotificationService {
         action_url: '/aprovacao-usuarios'
       })
     }
+
+    // NOVA FUNCIONALIDADE: Enviar notificações por email para todos os administradores
+    console.log('📧 Enviando notificações por email sobre nova solicitação...')
+    await this.sendEmailNotifications('Nova Solicitação de Acesso - VidaShield', `
+🔔 Nova solicitação de acesso recebida!
+
+📊 Detalhes:
+• ${pendingUsersCount} usuário${pendingUsersCount > 1 ? 's' : ''} aguardando aprovação
+• Acesse: https://vidashield.vercel.app/aprovacao-usuarios
+• Sistema: VidaShield Security
+
+⏰ ${new Date().toLocaleString('pt-BR')}
+
+Ação necessária: Revisar e aprovar/rejeitar solicitação(ões) pendente(s).
+    `.trim())
   }
 
   /**
