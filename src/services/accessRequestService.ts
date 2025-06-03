@@ -45,8 +45,8 @@ export class AccessRequestService {
       // Criar notificação para admin via NotificationService
       const notificationData = {
         type: 'auth' as const,
-        title: 'Nova Solicitação de Acesso',
-        message: `${data.full_name || data.email} solicitou acesso ao sistema VidaShield.`,
+        title: '🔔 Nova Solicitação de Acesso',
+        message: `${data.full_name || data.email} solicitou acesso ao sistema VidaShield.${data.department ? ` Departamento: ${data.department}.` : ''} Clique para revisar e aprovar.`,
         severity: 'media' as const,
         metadata: {
           request_id: requestId,
@@ -69,7 +69,12 @@ export class AccessRequestService {
       // Usar NotificationService que já lida com RLS corretamente
       await NotificationService.createNotification(notificationData);
 
+      // NOVA FUNCIONALIDADE: Notificar especificamente todos os admins
+      console.log('📨 Enviando notificações direcionadas para todos os admins...');
+      await NotificationService.notifyPendingUserApproval(1);
+
       console.log('✅ Solicitação criada como notificação ID:', requestId);
+      console.log('✅ Todos os admins foram notificados sobre a nova solicitação');
       
       return {
         id: requestId,
@@ -309,6 +314,21 @@ export class AccessRequestService {
         console.log('✅ [APROVAÇÃO] Notificação atualizada com sucesso');
       }
 
+      // NOVA FUNCIONALIDADE: Notificar outros admins sobre a aprovação
+      console.log('📨 [APROVAÇÃO] Notificando outros admins sobre a aprovação...');
+      try {
+        await NotificationService.notifyAdminUserAction({
+          action: 'approved',
+          userName: request.full_name || request.email.split('@')[0],
+          userEmail: request.email,
+          actionBy: approvedBy
+        });
+        console.log('✅ [APROVAÇÃO] Outros admins notificados sobre a aprovação');
+      } catch (notifyError) {
+        console.error('⚠️ [APROVAÇÃO] Erro ao notificar outros admins:', notifyError);
+        // Não falhar o processo principal por causa disso
+      }
+
       console.log(`✅ [APROVAÇÃO] Solicitação ${requestId} aprovada com sucesso`);
       
     } catch (error) {
@@ -366,6 +386,22 @@ export class AccessRequestService {
       if (updateError) {
         console.error('❌ Erro ao atualizar notificação:', updateError);
         throw new Error(`Erro ao rejeitar solicitação: ${updateError.message}`);
+      }
+
+      // NOVA FUNCIONALIDADE: Notificar outros admins sobre a rejeição
+      console.log('📨 [REJEIÇÃO] Notificando outros admins sobre a rejeição...');
+      try {
+        await NotificationService.notifyAdminUserAction({
+          action: 'rejected',
+          userName: notification.metadata.full_name || notification.metadata.email.split('@')[0],
+          userEmail: notification.metadata.email,
+          actionBy: rejectedBy,
+          reason: reason
+        });
+        console.log('✅ [REJEIÇÃO] Outros admins notificados sobre a rejeição');
+      } catch (notifyError) {
+        console.error('⚠️ [REJEIÇÃO] Erro ao notificar outros admins:', notifyError);
+        // Não falhar o processo principal por causa disso
       }
 
       console.log(`❌ Solicitação ${requestId} rejeitada com sucesso`);
