@@ -184,23 +184,23 @@ export class AccessRequestService {
    */
   static async approveRequest(requestId: string, approvedBy: string, assignedRole?: string): Promise<void> {
     console.log(`✅ Aprovando solicitação ${requestId}...`);
-    console.log('🔄 Usando sistema unificado v2.0 - Filtro no cliente'); // Force rebuild
+    console.log('🔄 Usando sistema unificado v2.1 - Buscar TODAS notificações auth'); // Force rebuild
 
     try {
-      console.log('🔍 [APROVAÇÃO] Etapa 1: Buscando notificações...');
-      // Buscar notificações do tipo auth não lidas e filtrar no cliente
+      console.log('🔍 [APROVAÇÃO] Etapa 1: Buscando TODAS as notificações auth...');
+      // CORREÇÃO: Buscar TODAS as notificações auth (lidas e não lidas) para manter consistência
       const { data: notifications, error: fetchError } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
-        .eq('read', false);
+        .order('created_at', { ascending: false });
 
       if (fetchError) {
         console.error('❌ [APROVAÇÃO] Erro ao buscar notificações:', fetchError);
         throw new Error('Erro ao buscar solicitações de acesso');
       }
 
-      console.log(`🔍 [APROVAÇÃO] Etapa 2: Encontradas ${notifications?.length || 0} notificações auth não lidas`);
+      console.log(`🔍 [APROVAÇÃO] Etapa 2: Encontradas ${notifications?.length || 0} notificações auth (todas)`);
 
       // Filtrar no cliente pela request_id e system_type
       const notification = notifications?.find(notif => 
@@ -210,10 +210,20 @@ export class AccessRequestService {
 
       if (!notification) {
         console.error('❌ [APROVAÇÃO] Notificação não encontrada para request_id:', requestId);
+        console.error('❌ [APROVAÇÃO] Notificações disponíveis:', notifications?.map(n => ({
+          id: n.id,
+          request_id: n.metadata?.request_id,
+          system_type: n.metadata?.system_type,
+          email: n.metadata?.email
+        })));
         throw new Error('Solicitação não encontrada nas notificações');
       }
 
-      console.log('✅ [APROVAÇÃO] Etapa 3: Notificação encontrada:', notification.id);
+      console.log('✅ [APROVAÇÃO] Etapa 3: Notificação encontrada:', {
+        notification_id: notification.id,
+        read: notification.read,
+        email: notification.metadata?.email
+      });
       const request = notification.metadata;
       console.log('📋 [APROVAÇÃO] Dados da solicitação:', {
         email: request.email,
@@ -316,12 +326,12 @@ export class AccessRequestService {
     console.log(`❌ Rejeitando solicitação ${requestId}...`);
 
     try {
-      // Buscar notificações do tipo auth não lidas e filtrar no cliente
+      // CORREÇÃO: Buscar TODAS as notificações auth (lidas e não lidas) para manter consistência
       const { data: notifications, error: fetchError } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'auth')
-        .eq('read', false);
+        .order('created_at', { ascending: false });
 
       if (fetchError) {
         console.error('❌ Erro ao buscar notificações:', fetchError);
