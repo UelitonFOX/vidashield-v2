@@ -15,7 +15,7 @@ export const useLGPDConsent = () => {
   })
 
   useEffect(() => {
-    checkConsentStatus()
+    checkConsentStatus().catch(console.error)
   }, [])
 
   const checkConsentStatus = async () => {
