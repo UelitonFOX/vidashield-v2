@@ -760,10 +760,12 @@ CREATE TABLE ip_blocks (
   ativo BOOLEAN DEFAULT TRUE,
   attempts INTEGER DEFAULT 1,
   country TEXT, city TEXT,                      -- Geolocalização
-  expires_at TIMESTAMP WITH TIME ZONE,          -- Bloqueio temporário vs permanente
+  expires_at TIMESTAMP WITH TIME ZONE,          -- NULL = bloqueio permanente
   unblocked_at TIMESTAMP WITH TIME ZONE         -- Histórico de desbloqueios
 );
 ```
+
+Em **`ip_blocks`**, quando `expires_at` está `NULL`, o bloqueio é considerado permanente. Para bloqueios temporários, defina uma data e hora de expiração.
 
 #### **📊 4. Dashboard de Segurança com Alertas em Tempo Real**
 
