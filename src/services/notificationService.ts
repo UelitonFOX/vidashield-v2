@@ -463,15 +463,31 @@ Ação necessária: Revisar e aprovar/rejeitar solicitação(ões) pendente(s).
     action: 'approved' | 'rejected'
     userName: string
     userEmail: string
-    actionBy: string
+    actionBy: string // ID do administrador que executou a ação
     reason?: string
   }) {
-    // Buscar todos os usuários admin exceto quem fez a ação
+    // Buscar perfil de quem realizou a ação para obter nome/email
+    let actorName = 'Administrador'
+    try {
+      const { data: actor, error: actorError } = await supabase
+        .from('user_profiles')
+        .select('name, email')
+        .eq('id', actionData.actionBy)
+        .single()
+
+      if (!actorError && actor) {
+        actorName = actor.name || actor.email || actorName
+      }
+    } catch (fetchError) {
+      console.warn('Erro ao buscar perfil do administrador:', fetchError)
+    }
+
+    // Buscar todos os admins exceto quem executou a ação
     const { data: admins, error } = await supabase
       .from('user_profiles')
-      .select('id, name')
+      .select('id')
       .eq('role', 'admin')
-      .neq('email', actionData.actionBy)
+      .neq('id', actionData.actionBy)
 
     if (error) {
       console.error('Erro ao buscar outros admins:', error)
@@ -481,12 +497,11 @@ Ação necessária: Revisar e aprovar/rejeitar solicitação(ões) pendente(s).
     const actionText = actionData.action === 'approved' ? 'aprovou' : 'rejeitou'
     const icon = actionData.action === 'approved' ? '✅' : '❌'
 
-    // Criar notificação para cada admin
     for (const admin of admins) {
       await this.createNotification({
         type: 'auth',
         title: `${icon} Usuário ${actionData.action === 'approved' ? 'Aprovado' : 'Rejeitado'}`,
-        message: `${actionData.actionBy} ${actionText} o acesso de ${actionData.userName} (${actionData.userEmail})${actionData.reason ? `. Motivo: ${actionData.reason}` : ''}.`,
+        message: `${actorName} ${actionText} o acesso de ${actionData.userName} (${actionData.userEmail})${actionData.reason ? `. Motivo: ${actionData.reason}` : ''}.`,
         severity: 'baixa',
         user_id: admin.id,
         metadata: {
