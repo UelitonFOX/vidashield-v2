@@ -404,7 +404,7 @@ export class AccessRequestService {
         // Não falhar o processo principal por causa disso
       }
 
-      console.log(`❌ Solicitação ${requestId} rejeitada com sucesso`);
+      console.log(`✅ Solicitação ${requestId} rejeitada com sucesso`);
       
     } catch (error) {
       console.error('❌ Erro ao rejeitar solicitação:', error);
